@@ -1,0 +1,148 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProjectGuid>{558A996A-0AA2-402A-87D0-C6B8A0B1BA85}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>gipbakery.mes.processapplication</RootNamespace>
+    <AssemblyName>gipbakery.mes.processapplication</AssemblyName>
+    <TargetFrameworkVersion>v4.8</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+    <Deterministic>true</Deterministic>
+    <TargetFrameworkProfile />
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>..\bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <IPlusIncludeDir>..\..\..\trunk\iPlusMES\bin\Debug</IPlusIncludeDir>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>..\bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <IPlusIncludeDir>..\..\..\trunk\iPlusMES\bin\Release</IPlusIncludeDir>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="EntityFramework, Version=5.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\..\packages\EntityFramework.6.1.3\lib\net45\EntityFramework.dll</HintPath>
+    </Reference>
+    <Reference Include="PresentationCore" />
+    <Reference Include="PresentationFramework" />
+    <Reference Include="System" />
+    <Reference Include="System.ComponentModel.DataAnnotations" />
+    <Reference Include="System.Configuration" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.Data.Entity" />
+    <Reference Include="System.Drawing" />
+    <Reference Include="System.Runtime.Serialization" />
+    <Reference Include="System.Security" />
+    <Reference Include="System.Xaml" />
+    <Reference Include="System.Xml.Linq" />
+    <Reference Include="System.Data.DataSetExtensions" />
+    <Reference Include="Microsoft.CSharp" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Xml" />
+    <Reference Include="WindowsBase" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="ACProcessWorkflow\PWNodeMethod\PWBakeryWorkKneading.cs" />
+    <Compile Include="ACProcessWorkflow\PWNodeMethod\PWBakeryWorkDecoring.cs" />
+    <Compile Include="ACProcessWorkflow\PWNodeMethod\PWBakeryWorkPacking.cs" />
+    <Compile Include="ACProcessWorkflow\PWNodeMethod\PWBakeryWorkFreezing.cs" />
+    <Compile Include="ACProcessWorkflow\PWNodeMethod\PWBakeryWorkBaking.cs" />
+    <Compile Include="ACProcessWorkflow\PWNodeMethod\PWBakeryWorkProofing.cs" />
+    <Compile Include="ACProcessWorkflow\PWNodeMethod\PWBakeryWorkForming.cs" />
+    <Compile Include="ACProcessWorkflow\PWNodeMethod\PWBakeryKneading.cs" />
+    <Compile Include="ACProcessWorkflow\PWNodeMethod\PWBakeryRisingTimer.cs" />
+    <Compile Include="ACProcessWorkflow\PWNodeMethod\PWBakeryTempCalc.cs" />
+    <Compile Include="PAProcessFunction\PAFBakeryWorkBaking.cs" />
+    <Compile Include="PAProcessFunction\PAFBakeryWorkKneading.cs" />
+    <Compile Include="PAProcessFunction\PAFBakeryWorkDecoring.cs" />
+    <Compile Include="PAProcessFunction\PAFBakeryWorkProofing.cs" />
+    <Compile Include="PAProcessFunction\PAFBakeryWorkPacking.cs" />
+    <Compile Include="PAProcessFunction\PAFBakeryWorkFreezing.cs" />
+    <Compile Include="PAProcessFunction\PAFBakeryWorkForming.cs" />
+    <Compile Include="PAProcessFunction\PAFBakeryKneading.cs" />
+    <Compile Include="PAProcessModules\BakeryFreezer.cs" />
+    <Compile Include="PAProcessModules\BakeryDecorStation.cs" />
+    <Compile Include="PAProcessModules\BakeryPacker.cs" />
+    <Compile Include="PAProcessModules\BakeryOven.cs" />
+    <Compile Include="PAProcessModules\BakeryDoughProofer.cs" />
+    <Compile Include="PAProcessModules\BakeryDoughFormer.cs" />
+    <Compile Include="PAProcessModules\BakeryDoughRiser.cs" />
+    <Compile Include="PAProcessModules\BakeryKneader.cs" />
+    <Compile Include="PAProcessModules\BakeryReceivingPoint.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="TODO.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <Reference Include="gip.bso.iplus">
+      <HintPath>$(IPlusIncludeDir)\gip.bso.iplus.dll</HintPath>
+    </Reference>
+    <Reference Include="gip.core.autocomponent, Version=1.0.0.0, Culture=neutral, PublicKeyToken=12adb6357a02d860, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>$(IPlusIncludeDir)\gip.core.autocomponent.dll</HintPath>
+    </Reference>
+    <Reference Include="gip.core.communication">
+      <HintPath>$(IPlusIncludeDir)\gip.core.communication.dll</HintPath>
+    </Reference>
+    <Reference Include="gip.core.datamodel, Version=1.0.0.0, Culture=neutral, PublicKeyToken=12adb6357a02d860, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>$(IPlusIncludeDir)\gip.core.datamodel.dll</HintPath>
+    </Reference>
+    <Reference Include="gip.core.layoutengine, Version=1.0.0.0, Culture=neutral, PublicKeyToken=12adb6357a02d860, processorArchitecture=MSIL">
+      <HintPath>$(IPlusIncludeDir)\gip.core.layoutengine.dll</HintPath>
+    </Reference>
+    <Reference Include="gip.core.manager">
+      <HintPath>$(IPlusIncludeDir)\gip.core.manager.dll</HintPath>
+    </Reference>
+    <Reference Include="gip.core.processapplication">
+      <HintPath>$(IPlusIncludeDir)\gip.core.processapplication.dll</HintPath>
+    </Reference>
+    <Reference Include="gip.bso.facility">
+      <HintPath>$(IPlusIncludeDir)\gip.bso.facility.dll</HintPath>
+    </Reference>
+    <Reference Include="gip.bso.manufacturing">
+      <HintPath>$(IPlusIncludeDir)\gip.bso.manufacturing.dll</HintPath>
+    </Reference>
+    <Reference Include="gip.bso.masterdata">
+      <HintPath>$(IPlusIncludeDir)\gip.bso.masterdata.dll</HintPath>
+    </Reference>
+    <Reference Include="gip.bso.purchasing">
+      <HintPath>$(IPlusIncludeDir)\gip.bso.purchasing.dll</HintPath>
+    </Reference>
+    <Reference Include="gip.mes.autocomponent">
+      <HintPath>$(IPlusIncludeDir)\gip.mes.autocomponent.dll</HintPath>
+    </Reference>
+    <Reference Include="gip.mes.datamodel">
+      <HintPath>$(IPlusIncludeDir)\gip.mes.datamodel.dll</HintPath>
+    </Reference>
+    <Reference Include="gip.mes.facility">
+      <HintPath>$(IPlusIncludeDir)\gip.mes.facility.dll</HintPath>
+    </Reference>
+    <Reference Include="gip.mes.manager">
+      <HintPath>$(IPlusIncludeDir)\gip.mes.manager.dll</HintPath>
+    </Reference>
+    <Reference Include="gip.mes.processapplication">
+      <HintPath>$(IPlusIncludeDir)\gip.mes.processapplication.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="VBControlScripts\" />
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+</Project>
