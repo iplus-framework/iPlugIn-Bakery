@@ -67,6 +67,7 @@
     <Compile Include="ACProcessWorkflow\PWNodeMethod\PWBakeryKneading.cs" />
     <Compile Include="ACProcessWorkflow\PWNodeMethod\PWBakeryRisingTimer.cs" />
     <Compile Include="ACProcessWorkflow\PWNodeMethod\PWBakeryTempCalc.cs" />
+    <Compile Include="PAModules\PABakeryTempService.cs" />
     <Compile Include="PAProcessFunction\PAFBakeryWorkBaking.cs" />
     <Compile Include="PAProcessFunction\PAFBakeryWorkKneading.cs" />
     <Compile Include="PAProcessFunction\PAFBakeryWorkDecoring.cs" />
@@ -142,6 +143,7 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Folder Include="BSO\" />
     <Folder Include="VBControlScripts\" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
