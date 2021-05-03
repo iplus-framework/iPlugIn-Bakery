@@ -67,7 +67,12 @@
     <Compile Include="ACProcessWorkflow\PWNodeMethod\PWBakeryKneading.cs" />
     <Compile Include="ACProcessWorkflow\PWNodeMethod\PWBakeryRisingTimer.cs" />
     <Compile Include="ACProcessWorkflow\PWNodeMethod\PWBakeryTempCalc.cs" />
+    <Compile Include="BSO\BakeryBSOMaterial.cs" />
+    <Compile Include="BSO\BakeryBSOPartslist.cs" />
+    <Compile Include="BSO\BakeryBSOTemperature.cs" />
+    <Compile Include="BSO\BakeryBSOWorkCenterSelector.cs" />
     <Compile Include="PAModules\PABakeryTempService.cs" />
+    <Compile Include="PAModules\PAEBakeryThermometer.cs" />
     <Compile Include="PAProcessFunction\PAFBakeryWorkBaking.cs" />
     <Compile Include="PAProcessFunction\PAFBakeryWorkKneading.cs" />
     <Compile Include="PAProcessFunction\PAFBakeryWorkDecoring.cs" />
@@ -85,6 +90,7 @@
     <Compile Include="PAProcessModules\BakeryDoughRiser.cs" />
     <Compile Include="PAProcessModules\BakeryKneader.cs" />
     <Compile Include="PAProcessModules\BakeryReceivingPoint.cs" />
+    <Compile Include="PAProcessModules\BakerySilo.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
@@ -143,7 +149,6 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <Folder Include="BSO\" />
     <Folder Include="VBControlScripts\" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
