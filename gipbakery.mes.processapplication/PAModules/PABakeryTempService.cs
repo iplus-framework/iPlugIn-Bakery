@@ -100,12 +100,14 @@ namespace gipbakery.mes.processapplication
         public void InitService()
         {
             InitializeService();
+            RecalucateAverageTemperature();
         }
 
         public BakeryRecvPointTemperature GetBakeryTemperatures()
         {
             return null;
         }
+
 
         /// <summary>
         /// Returns info(material, silos, average temp) for BSOTemperature
@@ -234,21 +236,21 @@ namespace gipbakery.mes.processapplication
                 foreach (var cacheItem in Cache)
                 {
                     //Cold water
-                    InitializeWaterSensor(cacheItem, cacheItem.Key.PAPointMatIn2.PropertyInfo, db);
+                    InitializeWaterSensor(cacheItem, cacheItem.Key.PAPointMatIn2, db);
 
                     //City water
-                    InitializeWaterSensor(cacheItem, cacheItem.Key.PAPointMatIn3.PropertyInfo, db);
+                    InitializeWaterSensor(cacheItem, cacheItem.Key.PAPointMatIn3, db);
 
                     //Warm water
-                    InitializeWaterSensor(cacheItem, cacheItem.Key.PAPointMatIn4.PropertyInfo, db);
+                    InitializeWaterSensor(cacheItem, cacheItem.Key.PAPointMatIn4, db);
                 }
             }
         }
 
-        private void InitializeWaterSensor(KeyValuePair<BakeryReceivingPoint, BakeryRecvPointTemperature> cacheItem, ACClassProperty paPointMatIn, Database db)
+        private void InitializeWaterSensor(KeyValuePair<BakeryReceivingPoint, BakeryRecvPointTemperature> cacheItem, PAPoint paPointMatIn, Database db)
         {
             RoutingResult rr = ACRoutingService.FindSuccessorsFromPoint(RoutingService, db, false, cacheItem.Key.ComponentClass,
-                                                            paPointMatIn, PAMTank.SelRuleID_Silo, RouteDirections.Backwards,
+                                                            paPointMatIn.PropertyInfo, PAMTank.SelRuleID_Silo, RouteDirections.Backwards,
                                                             null, null, null, 1, true, true);
 
             if (rr != null && rr.Routes != null && rr.Routes.Any())
@@ -265,7 +267,7 @@ namespace gipbakery.mes.processapplication
                             //TODO: error
                         }
 
-                        PAFDosing dosing = cacheItem.Key.PAPointMatIn2.ConnectionList.Where(c => c.TargetParentComponent is PAFDosing)
+                        PAFDosing dosing = paPointMatIn.ConnectionList.Where(c => c.TargetParentComponent is PAFDosing)
                                                                                      .FirstOrDefault()?.TargetParentComponent as PAFDosing;
                         if (dosing == null)
                         {
@@ -300,6 +302,16 @@ namespace gipbakery.mes.processapplication
             }
         }
 
+        private void RecalucateAverageTemperature()
+        {
+            if (Cache == null)
+                return;
+
+            foreach(var recvPoint in Cache.Values)
+            {
+                recvPoint.RecalculateAverageTemperature();
+            }
+        }
 
         #endregion
     }
@@ -358,12 +370,22 @@ namespace gipbakery.mes.processapplication
             set;
         }
 
+        public void RecalculateAverageTemperature()
+        {
+            if (MaterialTempInfos == null)
+                return;
+
+            foreach (MaterialTemperature mt in MaterialTempInfos)
+            {
+                mt.AverageTemperature = mt.AverageTemperatureCalc;
+            }
+        }
     }
 
     [DataContract]
     [ACSerializeableInfo()]
     [ACClassInfo(Const.PackName_VarioSystem, "en{'Material temperature'}de{'Material temperature'}", Global.ACKinds.TACSimpleClass)]
-    public class MaterialTemperature
+    public class MaterialTemperature : IACObject, INotifyPropertyChanged
     {
         public MaterialTemperature()
         {
@@ -379,6 +401,8 @@ namespace gipbakery.mes.processapplication
             set;
         }
 
+        [IgnoreDataMember]
+        [ACPropertyInfo(9999)]
         public gip.mes.datamodel.Material Material
         {
             get;
@@ -400,7 +424,7 @@ namespace gipbakery.mes.processapplication
         }
 
         [IgnoreDataMember]
-        public double AverageTemperature
+        public double AverageTemperatureCalc
         {
             get
             {
@@ -414,11 +438,39 @@ namespace gipbakery.mes.processapplication
         }
 
         [DataMember]
+        [ACPropertyInfo(9999)]
+        public double AverageTemperature
+        {
+            get;
+            set;
+        }
+
+        [DataMember]
         public List<string> BakeryThermometersACUrls
         {
             get;
             set;
         }
+
+        [IgnoreDataMember]
+        [ACPropertyInfo(9999)]
+        public List<Tuple<string,string,string>> BakeryThermometersInfo
+        {
+            get;
+            set;
+        }
+
+        public IACObject ParentACObject => null;
+
+        public IACType ACType => this.ReflectACType();
+
+        public IEnumerable<IACObject> ACContentList => this.ReflectGetACContentList();
+
+        public string ACIdentifier => this.ReflectGetACIdentifier();
+
+        public string ACCaption => this.ACIdentifier;
+
+        public event PropertyChangedEventHandler PropertyChanged;
 
         public void AddSilo(BakerySilo bakerySilo)
         {
@@ -437,7 +489,48 @@ namespace gipbakery.mes.processapplication
             return BakeryThermometers.Concat(SilosWithPTC.SelectMany(c => c.Thermometers.Where(t => !t.DisabledForTempCalculation)));
         }
 
-        
+        public void BuildBakeryThermometersInfo(gip.mes.datamodel.DatabaseApp dbApp)
+        {
+            Material = dbApp.Material.FirstOrDefault(c => c.MaterialNo == MaterialNo);
+            BakeryThermometersInfo = new List<Tuple<string, string, string>>();
+
+            foreach(string tACUrl in BakeryThermometersACUrls)
+            {
+                ACComponent tProxy = dbApp.Root().ACUrlCommand(tACUrl) as ACComponent;
+                if (tProxy != null)
+                {
+                    string siloACCaption = null;
+
+                    if (typeof(PAMSilo).IsAssignableFrom(tProxy.ParentACComponent.ComponentClass.ObjectType))
+                    {
+                        siloACCaption += tProxy.ParentACComponent.ACCaption;
+                    }
+
+                    BakeryThermometersInfo.Add(new Tuple<string, string, string>(siloACCaption, tProxy.ACCaption, tACUrl));
+
+                }
+            }
+        }
+
+        public object ACUrlCommand(string acUrl, params object[] acParameter)
+        {
+            return this.ReflectACUrlCommand(acUrl, acParameter);
+        }
+
+        public bool IsEnabledACUrlCommand(string acUrl, params object[] acParameter)
+        {
+            return this.IsEnabledACUrlCommand(acUrl, acParameter);
+        }
+
+        public string GetACUrl(IACObject rootACObject = null)
+        {
+            return this.ReflectGetACUrl(rootACObject);
+        }
+
+        public bool ACUrlBinding(string acUrl, ref IACType acTypeInfo, ref object source, ref string path, ref Global.ControlModes rightControlMode)
+        {
+            return this.ReflectACUrlBinding(acUrl, ref acTypeInfo, ref source, ref path, ref rightControlMode);
+        }
     }
 
     [DataContract]

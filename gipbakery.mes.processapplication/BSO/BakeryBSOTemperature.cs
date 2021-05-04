@@ -19,6 +19,21 @@ namespace gipbakery.mes.processapplication
 
         public const string ClassName = "BakeryBSOTemperature";
 
+        [ACPropertySelected(700, "MaterialTemperature")]
+        public MaterialTemperature SelectedMaterialTemperature
+        {
+            get;
+            set;
+        }
+
+        [ACPropertyList(700, "MaterialTemperature")]
+        public IEnumerable<MaterialTemperature> MaterialTemperatures
+        {
+            get;
+            set;
+        }
+
+
         public override void Activate(ACComponent selectedProcessModule)
         {
             BakeryBSOWorkCenterSelector workCenter = ParentBSOWCS as BakeryBSOWorkCenterSelector;
@@ -35,6 +50,14 @@ namespace gipbakery.mes.processapplication
                 ACValueList result = Root.ACUrlCommand(workCenter.BakeryTemperatureServiceACUrl + "!GetTemperaturesInfo", selectedProcessModule.ComponentClass.ACClassID) as ACValueList;
                 if (result != null && result.Any())
                 {
+                    var materialTempList = result.Select(c => c.Value as MaterialTemperature).ToArray();
+
+                    foreach(var materialTemp in materialTempList)
+                    {
+                        materialTemp.BuildBakeryThermometersInfo(DatabaseApp);
+                    }
+
+                    MaterialTemperatures = materialTempList;
 
                 }
             }
