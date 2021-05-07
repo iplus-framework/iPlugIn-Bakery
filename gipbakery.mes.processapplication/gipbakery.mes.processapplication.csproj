@@ -67,6 +67,7 @@
     <Compile Include="ACProcessWorkflow\PWNodeMethod\PWBakeryKneading.cs" />
     <Compile Include="ACProcessWorkflow\PWNodeMethod\PWBakeryRisingTimer.cs" />
     <Compile Include="ACProcessWorkflow\PWNodeMethod\PWBakeryTempCalc.cs" />
+    <Compile Include="BSO\BakeryBSOManualWeighing.cs" />
     <Compile Include="BSO\BakeryBSOMaterial.cs" />
     <Compile Include="BSO\BakeryBSOPartslist.cs" />
     <Compile Include="BSO\BakeryBSOTemperature.cs" />
@@ -148,8 +149,14 @@
       <HintPath>$(IPlusIncludeDir)\gip.mes.processapplication.dll</HintPath>
     </Reference>
   </ItemGroup>
+  <ItemGroup />
   <ItemGroup>
-    <Folder Include="VBControlScripts\" />
+    <None Include="VBControlScripts\2021-05-07 13-10_ihrastinski.zip">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="VBControlScripts\2021-05-07 13-32_ihrastinski.zip">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

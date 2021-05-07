@@ -53,11 +53,24 @@ namespace gipbakery.mes.processapplication
             return base.ACDeInit(deleteACClassTask);
         }
 
+        public const string MN_GetTemperaturesInfo = "GetTemperaturesInfo";
+        public const string MN_GetAverageTemperatures = "GetAverageTemperatures";
+        public const string PN_TemperatureServiceInfo = "TemperatureServiceInfo";
+
         #endregion
 
         #region Properties
 
-        public Dictionary<BakeryReceivingPoint, BakeryRecvPointTemperature> Cache
+        public Dictionary<BakeryReceivingPoint, BakeryRecvPointTemperature> Temperatures
+        {
+            get;
+            set;
+        }
+
+        // 1 Refresh average temperatures
+        // 2 Refresh temperatures info
+        [ACPropertyBindingSource]
+        public IACContainerTNet<short> TemperatureServiceInfo
         {
             get;
             set;
@@ -116,14 +129,27 @@ namespace gipbakery.mes.processapplication
         [ACMethodInfo("","",9999)]
         public ACValueList GetTemperaturesInfo(Guid receivingPointID)
         {
-            if (Cache == null)
+            if (Temperatures == null)
                 return null;
 
-            KeyValuePair<BakeryReceivingPoint, BakeryRecvPointTemperature>? cacheItem = Cache.FirstOrDefault(c => c.Key.ComponentClass.ACClassID == receivingPointID);
+            KeyValuePair<BakeryReceivingPoint, BakeryRecvPointTemperature>? cacheItem = Temperatures.FirstOrDefault(c => c.Key.ComponentClass.ACClassID == receivingPointID);
             if (cacheItem == null)
                 return null;
 
             return new ACValueList(cacheItem.Value.Value.MaterialTempInfos.Where(t => !string.IsNullOrEmpty(t.MaterialNo)).Select(c => new ACValue(c.MaterialNo, c)).ToArray());
+        }
+
+        [ACMethodInfo("", "", 9999)]
+        public ACValueList GetAverageTemperatures(Guid receivingPointID)
+        {
+            if (Temperatures == null)
+                return null;
+
+            KeyValuePair<BakeryReceivingPoint, BakeryRecvPointTemperature>? cacheItem = Temperatures.FirstOrDefault(c => c.Key.ComponentClass.ACClassID == receivingPointID);
+            if (cacheItem == null)
+                return null;
+
+            return new ACValueList(cacheItem.Value.Value.MaterialTempInfos.Where(t => !string.IsNullOrEmpty(t.MaterialNo)).Select(c => new ACValue(c.MaterialNo, c.AverageTemperature)).ToArray());
         }
 
         //TODO Deinit service (event handlers)
@@ -132,7 +158,7 @@ namespace gipbakery.mes.processapplication
             DeinitCache();
 
             List<BakerySilo> silosWithBakeryPTC = new List<BakerySilo>();
-            Cache = new Dictionary<BakeryReceivingPoint, BakeryRecvPointTemperature>();
+            Temperatures = new Dictionary<BakeryReceivingPoint, BakeryRecvPointTemperature>();
 
             var projects = Root.ACComponentChilds.Where(c => c.ComponentClass.ACProject.ACProjectTypeIndex == (short)Global.ACProjectTypes.Application
                                                           && c.ACIdentifier != "DataAccess");
@@ -148,7 +174,10 @@ namespace gipbakery.mes.processapplication
                 foreach (var possibleSilo in possibleSilos)
                 {
                     if (possibleSilo.Thermometers.Any(c => !c.DisabledForTempCalculation))
+                    {
                         silosWithBakeryPTC.Add(possibleSilo);
+                        possibleSilo.MaterialNo.PropertyChanged += MaterialNo_PropertyChanged;
+                    }
                 }
 
                 receivingPoints.AddRange(project.FindChildComponents<BakeryReceivingPoint>(c => c is BakeryReceivingPoint));
@@ -158,7 +187,7 @@ namespace gipbakery.mes.processapplication
             {
                 foreach (var receivingPoint in receivingPoints)
                 {
-                    BakeryRecvPointTemperature tempInfo = new BakeryRecvPointTemperature();
+                    BakeryRecvPointTemperature tempInfo = new BakeryRecvPointTemperature(this);
 
                     foreach (var silo in silosWithBakeryPTC)
                     {
@@ -171,7 +200,7 @@ namespace gipbakery.mes.processapplication
                         }
                     }
 
-                    Cache.Add(receivingPoint, tempInfo);
+                    Temperatures.Add(receivingPoint, tempInfo);
                 }
 
 
@@ -197,10 +226,10 @@ namespace gipbakery.mes.processapplication
                             //specific for receiving point
 
                             BakeryRecvPointTemperature tempInfo = null;
-                            if (!Cache.TryGetValue(configReceivingPoint, out tempInfo))
+                            if (!Temperatures.TryGetValue(configReceivingPoint, out tempInfo))
                             {
-                                tempInfo = new BakeryRecvPointTemperature();
-                                Cache.Add(configReceivingPoint, tempInfo);
+                                tempInfo = new BakeryRecvPointTemperature(this);
+                                Temperatures.Add(configReceivingPoint, tempInfo);
                             }
 
                             MaterialTemperature materialInfo = tempInfo.MaterialTempInfos.FirstOrDefault(c => c.MaterialNo == config.MaterialNo);
@@ -218,7 +247,7 @@ namespace gipbakery.mes.processapplication
                         {
                             //for all receiving points
 
-                            foreach (BakeryRecvPointTemperature tempInfo in Cache.Values)
+                            foreach (BakeryRecvPointTemperature tempInfo in Temperatures.Values)
                             {
                                 MaterialTemperature materialInfo = tempInfo.MaterialTempInfos.FirstOrDefault(c => c.MaterialNo == config.MaterialNo);
                                 if (materialInfo == null)
@@ -236,7 +265,7 @@ namespace gipbakery.mes.processapplication
 
                 // Temperatures for water
 
-                foreach (var cacheItem in Cache)
+                foreach (var cacheItem in Temperatures)
                 {
                     //Cold water
                     InitializeWaterSensor(cacheItem, cacheItem.Key.PAPointMatIn2, db);
@@ -250,12 +279,25 @@ namespace gipbakery.mes.processapplication
             }
         }
 
+        private void MaterialNo_PropertyChanged(object sender, PropertyChangedEventArgs e)
+        {
+            if (e.PropertyName == Const.ValueT)
+            {
+                TemperatureServiceInfo.ValueT = 0;
+                foreach (var bakeryTempItem in Temperatures.Values)
+                {
+                    bakeryTempItem.SiloMaterialNoPropertyChanged(sender, e);
+                }
+                TemperatureServiceInfo.ValueT = 2;
+            }
+        }
+
         private void DeinitCache()
         {
-            if (Cache == null)
+            if (Temperatures == null)
                 return;
 
-            foreach(var cacheItem in Cache.Values)
+            foreach(var cacheItem in Temperatures.Values)
             {
                 cacheItem.DeInit();
             }
@@ -318,31 +360,42 @@ namespace gipbakery.mes.processapplication
 
         private void RecalculateAverageTemperature()
         {
-            if (Cache == null)
+            if (Temperatures == null)
                 return;
 
-            foreach(var recvPoint in Cache.Values)
+            TemperatureServiceInfo.ValueT = 0;
+
+            foreach (var recvPoint in Temperatures.Values)
             {
                 recvPoint.RecalculateAverageTemperature();
             }
+
+            TemperatureServiceInfo.ValueT = 1;
         }
 
         #endregion
     }
 
+    #region Model
+
     public class BakeryRecvPointTemperature
     {
-        public BakeryRecvPointTemperature()
+        public BakeryRecvPointTemperature(PABakeryTempService tempService)
         {
             MaterialTempInfos = new List<MaterialTemperature>();
+            TemperatureService = tempService;
+        }
+
+        public PABakeryTempService TemperatureService
+        {
+            get;
+            set;
         }
 
         public void AddSilo(BakerySilo silo)
         {
             if (silo == null || silo.MaterialNo == null)
                 return;
-
-            silo.MaterialNo.PropertyChanged += SiloMaterialNoPropertyChanged;
 
             var materialNo = silo.MaterialNo.ValueT;
             if (string.IsNullOrEmpty(materialNo))
@@ -370,11 +423,47 @@ namespace gipbakery.mes.processapplication
             }
         }
 
-        private void SiloMaterialNoPropertyChanged(object sender, System.ComponentModel.PropertyChangedEventArgs e)
+        internal void SiloMaterialNoPropertyChanged(object sender, System.ComponentModel.PropertyChangedEventArgs e)
         {
             if (e.PropertyName == Const.ValueT)
             {
+                ACPropertyNet<string> materialNoProp = sender as ACPropertyNet<string>;
+                if (materialNoProp != null)
+                {
+                    TemperatureService.TemperatureServiceInfo.ValueT = 0;
 
+                    var silo = materialNoProp.ParentACComponent as BakerySilo;
+                    if (silo != null)
+                    {
+                        var affectedMaterialTemperatures = MaterialTempInfos.Where(c => c.SilosWithPTC.Contains(silo)).ToList();
+
+                        foreach (var item in affectedMaterialTemperatures)
+                        {
+                            string materialNo = silo.MaterialNo.ValueT;
+
+                            if (item.MaterialNo == materialNo)
+                                continue;
+
+                            item.RemoveSilo(silo);
+
+                            if (!item.BakeryThermometersACUrls.Any())
+                            {
+                                MaterialTempInfos.Remove(item);
+                            }
+
+                            var mt = MaterialTempInfos.FirstOrDefault(c => c.MaterialNo == materialNo);
+                            if (mt == null)
+                            {
+                                mt = new MaterialTemperature();
+                                mt.MaterialNo = materialNo;
+                                MaterialTempInfos.Add(mt);
+                            }
+
+                            mt.AddSilo(silo);
+
+                        }
+                    }
+                }
             }
         }
 
@@ -462,12 +551,17 @@ namespace gipbakery.mes.processapplication
             }
         }
 
+        private double _AverageTemperature;
         [DataMember]
         [ACPropertyInfo(9999)]
         public double AverageTemperature
         {
-            get;
-            set;
+            get => _AverageTemperature;
+            set
+            {
+                _AverageTemperature = value;
+                OnPropertyChanged("AverageTemperature");
+            }
         }
 
         [DataMember]
@@ -475,13 +569,6 @@ namespace gipbakery.mes.processapplication
         {
             get;
             set;
-        }
-
-        [IgnoreDataMember]
-        [ACPropertyInfo(9999)]
-        public bool UseSensorTemperature
-        {
-            get => BakeryThermometersACUrls.Count == 1;
         }
 
         [IgnoreDataMember]
@@ -508,6 +595,15 @@ namespace gipbakery.mes.processapplication
         {
             SilosWithPTC.Add(bakerySilo);
             BakeryThermometersACUrls.AddRange(bakerySilo.Thermometers.Where(c => !c.DisabledForTempCalculation).Select(t => t.ACUrl));
+        }
+
+        public void RemoveSilo(BakerySilo bakerySilo)
+        {
+            SilosWithPTC.Remove(bakerySilo);
+            foreach (string ptc in bakerySilo.Thermometers.Where(c => !c.DisabledForTempCalculation).Select(t => t.ACUrl))
+            {
+                BakeryThermometersACUrls.Remove(ptc);
+            }
         }
 
         public void AddThermometer(PAEBakeryThermometer thermometer)
@@ -539,7 +635,6 @@ namespace gipbakery.mes.processapplication
                     }
 
                     BakeryThermometersInfo.Add(new Tuple<string, string, string>(siloACCaption, tProxy.ACCaption, tACUrl));
-
                 }
             }
         }
@@ -563,7 +658,16 @@ namespace gipbakery.mes.processapplication
         {
             return this.ReflectACUrlBinding(acUrl, ref acTypeInfo, ref source, ref path, ref rightControlMode);
         }
+
+        public void OnPropertyChanged(string propertyName)
+        {
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+        }
     }
+
+    #endregion
+
+    #region Config
 
     [DataContract]
     [ACSerializeableInfo]
@@ -641,4 +745,6 @@ namespace gipbakery.mes.processapplication
         #endregion
 
     }
+
+    #endregion
 }

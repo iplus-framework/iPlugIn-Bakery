@@ -17,6 +17,17 @@ namespace gipbakery.mes.processapplication
         {
         }
 
+        public override bool ACInit(Global.ACStartTypes startChildMode = Global.ACStartTypes.Automatic)
+        {
+            return base.ACInit(startChildMode);
+        }
+
+        public override bool ACDeInit(bool deleteACClassTask = false)
+        {
+            DeActivate();
+            return base.ACDeInit(deleteACClassTask);
+        }
+
         public const string ClassName = "BakeryBSOTemperature";
 
         [ACPropertySelected(700, "MaterialTemperature")]
@@ -26,13 +37,25 @@ namespace gipbakery.mes.processapplication
             set;
         }
 
+        private IEnumerable<MaterialTemperature> _MaterialTemperatures;
         [ACPropertyList(700, "MaterialTemperature")]
         public IEnumerable<MaterialTemperature> MaterialTemperatures
+        {
+            get => _MaterialTemperatures;
+            set
+            {
+                _MaterialTemperatures = value;
+                OnPropertyChanged("MaterialTemperatures");
+            }
+        }
+
+        public ACRef<ACComponent> TemperatureServiceProxy
         {
             get;
             set;
         }
 
+        private IACContainerTNet<short> _TemperatureServiceInfo;
 
         public override void Activate(ACComponent selectedProcessModule)
         {
@@ -45,9 +68,23 @@ namespace gipbakery.mes.processapplication
                     return;
                 }
 
-                //workCenter.BakeryTemperatureServiceACUrl = "\\Service\\BakeryTempService";
+                ACComponent tempService = Root.ACUrlCommand(workCenter.BakeryTemperatureServiceACUrl) as ACComponent;
+                if (tempService == null && Root.IsProxy)
+                {
+                    //TODO message
+                    return;
+                }
 
-                ACValueList result = Root.ACUrlCommand(workCenter.BakeryTemperatureServiceACUrl + "!GetTemperaturesInfo", selectedProcessModule.ComponentClass.ACClassID) as ACValueList;
+                TemperatureServiceProxy = new ACRef<ACComponent>(tempService, this);
+
+                _TemperatureServiceInfo = TemperatureServiceProxy.ValueT.GetPropertyNet(PABakeryTempService.PN_TemperatureServiceInfo) as IACContainerTNet<short>;
+                if (_TemperatureServiceInfo != null)
+                {
+                    (_TemperatureServiceInfo as IACPropertyNetBase).PropertyChanged += TempServiceInfo_PropertyChanged;
+                }
+
+
+                ACValueList result = TemperatureServiceProxy.ValueT.ExecuteMethod(PABakeryTempService.MN_GetTemperaturesInfo, selectedProcessModule.ComponentClass.ACClassID) as ACValueList;
                 if (result != null && result.Any())
                 {
                     var materialTempList = result.Select(c => c.Value as MaterialTemperature).ToArray();
@@ -58,14 +95,70 @@ namespace gipbakery.mes.processapplication
                     }
 
                     MaterialTemperatures = materialTempList;
+                }
+            }
+        }
 
+
+        //TODO: try/catch
+        private void TempServiceInfo_PropertyChanged(object sender, System.ComponentModel.PropertyChangedEventArgs e)
+        {
+            if (e.PropertyName == Const.ValueT)
+            {
+                // 1 Refresh average temperatures
+                // 2 Refresh temperatures info
+                if (_TemperatureServiceInfo.ValueT == 1)
+                {
+                    Task.Run(() =>
+                    {
+                        ACValueList result = TemperatureServiceProxy.ValueT.ExecuteMethod(PABakeryTempService.MN_GetAverageTemperatures, ParentBSOWCS.SelectedWorkCenterItem.ProcessModule.ComponentClass.ACClassID) as ACValueList;
+                        if (result != null && result.Any())
+                        {
+                            foreach (ACValue acValue in result)
+                            {
+                                MaterialTemperature mt = MaterialTemperatures.FirstOrDefault(c => c.MaterialNo == acValue.ACIdentifier);
+                                if (mt != null)
+                                {
+                                    mt.AverageTemperature = acValue.ParamAsDouble;
+                                }
+                            }
+                        }
+                    });
+                }
+                else if (_TemperatureServiceInfo.ValueT == 2)
+                {
+                    Task.Run(() =>
+                    {
+                        ACValueList result = TemperatureServiceProxy.ValueT.ExecuteMethod(PABakeryTempService.MN_GetTemperaturesInfo, ParentBSOWCS.SelectedWorkCenterItem.ProcessModule.ComponentClass.ACClassID) as ACValueList;
+                        if (result != null && result.Any())
+                        {
+                            var materialTempList = result.Select(c => c.Value as MaterialTemperature).ToArray();
+
+                            foreach (var materialTemp in materialTempList)
+                            {
+                                materialTemp.BuildBakeryThermometersInfo(DatabaseApp);
+                            }
+
+                            MaterialTemperatures = materialTempList;
+                        }
+                    });
                 }
             }
         }
 
         public override void DeActivate()
         {
+            if (TemperatureServiceProxy != null)
+            {
+                TemperatureServiceProxy.Detach();
+                TemperatureServiceProxy = null;
+            }
 
+            if (_TemperatureServiceInfo != null)
+            {
+                (_TemperatureServiceInfo as IACPropertyNetBase).PropertyChanged -= TempServiceInfo_PropertyChanged;
+                _TemperatureServiceInfo = null;
+            }
         }
     }
 }
