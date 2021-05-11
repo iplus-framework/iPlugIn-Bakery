@@ -40,6 +40,28 @@ namespace gipbakery.mes.processapplication
         }
         #endregion
 
+        #region Properties 
+
+        [ACPropertyBindingSource(IsPersistable = true)]
+        public IACContainerTNet<double> DoughCorrTemp
+        {
+            get;
+            set;
+        }
+
+
+        /// <summary>
+        /// Represents the room temperature. It can be fix defined or can be bounded to the sensor.
+        /// </summary>
+        [ACPropertyBindingTarget(IsPersistable = true)]
+        public IACContainerTNet<double> RoomTemperature
+        {
+            get;
+            set;
+        }
+
+        #endregion
+
         #region Points
         PAPoint _PAPointMatIn2;
         /// <summary>

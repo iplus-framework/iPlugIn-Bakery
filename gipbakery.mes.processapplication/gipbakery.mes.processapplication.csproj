@@ -74,6 +74,8 @@
     <Compile Include="BSO\BakeryBSOWorkCenterSelector.cs" />
     <Compile Include="PAModules\PABakeryTempService.cs" />
     <Compile Include="PAModules\PAEBakeryThermometer.cs" />
+    <Compile Include="PAProcessFunction\PAFBakeryManualWeighing.cs" />
+    <Compile Include="PAProcessFunction\PAFBakeryTempCalc.cs" />
     <Compile Include="PAProcessFunction\PAFBakeryWorkBaking.cs" />
     <Compile Include="PAProcessFunction\PAFBakeryWorkKneading.cs" />
     <Compile Include="PAProcessFunction\PAFBakeryWorkDecoring.cs" />
@@ -155,6 +157,9 @@
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
     <None Include="VBControlScripts\2021-05-07 13-32_ihrastinski.zip">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="VBControlScripts\2021-05-11 14-26_ihrastinski.zip">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
   </ItemGroup>

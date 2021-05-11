@@ -32,6 +32,16 @@ namespace gipbakery.mes.processapplication
             paramTranslation.Add("TempRiseSlow", "en{'Temperature rising °C/Min slow'}de{'Erwärmung °C/Min langsam'}");
             method.ParameterValueList.Add(new ACValue("TempRiseFast", typeof(double), 0, Global.ParamOption.Required));
             paramTranslation.Add("TempRiseFast", "en{'Temperature rising °C/Min fast'}de{'Erwärmung °C/Min schnell'}");
+
+            method.ParameterValueList.Add(new ACValue("KneadingTimeSlowHalf", typeof(TimeSpan), TimeSpan.Zero, Global.ParamOption.Required));
+            paramTranslation.Add("KneadingTimeSlowHalf", "en{'Kneadingtime slow half quantity'}de{'Knetzeit langsam halbe Menge'}");
+            method.ParameterValueList.Add(new ACValue("KneadingTimeFastHalf", typeof(TimeSpan), TimeSpan.Zero, Global.ParamOption.Required));
+            paramTranslation.Add("KneadingTimeFastHalf", "en{'Kneadingtime fast half quantity'}de{'Knetzeit schnell halbe Menge'}");
+            method.ParameterValueList.Add(new ACValue("TempRiseSlowHalf", typeof(double), 0, Global.ParamOption.Required));
+            paramTranslation.Add("TempRiseSlowHalf", "en{'Temperature rising °C/Min slow half quantity'}de{'Erwärmung °C/Min langsam halbe Menge'}");
+            method.ParameterValueList.Add(new ACValue("TempRiseFastHalf", typeof(double), 0, Global.ParamOption.Required));
+            paramTranslation.Add("TempRiseFastHalf", "en{'Temperature rising °C/Min fast half quantity'}de{'Erwärmung °C/Min schnell halbe Menge'}");
+
             var wrapper = new ACMethodWrapper(method, "en{'Configuration'}de{'Konfiguration'}", typeof(PWBakeryKneading), paramTranslation, null);
             ACMethod.RegisterVirtualMethod(typeof(PWBakeryKneading), ACStateConst.SMStarting, wrapper);
             RegisterExecuteHandler(typeof(PWBakeryKneading), HandleExecuteACMethod_PWBakeryKneading);

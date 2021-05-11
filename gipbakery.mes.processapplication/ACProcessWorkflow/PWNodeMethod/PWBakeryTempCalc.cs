@@ -10,10 +10,10 @@ using System.Xml;
 
 namespace gipbakery.mes.processapplication
 {
-    [ACClassInfo(Const.PackName_VarioAutomation, "en{'Dough temperature calculator'}de{'Teigtemperaturberechnung'}", Global.ACKinds.TPWNodeStatic, Global.ACStorableTypes.Optional, false, PWMethodVBBase.PWClassName, true)]
-    public class PWBakeryTempCalc : PWNodeUserAck
+    [ACClassInfo(Const.PackName_VarioAutomation, "en{'Dough temperature calculato'}de{'Teigtemperaturberechnung'}", Global.ACKinds.TPWNodeMethod, Global.ACStorableTypes.Optional, false, PWMethodVBBase.PWClassName, true)]
+    public class PWBakeryTempCalc : PWNodeProcessMethod
     {
-        new public const string PWClassName = "PWBakeryTempCalc";
+        public const string PWClassName = "PWBakeryTempCalc";
 
         #region Constructors
 
@@ -30,6 +30,8 @@ namespace gipbakery.mes.processapplication
             paramTranslation.Add("DoughTemp", "en{'Doughtemperature °C'}de{'Teigtemperatur °C'}");
             method.ParameterValueList.Add(new ACValue("WaterTemp", typeof(double?), false, Global.ParamOption.Required));
             paramTranslation.Add("WaterTemp", "en{'Watertemperature °C'}de{'Wassertemperatur °C'}");
+            method.ParameterValueList.Add(new ACValue("UseWaterTemp", typeof(bool), false, Global.ParamOption.Required));
+            paramTranslation.Add("UseWaterTemp", "en{'Use Watertemperature'}de{'Wassertemperatur verwenden'}");
             var wrapper = new ACMethodWrapper(method, "en{'User Acknowledge'}de{'Benutzerbestätigung'}", typeof(PWBakeryTempCalc), paramTranslation, null);
             ACMethod.RegisterVirtualMethod(typeof(PWBakeryTempCalc), ACStateConst.SMStarting, wrapper);
 
@@ -44,7 +46,14 @@ namespace gipbakery.mes.processapplication
 
         public override bool ACDeInit(bool deleteACClassTask = false)
         {
+            ClearMyConfiguration();
             return base.ACDeInit(deleteACClassTask);
+        }
+
+        public override void Recycle(IACObject content, IACObject parentACObject, ACValueList parameter, string acIdentifier = "")
+        {
+            ClearMyConfiguration();
+            base.Recycle(content, parentACObject, parameter, acIdentifier);
         }
 
         #endregion
@@ -55,6 +64,25 @@ namespace gipbakery.mes.processapplication
             if (ParentRootWFNode == null)
                 return null;
             return ParentRootWFNode as T;
+        }
+
+        //TODO: clear config on idle or recycle
+        private ACMethod _MyConfiguration;
+        [ACPropertyInfo(9999)]
+        public ACMethod MyConfiguration
+        {
+            get
+            {
+                using (ACMonitor.Lock(_20015_LockValue))
+                {
+                    if (_MyConfiguration != null)
+                        return _MyConfiguration;
+                }
+
+                var myNewConfig = NewACMethodWithConfiguration();
+                _MyConfiguration = myNewConfig;
+                return myNewConfig;
+            }
         }
 
         public bool IsProduction
@@ -99,6 +127,23 @@ namespace gipbakery.mes.processapplication
             }
         }
 
+        protected bool UseWaterTemp
+        {
+            get
+            {
+                var method = MyConfiguration;
+                if (method != null)
+                {
+                    var acValue = method.ParameterValueList.GetACValue("UseWaterTemp");
+                    if (acValue != null)
+                    {
+                        return acValue.ParamAsBoolean;
+                    }
+                }
+                return false;
+            }
+        }
+
         #endregion
 
 
@@ -117,34 +162,60 @@ namespace gipbakery.mes.processapplication
         public static bool HandleExecuteACMethod_PWBakeryTempCalc(out object result, IACComponent acComponent, string acMethodName, gip.core.datamodel.ACClassMethod acClassMethod, params object[] acParameter)
         {
             result = null;
-            switch (acMethodName)
-            {
-                case MN_AckStartClient:
-                    AckStartClient(acComponent);
-                    return true;
-                case Const.IsEnabledPrefix + MN_AckStartClient:
-                    result = IsEnabledAckStartClient(acComponent);
-                    return true;
-            }
-            return HandleExecuteACMethod_PWNodeUserAck(out result, acComponent, acMethodName, acClassMethod, acParameter);
+            //switch (acMethodName)
+            //{
+            //    case MN_AckStartClient:
+            //        AckStartClient(acComponent);
+            //        return true;
+            //    case Const.IsEnabledPrefix + MN_AckStartClient:
+            //        result = IsEnabledAckStartClient(acComponent);
+            //        return true;
+            //}
+            return HandleExecuteACMethod_PWBaseNodeProcess(out result, acComponent, acMethodName, acClassMethod, acParameter);
         }
         #endregion
 
+        public override void Start()
+        {
+            base.Start();
+        }
+
         public override void SMIdle()
         {
+            ClearMyConfiguration();
             base.SMIdle();
         }
 
         [ACMethodState("en{'Executing'}de{'Ausführend'}", 20, true)]
         public override void SMStarting()
         {
+            double temp = 0;
+            bool result = GetKneedingRiseTemperature(out temp);
+
+            if (!result)
+                return;
+
+
             base.SMStarting();
+        }
+
+        public override void SMRunning()
+        {
+            CalculateTargetTemperature();
+
+            base.SMRunning();
         }
 
         [ACMethodState("en{'Completed'}de{'Beendet'}", 40, true)]
         public override void SMCompleted()
         {
             base.SMCompleted();
+        }
+
+        public override void Reset()
+        {
+            ClearMyConfiguration();
+            base.Reset();
         }
 
         [ACMethodInteractionClient("", "en{'Acknowledge'}de{'Bestätigen'}", 450, false)]
@@ -208,6 +279,111 @@ namespace gipbakery.mes.processapplication
                 xmlACPropertyList.AppendChild(xmlChild);
             }
         }
+
+        public void ClearMyConfiguration()
+        {
+            using (ACMonitor.Lock(_20015_LockValue))
+            {
+                _MyConfiguration = null;
+            }
+        }
+
+        private void CalculateTargetTemperature()
+        {
+            if (!UseWaterTemp)
+            {
+                double kneedingRiseTemperature = 0;
+                bool kneedingTempResult = GetKneedingRiseTemperature(out kneedingRiseTemperature);
+                if (!kneedingTempResult)
+                    return;
+            }
+
+
+        }
+
+        //TODO: half quantity
+        private bool GetKneedingRiseTemperature(out double kneedingTemperature)
+        {
+            kneedingTemperature = 0;
+
+            var kneedingNodes = RootPW.FindChildComponents<PWBakeryKneading>();
+
+            if (kneedingNodes != null && kneedingNodes.Any())
+            {
+                if (kneedingNodes.Count > 1)
+                {
+                    //TODO: alarm
+                    return false;
+                }
+
+                PWBakeryKneading kneedingNode = kneedingNodes.FirstOrDefault();
+
+                ACMethod kneedingNodeConfiguration = kneedingNode.MyConfiguration;
+                if (kneedingNodeConfiguration == null)
+                {
+                    //TOOD alarm
+                    return false;
+                }
+
+                double temperatureRiseSlow = 0, temperatureRiseFast = 0;
+                TimeSpan kneedingSlow = TimeSpan.Zero, kneedingFast = TimeSpan.Zero;
+
+                bool fullQuantity = true;
+
+                // Full quantity
+                if (fullQuantity)
+                {
+                    ACValue tempRiseSlow = kneedingNodeConfiguration.ParameterValueList.GetACValue("TempRiseSlow");
+                    if (tempRiseSlow != null)
+                        temperatureRiseSlow = tempRiseSlow.ParamAsDouble;
+
+                    ACValue tempRiseFast = kneedingNodeConfiguration.ParameterValueList.GetACValue("TempRiseFast");
+                    if (tempRiseFast != null)
+                        temperatureRiseFast = tempRiseFast.ParamAsDouble;
+
+                    ACValue kTimeSlow = kneedingNodeConfiguration.ParameterValueList.GetACValue("KneadingTimeSlow");
+                    if (kTimeSlow != null)
+                        kneedingSlow = kTimeSlow.ParamAsTimeSpan;
+
+                    ACValue kTimeFast = kneedingNodeConfiguration.ParameterValueList.GetACValue("KneadingTimeFast");
+                    if (kTimeFast != null)
+                        kneedingFast = kTimeFast.ParamAsTimeSpan;
+
+                    kneedingTemperature = (kneedingSlow.TotalMinutes * temperatureRiseSlow) + (kneedingFast.TotalMinutes * temperatureRiseFast);
+                }
+                // Half quantity
+                else
+                {
+                    ACValue tempRiseSlow = kneedingNodeConfiguration.ParameterValueList.GetACValue("TempRiseSlowHalf");
+                    if (tempRiseSlow != null)
+                        temperatureRiseSlow = tempRiseSlow.ParamAsDouble;
+
+                    ACValue tempRiseFast = kneedingNodeConfiguration.ParameterValueList.GetACValue("TempRiseFastHalf");
+                    if (tempRiseFast != null)
+                        temperatureRiseFast = tempRiseFast.ParamAsDouble;
+
+                    ACValue kTimeSlow = kneedingNodeConfiguration.ParameterValueList.GetACValue("KneadingTimeSlowHalf");
+                    if (kTimeSlow != null)
+                        kneedingSlow = kTimeSlow.ParamAsTimeSpan;
+
+                    ACValue kTimeFast = kneedingNodeConfiguration.ParameterValueList.GetACValue("KneadingTimeFastHalf");
+                    if (kTimeFast != null)
+                        kneedingFast = kTimeFast.ParamAsTimeSpan;
+
+                    kneedingTemperature = (kneedingSlow.TotalMinutes * temperatureRiseSlow) + (kneedingFast.TotalMinutes * temperatureRiseFast);
+                }
+            }
+            return true;
+        }
+
+        private void CalculateComponents_Q_()
+        {
+
+
+
+        }
+
+
 
         #endregion
 

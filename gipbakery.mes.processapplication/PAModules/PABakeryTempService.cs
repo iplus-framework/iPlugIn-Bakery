@@ -263,7 +263,7 @@ namespace gipbakery.mes.processapplication
                     }
                 }
 
-                // Temperatures for water
+                // Temperatures for water/room
 
                 foreach (var cacheItem in Temperatures)
                 {
@@ -275,6 +275,9 @@ namespace gipbakery.mes.processapplication
 
                     //Warm water
                     InitializeWaterSensor(cacheItem, cacheItem.Key.PAPointMatIn4, db);
+
+                    //Room temp
+                    cacheItem.Value.AddRoomTemperature(cacheItem.Key);
                 }
             }
         }
@@ -365,9 +368,9 @@ namespace gipbakery.mes.processapplication
 
             TemperatureServiceInfo.ValueT = 0;
 
-            foreach (var recvPoint in Temperatures.Values)
+            foreach (var recvPoint in Temperatures)
             {
-                recvPoint.RecalculateAverageTemperature();
+                recvPoint.Value.RecalculateAverageTemperature(recvPoint.Key);
             }
 
             TemperatureServiceInfo.ValueT = 1;
@@ -473,15 +476,31 @@ namespace gipbakery.mes.processapplication
             set;
         }
 
-        public void RecalculateAverageTemperature()
+        public void RecalculateAverageTemperature(BakeryReceivingPoint recvPoint)
         {
             if (MaterialTempInfos == null)
                 return;
 
             foreach (MaterialTemperature mt in MaterialTempInfos)
             {
-                mt.AverageTemperature = mt.AverageTemperatureCalc;
+                if (mt.IsRoomTemperature)
+                {
+                    mt.AverageTemperature = recvPoint.RoomTemperature.ValueT;
+                }
+                else
+                {
+                    mt.AverageTemperature = mt.AverageTemperatureCalc;
+                }
             }
+        }
+
+        public void AddRoomTemperature(BakeryReceivingPoint recvPoint)
+        {
+            MaterialTemperature mt = new MaterialTemperature();
+            mt.IsRoomTemperature = true;
+            mt.MaterialNo = "Room temperature"; //TODO: Translation
+            mt.AverageTemperature = recvPoint.RoomTemperature.ValueT;
+            MaterialTempInfos.Add(mt);
         }
 
         public void DeInit()
@@ -508,7 +527,15 @@ namespace gipbakery.mes.processapplication
             BakeryThermometersACUrls = new List<string>();
         }
 
+        [IgnoreDataMember]
+        public bool IsRoomTemperature
+        {
+            get;
+            set;
+        }
+
         [DataMember]
+        [ACPropertyInfo(9999)]
         public string MaterialNo
         {
             get;
@@ -578,6 +605,8 @@ namespace gipbakery.mes.processapplication
             get;
             set;
         }
+
+        #region IACObject
 
         public IACObject ParentACObject => null;
 
@@ -658,6 +687,8 @@ namespace gipbakery.mes.processapplication
         {
             return this.ReflectACUrlBinding(acUrl, ref acTypeInfo, ref source, ref path, ref rightControlMode);
         }
+
+        #endregion
 
         public void OnPropertyChanged(string propertyName)
         {
