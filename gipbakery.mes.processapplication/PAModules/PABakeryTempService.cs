@@ -237,6 +237,7 @@ namespace gipbakery.mes.processapplication
                             {
                                 materialInfo = new MaterialTemperature();
                                 materialInfo.MaterialNo = config.MaterialNo;
+                                materialInfo.Water = WaterType.NotWater;
                                 tempInfo.MaterialTempInfos.Add(materialInfo);
                             }
 
@@ -254,6 +255,7 @@ namespace gipbakery.mes.processapplication
                                 {
                                     materialInfo = new MaterialTemperature();
                                     materialInfo.MaterialNo = config.MaterialNo;
+                                    materialInfo.Water = WaterType.NotWater;
                                     tempInfo.MaterialTempInfos.Add(materialInfo);
                                 }
 
@@ -268,13 +270,13 @@ namespace gipbakery.mes.processapplication
                 foreach (var cacheItem in Temperatures)
                 {
                     //Cold water
-                    InitializeWaterSensor(cacheItem, cacheItem.Key.PAPointMatIn2, db);
+                    InitializeWaterSensor(cacheItem, cacheItem.Key.PAPointMatIn2, db, WaterType.ColdWater);
 
                     //City water
-                    InitializeWaterSensor(cacheItem, cacheItem.Key.PAPointMatIn3, db);
+                    InitializeWaterSensor(cacheItem, cacheItem.Key.PAPointMatIn3, db, WaterType.CityWater);
 
                     //Warm water
-                    InitializeWaterSensor(cacheItem, cacheItem.Key.PAPointMatIn4, db);
+                    InitializeWaterSensor(cacheItem, cacheItem.Key.PAPointMatIn4, db, WaterType.WarmWater);
 
                     //Room temp
                     cacheItem.Value.AddRoomTemperature(cacheItem.Key);
@@ -306,7 +308,7 @@ namespace gipbakery.mes.processapplication
             }
         }
 
-        private void InitializeWaterSensor(KeyValuePair<BakeryReceivingPoint, BakeryRecvPointTemperature> cacheItem, PAPoint paPointMatIn, Database db)
+        private void InitializeWaterSensor(KeyValuePair<BakeryReceivingPoint, BakeryRecvPointTemperature> cacheItem, PAPoint paPointMatIn, Database db, WaterType wType)
         {
             RoutingResult rr = ACRoutingService.FindSuccessorsFromPoint(RoutingService, db, false, cacheItem.Key.ComponentClass,
                                                             paPointMatIn.PropertyInfo, PAMTank.SelRuleID_Silo, RouteDirections.Backwards,
@@ -351,6 +353,7 @@ namespace gipbakery.mes.processapplication
                         {
                             materialTempInfo = new MaterialTemperature();
                             materialTempInfo.MaterialNo = materialNo;
+                            materialTempInfo.Water = wType;
                             cacheItem.Value.MaterialTempInfos.Add(materialTempInfo);
                         }
 
@@ -419,6 +422,7 @@ namespace gipbakery.mes.processapplication
                 {
                     targetMaterialInfo = new MaterialTemperature();
                     targetMaterialInfo.MaterialNo = materialNo;
+                    targetMaterialInfo.Water = WaterType.NotWater;
                     MaterialTempInfos.Add(targetMaterialInfo);
                 }
 
@@ -459,6 +463,7 @@ namespace gipbakery.mes.processapplication
                             {
                                 mt = new MaterialTemperature();
                                 mt.MaterialNo = materialNo;
+                                mt.Water = WaterType.NotWater;
                                 MaterialTempInfos.Add(mt);
                             }
 
@@ -498,6 +503,7 @@ namespace gipbakery.mes.processapplication
         {
             MaterialTemperature mt = new MaterialTemperature();
             mt.IsRoomTemperature = true;
+            mt.Water = WaterType.NotWater;
             mt.MaterialNo = "Room temperature"; //TODO: Translation
             mt.AverageTemperature = recvPoint.RoomTemperature.ValueT;
             MaterialTempInfos.Add(mt);
@@ -606,16 +612,28 @@ namespace gipbakery.mes.processapplication
             set;
         }
 
+        [DataMember]
+        public WaterType Water
+        {
+            get;
+            set;
+        }
+
         #region IACObject
 
+        [IgnoreDataMember]
         public IACObject ParentACObject => null;
 
+        [IgnoreDataMember]
         public IACType ACType => this.ReflectACType();
 
+        [IgnoreDataMember]
         public IEnumerable<IACObject> ACContentList => this.ReflectGetACContentList();
 
+        [IgnoreDataMember]
         public string ACIdentifier => this.ReflectGetACIdentifier();
 
+        [IgnoreDataMember]
         public string ACCaption => this.ACIdentifier;
 
         public event PropertyChangedEventHandler PropertyChanged;
@@ -694,6 +712,14 @@ namespace gipbakery.mes.processapplication
         {
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
         }
+    }
+
+    public enum WaterType : short
+    {
+        NotWater = 0,
+        ColdWater = 10,
+        CityWater = 20,
+        WarmWater = 30
     }
 
     #endregion

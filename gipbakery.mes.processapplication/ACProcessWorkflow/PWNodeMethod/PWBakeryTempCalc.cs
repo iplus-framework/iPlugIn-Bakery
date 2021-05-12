@@ -7,6 +7,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Xml;
+using gip.mes.datamodel;
 
 namespace gipbakery.mes.processapplication
 {
@@ -144,6 +145,8 @@ namespace gipbakery.mes.processapplication
             }
         }
 
+        private Type _PWManualWeighingType = typeof(PWManualWeighing);
+
         #endregion
 
 
@@ -189,13 +192,6 @@ namespace gipbakery.mes.processapplication
         [ACMethodState("en{'Executing'}de{'Ausführend'}", 20, true)]
         public override void SMStarting()
         {
-            double temp = 0;
-            bool result = GetKneedingRiseTemperature(out temp);
-
-            if (!result)
-                return;
-
-
             base.SMStarting();
         }
 
@@ -290,19 +286,50 @@ namespace gipbakery.mes.processapplication
 
         private void CalculateTargetTemperature()
         {
-            if (!UseWaterTemp)
+            PWMethodProduction pwMethodProduction = ParentPWMethod<PWMethodProduction>();
+            // If dosing is not for production, then do nothing
+            if (pwMethodProduction == null)
+                return;
+
+            BakeryReceivingPoint recvPoint = ParentPWGroup.AccessedProcessModule as BakeryReceivingPoint;
+            if (recvPoint == null)
             {
-                double kneedingRiseTemperature = 0;
-                bool kneedingTempResult = GetKneedingRiseTemperature(out kneedingRiseTemperature);
-                if (!kneedingTempResult)
-                    return;
+                //TODO: Error msg: Accessed process module on PWGroup is null or is not BakeryReceivingPoint!
+                return;
+            }
+
+            //TODO: check if something changed (water temp or dough temp ....)
+
+            using (Database db = new gip.core.datamodel.Database())
+            using (DatabaseApp dbApp = new DatabaseApp())
+            {
+                // Dough temperature active
+                if (!UseWaterTemp)
+                {
+                    if (DoughTemp == null)
+                    {
+                        //TODO: alarm
+                        return;
+                    }
+
+                    double kneedingRiseTemperature = 0;
+                    bool kneedingTempResult = GetKneedingRiseTemperature(dbApp, out kneedingRiseTemperature);
+                    if (!kneedingTempResult)
+                        return;
+
+                    double recvPointCorrTemp = recvPoint.DoughCorrTemp.ValueT;
+
+                    double doughTargetTemp = DoughTemp.Value - kneedingRiseTemperature + recvPointCorrTemp;
+
+                    double componentsQ = CalculateComponents_Q_(recvPoint, dbApp, pwMethodProduction, kneedingRiseTemperature);
+                }
             }
 
 
         }
 
         //TODO: half quantity
-        private bool GetKneedingRiseTemperature(out double kneedingTemperature)
+        private bool GetKneedingRiseTemperature(DatabaseApp dbApp, out double kneedingTemperature)
         {
             kneedingTemperature = 0;
 
@@ -376,14 +403,205 @@ namespace gipbakery.mes.processapplication
             return true;
         }
 
-        private void CalculateComponents_Q_()
+        private double CalculateComponents_Q_(BakeryReceivingPoint recvPoint, DatabaseApp dbApp, PWMethodProduction pwMethodProduction, double kneedingTemperature)
         {
+            ACValueList componentTemperaturesService = recvPoint.GetComponentTemperatures();
+
+            List<MaterialTemperature> tempFromService = componentTemperaturesService.Select(c => c.Value as MaterialTemperature).ToList();
+
+            string coldWater = tempFromService.FirstOrDefault(c => c.Water == WaterType.ColdWater)?.MaterialNo;
+            string cityWater = tempFromService.FirstOrDefault(c => c.Water == WaterType.CityWater)?.MaterialNo;
+            string warmWater = tempFromService.FirstOrDefault(c => c.Water == WaterType.WarmWater)?.MaterialNo;
+            string dryIce = "";
+
+            if (string.IsNullOrEmpty(coldWater) || string.IsNullOrEmpty(cityWater) || string.IsNullOrEmpty(warmWater) || string.IsNullOrEmpty(dryIce))
+            {
+                //TODO error
+            }
+
+            ProdOrderPartslistPos endBatchPos = pwMethodProduction.CurrentProdOrderPartslistPos.FromAppContext<ProdOrderPartslistPos>(dbApp);
+
+            if (pwMethodProduction.CurrentProdOrderBatch == null)
+            {
+                // Error50276: No batch assigned to last intermediate material of this workflow
+                Msg msg = new Msg(this, eMsgLevel.Error, PWClassName, "StartManualWeighingProd(30)", 1010, "Error50276");
+
+                //if (IsAlarmActive(ProcessAlarm, msg.Message) == null)
+                //    Messages.LogError(this.GetACUrl(), msg.ACIdentifier, msg.InnerMessage);
+                //OnNewAlarmOccurred(ProcessAlarm, msg, false);
+                //return StartNextCompResult.CycleWait;
+            }
+
+            var contentACClassWFVB = ContentACClassWF.FromAppContext<gip.mes.datamodel.ACClassWF>(dbApp);
+            ProdOrderBatch batch = pwMethodProduction.CurrentProdOrderBatch.FromAppContext<ProdOrderBatch>(dbApp);
+            ProdOrderBatchPlan batchPlan = batch.ProdOrderBatchPlan;
+
+            PartslistACClassMethod plMethod = endBatchPos.ProdOrderPartslist.Partslist.PartslistACClassMethod_Partslist.FirstOrDefault();
+            ProdOrderPartslist currentProdOrderPartslist = endBatchPos.ProdOrderPartslist.FromAppContext<ProdOrderPartslist>(dbApp);
+
+            IEnumerable<ProdOrderPartslistPos> intermediates = currentProdOrderPartslist.ProdOrderPartslistPos_ProdOrderPartslist
+                                                                                        .Where(c => c.MaterialID.HasValue
+                                                                                                 && c.MaterialPosType == GlobalApp.MaterialPosTypes.InwardIntern
+                                                                                                && !c.ParentProdOrderPartslistPosID.HasValue)
+                                                                                        .SelectMany(p => p.ProdOrderPartslistPos_ParentProdOrderPartslistPos)
+                                                                                        .ToArray();
 
 
+            List<MaterialTemperature> compTemps = DetermineComponentsTemperature(currentProdOrderPartslist, intermediates, recvPoint, plMethod, dbApp, tempFromService, coldWater, 
+                                                                                 cityWater, warmWater, dryIce);
 
+
+            var relations = intermediates.Select(c => new Tuple<bool?, ProdOrderPartslistPos>(c.Material.ACProperties.GetOrCreateACPropertyExtByName("UseInTemperatureCalculation", false)?.Value as bool?, c))
+                                         .Where(c => c.Item1.HasValue && c.Item1.Value)
+                                         .SelectMany(x => x.Item2.ProdOrderPartslistPosRelation_TargetProdOrderPartslistPos)
+                                         .Where(c => c.SourceProdOrderPartslistPos.IsOutwardRoot
+                                                  && c.SourceProdOrderPartslistPos.Material.MaterialNo != coldWater
+                                                  && c.SourceProdOrderPartslistPos.Material.MaterialNo != cityWater
+                                                  && c.SourceProdOrderPartslistPos.Material.MaterialNo != warmWater
+                                                  && c.SourceProdOrderPartslistPos.Material.MaterialNo != dryIce).ToArray();
+
+            double totalQ = 0;
+
+            //n_Q_komp += n_C_spez * nSollKg * (n_T_TeigSollTempVorKneten - n_T_komp);
+
+            foreach (ProdOrderPartslistPosRelation rel in relations)
+            {
+                double componentTemperature = recvPoint.RoomTemperature.ValueT;
+                MaterialTemperature compTemp = compTemps.FirstOrDefault(c => c.Material.MaterialNo == rel.SourceProdOrderPartslistPos.Material.MaterialNo);
+                if (compTemp != null)
+                    componentTemperature = compTemp.AverageTemperature;
+
+                totalQ += rel.SourceProdOrderPartslistPos.Material.SpecHeatCapacity * rel.TargetQuantity * (kneedingTemperature - componentTemperature);
+            }
+
+            return totalQ;
         }
 
+        private List<MaterialTemperature> DetermineComponentsTemperature(ProdOrderPartslist prodOrderPartslist, IEnumerable<ProdOrderPartslistPos> intermediates, 
+                                                                         BakeryReceivingPoint recvPoint, PartslistACClassMethod plMethod, DatabaseApp dbApp, 
+                                                                         List<MaterialTemperature> tempFromService, string matNoColdWater, 
+                                                                         string matNoCityWater, string matNoWarmWater, string matNoDryIce)
+        {
+            IEnumerable<PartslistPos> partslistPosList = prodOrderPartslist.Partslist?.PartslistPos_Partslist.Where(c => c.IsOutwardRoot).ToArray();
 
+            List<MaterialTemperature> componentTemp = partslistPosList.Select(c => new MaterialTemperature() { Material = c.Material }).ToList();
+
+            DetermineCompTempFromPartslistOrMaterial(componentTemp, partslistPosList, recvPoint.RoomTemperature.ValueT);
+
+            if (plMethod != null)
+            {
+                var intermediatesManual = intermediates.Where(c => c.Material.MaterialWFConnection_Material
+                                                                             .Any(x => x.MaterialWFACClassMethodID == plMethod.MaterialWFACClassMethodID
+                                                                          && _PWManualWeighingType.IsAssignableFrom(x.ACClassWF.PWACClass
+                                                                                                                     .FromIPlusContext<gip.core.datamodel.ACClass>(dbApp.ContextIPlus)
+                                                                                                                     .ObjectType)));
+
+                if (intermediatesManual != null && intermediatesManual.Any())
+                {
+                    var components = intermediatesManual.SelectMany(c => c.ProdOrderPartslistPosRelation_TargetProdOrderPartslistPos.Select(x => x.SourceProdOrderPartslistPos.Material))
+                                                        .ToArray().Where(m => m.MaterialNo != matNoColdWater && m.MaterialNo != matNoCityWater && m.MaterialNo != matNoWarmWater
+                                                                           && m.MaterialNo != matNoDryIce);
+
+                    SetManualCompTemp(componentTemp, components, recvPoint.RoomTemperature.ValueT);
+                }
+
+            }
+
+            SetCompTempFromService(componentTemp, tempFromService, recvPoint.RoomTemperature.ValueT);
+
+            return componentTemp;
+        }
+
+        //TODO: double comparation with 0
+        private void DetermineCompTempFromPartslistOrMaterial(List<MaterialTemperature> componentTemp, IEnumerable<PartslistPos> partslistPosList, double roomTemp)
+        {
+            foreach (PartslistPos pos in partslistPosList)
+            {
+                if (pos.ACProperties == null)
+                    continue;
+
+                ACPropertyExt ext = pos.ACProperties.GetOrCreateACPropertyExtByName("Temperature", false);
+                if(ext != null)
+                {
+                    double? value = (ext.Value as double?);
+                    if (value.HasValue && value.Value != 0)
+                    {
+                        MaterialTemperature mt = componentTemp.FirstOrDefault(c => c.Material.MaterialID == pos.Material.MaterialID);
+                        if (mt != null)
+                            mt.AverageTemperature = value.Value;
+                        continue;
+                    }
+                }
+
+                ext = pos.ACProperties.GetOrCreateACPropertyExtByName("UseRoomTemperature", false);
+                if (ext != null)
+                {
+                    bool? value = (ext.Value as bool?);
+                    if (value.HasValue && value.Value)
+                    {
+                        MaterialTemperature mt = componentTemp.FirstOrDefault(c => c.Material.MaterialID == pos.Material.MaterialID);
+                        if (mt != null)
+                            mt.AverageTemperature = roomTemp;
+                        continue;
+                    }
+                }
+
+                ext = pos.Material.ACProperties.GetOrCreateACPropertyExtByName("Temperature", false);
+                if (ext != null)
+                {
+                    double? value = (ext.Value as double?);
+                    if (value.HasValue && value.Value != 0)
+                    {
+                        MaterialTemperature mt = componentTemp.FirstOrDefault(c => c.Material.MaterialID == pos.Material.MaterialID);
+                        if (mt != null)
+                            mt.AverageTemperature = value.Value;
+                        continue;
+                    }
+                }
+
+                ext = pos.Material.ACProperties.GetOrCreateACPropertyExtByName("UseRoomTemperature", false);
+                if (ext != null)
+                {
+                    bool? value = (ext.Value as bool?);
+                    if (value.HasValue && value.Value)
+                    {
+                        MaterialTemperature mt = componentTemp.FirstOrDefault(c => c.Material.MaterialID == pos.Material.MaterialID);
+                        if (mt != null)
+                            mt.AverageTemperature = roomTemp;
+                        continue;
+                    }
+                }
+            }
+        }
+
+        private void SetManualCompTemp(List<MaterialTemperature> componentTempList, IEnumerable<Material> manualComponents, double roomTemp)
+        {
+            foreach(Material manualComponent in manualComponents)
+            {
+                MaterialTemperature mt = componentTempList.FirstOrDefault(c => c.Material.MaterialNo == manualComponent.MaterialNo && c.AverageTemperature == 0);
+                if (mt != null)
+                    mt.AverageTemperature = roomTemp;
+
+            }
+        }
+
+        private void SetCompTempFromService(List<MaterialTemperature> componentTempList, List<MaterialTemperature> serviceTempList, double roomTemp)
+        {
+            foreach (var compTemp in componentTempList.Where(c => c.AverageTemperature == 0))
+            {
+                MaterialTemperature serviceTemp = serviceTempList.FirstOrDefault(c => c.MaterialNo == compTemp.Material.MaterialNo);
+                if (serviceTemp != null)
+                {
+                    compTemp.AverageTemperature = serviceTemp.AverageTemperature;
+                }
+                else
+                {
+                    //TODO: check if this OK
+                    //If in service temperature not exist for this component then use room temperature
+                    compTemp.AverageTemperature = roomTemp;
+                }
+            }
+        }
 
         #endregion
 

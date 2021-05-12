@@ -111,7 +111,7 @@ namespace gipbakery.mes.processapplication
                 {
                     Task.Run(() =>
                     {
-                        ACValueList result = TemperatureServiceProxy.ValueT.ExecuteMethod(PABakeryTempService.MN_GetAverageTemperatures, ParentBSOWCS.SelectedWorkCenterItem.ProcessModule.ComponentClass.ACClassID) as ACValueList;
+                        ACValueList result = TemperatureServiceProxy.ValueT.ExecuteMethod(PABakeryTempService.MN_GetAverageTemperatures, ParentBSOWCS.CurrentProcessModule.ComponentClass.ACClassID) as ACValueList;
                         if (result != null && result.Any())
                         {
                             foreach (ACValue acValue in result)
@@ -129,7 +129,7 @@ namespace gipbakery.mes.processapplication
                 {
                     Task.Run(() =>
                     {
-                        ACValueList result = TemperatureServiceProxy.ValueT.ExecuteMethod(PABakeryTempService.MN_GetTemperaturesInfo, ParentBSOWCS.SelectedWorkCenterItem.ProcessModule.ComponentClass.ACClassID) as ACValueList;
+                        ACValueList result = TemperatureServiceProxy.ValueT.ExecuteMethod(PABakeryTempService.MN_GetTemperaturesInfo, ParentBSOWCS.CurrentProcessModule.ComponentClass.ACClassID) as ACValueList;
                         if (result != null && result.Any())
                         {
                             var materialTempList = result.Select(c => c.Value as MaterialTemperature).ToArray();

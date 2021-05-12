@@ -60,6 +60,55 @@ namespace gipbakery.mes.processapplication
             set;
         }
 
+        private bool _SearchTempService = true;
+        private ACRef<ACComponent> _TemperatureService;
+
+        public ACComponent TemperatureService
+        {
+            get
+            {
+                //TODO: temp service from acurl config
+
+                if (_TemperatureService != null)
+                    return _TemperatureService.ValueT;
+
+                if (_SearchTempService)
+                {
+                    var serviceProj = Root.ACUrlCommand("\\Service") as ACComponent;
+                    if (serviceProj != null)
+                    {
+                        ACComponent comp = serviceProj.FindChildComponents<PABakeryTempService>(c => c is PABakeryTempService).FirstOrDefault();
+                        if (comp != null)
+                        {
+                            _TemperatureService = new ACRef<ACComponent>(comp, this);
+                            return _TemperatureService.ValueT;
+                        }
+                    }
+
+                    _SearchTempService = false;
+                }
+                return null;
+            }
+        }
+
+        #endregion
+
+        #region Methods 
+
+        /// <summary>
+        /// Get component(material) temperatures from the temperature service.
+        /// </summary>
+        /// <returns>Returns the list of ACValue(ACIdentifier = MaterialNo; Value = MaterialTemperature)</returns>
+        [ACMethodInfo("","",800)]
+        public ACValueList GetComponentTemperatures()
+        {
+            if (TemperatureService == null)
+                return null;
+
+            return TemperatureService.ExecuteMethod(PABakeryTempService.MN_GetTemperaturesInfo, ComponentClass.ACClassID) as ACValueList;
+        }
+
+
         #endregion
 
         #region Points
@@ -70,7 +119,7 @@ namespace gipbakery.mes.processapplication
         /// <value>
         /// Cold water Point
         /// </value>
-        [ACPropertyConnectionPoint(9999, "PointMaterial")]
+        [ACPropertyConnectionPoint(9999, "PointMaterial", "en{'ONLY for cold water'}de{'NUR für kaltes Wasser'}")]
         public PAPoint PAPointMatIn2
         {
             get
@@ -86,7 +135,7 @@ namespace gipbakery.mes.processapplication
         /// <value>
         /// City water Point
         /// </value>
-        [ACPropertyConnectionPoint(9999, "PointMaterial")]
+        [ACPropertyConnectionPoint(9999, "PointMaterial", "en{'ONLY for city water'}de{'NUR für Stadtwasser'}")]
         public PAPoint PAPointMatIn3
         {
             get
@@ -102,7 +151,7 @@ namespace gipbakery.mes.processapplication
         /// <value>
         /// Warm water Point
         /// </value>
-        [ACPropertyConnectionPoint(9999, "PointMaterial")]
+        [ACPropertyConnectionPoint(9999, "PointMaterial", "en{'ONLY for warm water'}de{'NUR für Warmwasser'}")]
         public PAPoint PAPointMatIn4
         {
             get
