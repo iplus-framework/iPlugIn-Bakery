@@ -35,6 +35,31 @@ namespace gipbakery.mes.processapplication
             set;
         }
 
+        #region Properties => Temperature dialog
+
+        private bool _IsOnlyWaterTemperatureCalculation;
+        [ACPropertyInfo(804)]
+        public bool IsOnlyWaterTemperatureCalculation
+        {
+            get => _IsOnlyWaterTemperatureCalculation;
+            set
+            {
+                _IsOnlyWaterTemperatureCalculation = value;
+                OnPropertyChanged("IsOnlyWaterTemperatureCalculation");
+            }
+        }
+
+        private bool _IsDoughTemperatureCalculation;
+        [ACPropertyInfo(805)]
+        public bool IsDoughTemperatureCalculation
+        {
+            get => _IsDoughTemperatureCalculation;
+            set
+            {
+                _IsDoughTemperatureCalculation = value;
+                OnPropertyChanged("IsDoughTemperatureCalculation");
+            }
+        }
 
         private double _DoughTargetTemperature;
         [ACPropertyInfo(800)]
@@ -86,6 +111,8 @@ namespace gipbakery.mes.processapplication
 
         #endregion
 
+        #endregion
+
         #region Methods
 
         [ACMethodInfo("","",800)]
@@ -97,15 +124,6 @@ namespace gipbakery.mes.processapplication
         public bool IsShowTemperaturesDialog()
         {
             return true;
-        }
-
-        [ACMethodInfo("", "en{'Apply'}de{'Anwenden'}", 800)]
-        public void ApplyTemperatures()
-        {
-
-
-
-            CloseTopDialog();
         }
 
         public override void OnGetPWGroup(IACComponentPWNode pwGroup)
@@ -143,7 +161,7 @@ namespace gipbakery.mes.processapplication
                 BakeryTempCalcACState.PropertyChanged += BakeryTempCalcACState_PropertyChanged;
             }
 
-            GetTemperatures();
+            GetTemperaturesFromPWBakeryTempCalc();
 
         }
 
@@ -153,7 +171,11 @@ namespace gipbakery.mes.processapplication
             {
                 if( BakeryTempCalcACState.ValueT == ACStateEnum.SMRunning)
                 {
-                    
+                    ItemFunction.IsFunctionActive = true;
+                }
+                else
+                {
+                    ItemFunction.IsFunctionActive = false;
                 }
             }
         }
@@ -163,7 +185,7 @@ namespace gipbakery.mes.processapplication
 
         }
 
-        private void GetTemperatures()
+        private void GetTemperaturesFromPWBakeryTempCalc()
         {
             ACMethod config = BakeryTempCalculator.ValueT.ACUrlCommand("MyConfiguration") as ACMethod;
             if (config != null)
@@ -179,9 +201,66 @@ namespace gipbakery.mes.processapplication
                 {
                     WaterTargetTemperature = wTemp.ParamAsDouble;
                 }
+
+                ACValue onlyForWaterCalc = config.ParameterValueList.GetACValue("UseWaterTemp");
+                if (onlyForWaterCalc != null)
+                {
+                    IsOnlyWaterTemperatureCalculation = onlyForWaterCalc.ParamAsBoolean;
+                    if (IsOnlyWaterTemperatureCalculation)
+                    {
+                        IsDoughTemperatureCalculation = false;
+                    }
+                    else
+                    {
+                        IsDoughTemperatureCalculation = true;
+                    }
+                }
             }
         }
 
+        #region Methods => Temperature dialog
+
+        [ACMethodInfo("","",880, true)]
+        public void DoughTempCorrPlus()
+        {
+            DoughCorrTemperature++;
+        }
+
+        [ACMethodInfo("", "", 880, true)]
+        public void DoughTempCorrMinus()
+        {
+            DoughCorrTemperature--;
+        }
+
+        [ACMethodInfo("", "", 880, true)]
+        public void WaterTempPlus()
+        {
+            WaterTargetTemperature++;
+        }
+
+        [ACMethodInfo("", "", 880, true)]
+        public void WaterTempMinus()
+        {
+            WaterTargetTemperature--;
+        }
+
+        [ACMethodInfo("", "en{'Apply'}de{'Anwenden'}", 800)]
+        public void ApplyTemperatures()
+        {
+            CurrentProcessModule.ACUrlCommand("DoughCorrTemp", DoughCorrTemperature); //Save dough correct temperature on bakery recieving point
+
+            BakeryTempCalculator.ValueT.ExecuteMethod("SaveWorkplaceTemperatureSettings", WaterTargetTemperature , IsOnlyWaterTemperatureCalculation);//TODO parameters
+            CloseTopDialog();
+        }
+
+        public bool IsEnabledApplyTemperatures()
+        {
+            return BakeryTempCalculator != null && BakeryTempCalculator.ValueT != null && CurrentProcessModule != null;
+        }
+
+        #endregion
+
+        //TODO: Handle execute ACMethods
 
         #endregion
     }

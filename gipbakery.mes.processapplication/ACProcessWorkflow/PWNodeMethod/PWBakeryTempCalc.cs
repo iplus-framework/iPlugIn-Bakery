@@ -321,9 +321,61 @@ namespace gipbakery.mes.processapplication
 
                     double recvPointCorrTemp = recvPoint.DoughCorrTemp.ValueT;
 
-                    double doughTargetTemp = DoughTemp.Value - kneedingRiseTemperature + recvPointCorrTemp;
+                    double doughTargetTempBeforeKneeding = DoughTemp.Value - kneedingRiseTemperature + recvPointCorrTemp;
 
-                    double componentsQ = CalculateComponents_Q_(recvPoint, dbApp, pwMethodProduction, kneedingRiseTemperature);
+                    ACValueList componentTemperaturesService = recvPoint.GetComponentTemperatures();
+                    List<MaterialTemperature> tempFromService = componentTemperaturesService.Select(c => c.Value as MaterialTemperature).ToList();
+
+                    string coldWater = tempFromService.FirstOrDefault(c => c.Water == WaterType.ColdWater)?.MaterialNo;
+                    string cityWater = tempFromService.FirstOrDefault(c => c.Water == WaterType.CityWater)?.MaterialNo;
+                    string warmWater = tempFromService.FirstOrDefault(c => c.Water == WaterType.WarmWater)?.MaterialNo;
+                    string dryIce = "";
+
+                    if (string.IsNullOrEmpty(coldWater) || string.IsNullOrEmpty(cityWater) || string.IsNullOrEmpty(warmWater) || string.IsNullOrEmpty(dryIce))
+                    {
+                        //TODO error
+                    }
+
+                    ProdOrderPartslistPos endBatchPos = pwMethodProduction.CurrentProdOrderPartslistPos.FromAppContext<ProdOrderPartslistPos>(dbApp);
+
+                    if (pwMethodProduction.CurrentProdOrderBatch == null)
+                    {
+                        // Error50276: No batch assigned to last intermediate material of this workflow
+                        Msg msg = new Msg(this, eMsgLevel.Error, PWClassName, "StartManualWeighingProd(30)", 1010, "Error50276");
+
+                        //if (IsAlarmActive(ProcessAlarm, msg.Message) == null)
+                        //    Messages.LogError(this.GetACUrl(), msg.ACIdentifier, msg.InnerMessage);
+                        //OnNewAlarmOccurred(ProcessAlarm, msg, false);
+                        //return StartNextCompResult.CycleWait;
+                    }
+
+                    var contentACClassWFVB = ContentACClassWF.FromAppContext<gip.mes.datamodel.ACClassWF>(dbApp);
+                    ProdOrderBatch batch = pwMethodProduction.CurrentProdOrderBatch.FromAppContext<ProdOrderBatch>(dbApp);
+                    ProdOrderBatchPlan batchPlan = batch.ProdOrderBatchPlan;
+
+                    PartslistACClassMethod plMethod = endBatchPos.ProdOrderPartslist.Partslist.PartslistACClassMethod_Partslist.FirstOrDefault();
+                    ProdOrderPartslist currentProdOrderPartslist = endBatchPos.ProdOrderPartslist.FromAppContext<ProdOrderPartslist>(dbApp);
+
+                    IEnumerable<ProdOrderPartslistPos> intermediates = currentProdOrderPartslist.ProdOrderPartslistPos_ProdOrderPartslist
+                                                                                                .Where(c => c.MaterialID.HasValue
+                                                                                                         && c.MaterialPosType == GlobalApp.MaterialPosTypes.InwardIntern
+                                                                                                        && !c.ParentProdOrderPartslistPosID.HasValue)
+                                                                                                .SelectMany(p => p.ProdOrderPartslistPos_ParentProdOrderPartslistPos)
+                                                                                                .ToArray();
+
+
+                    var relations = intermediates.Select(c => new Tuple<bool?, ProdOrderPartslistPos>(c.Material.ACProperties
+                                                             .GetOrCreateACPropertyExtByName("UseInTemperatureCalculation", false)?.Value as bool?, c))
+                                                 .Where(c => c.Item1.HasValue && c.Item1.Value)
+                                                 .SelectMany(x => x.Item2.ProdOrderPartslistPosRelation_TargetProdOrderPartslistPos)
+                                                 .Where(c => c.SourceProdOrderPartslistPos.IsOutwardRoot).ToArray();
+
+
+                    double componentsQ = CalculateComponents_Q_(recvPoint, dbApp, pwMethodProduction, kneedingRiseTemperature, currentProdOrderPartslist, intermediates,
+                                                                relations, plMethod, tempFromService, coldWater, cityWater, warmWater, dryIce);
+
+                    double suggestedWaterTemp = CalculateWaterTemperatureSuggestion(UseWaterTemp, relations, DoughTemp.Value, doughTargetTempBeforeKneeding,
+                                                                                    componentsQ, cityWater);
                 }
             }
 
@@ -405,68 +457,25 @@ namespace gipbakery.mes.processapplication
             return true;
         }
 
-        private double CalculateComponents_Q_(BakeryReceivingPoint recvPoint, DatabaseApp dbApp, PWMethodProduction pwMethodProduction, double kneedingTemperature)
+        private double CalculateComponents_Q_(BakeryReceivingPoint recvPoint, DatabaseApp dbApp, PWMethodProduction pwMethodProduction, double kneedingTemperature,
+                                              ProdOrderPartslist poPartslist, IEnumerable<ProdOrderPartslistPos> intermediates, IEnumerable<ProdOrderPartslistPosRelation> relations,
+                                              PartslistACClassMethod plMethod, List<MaterialTemperature> tempFromService, string coldWaterMatNo, string cityWaterMatNo, 
+                                              string warmWaterMatNo, string dryIceMatNo)
         {
-            ACValueList componentTemperaturesService = recvPoint.GetComponentTemperatures();
 
-            List<MaterialTemperature> tempFromService = componentTemperaturesService.Select(c => c.Value as MaterialTemperature).ToList();
+            List<MaterialTemperature> compTemps = DetermineComponentsTemperature(poPartslist, intermediates, recvPoint, plMethod, dbApp, tempFromService, coldWaterMatNo,
+                                                                                 cityWaterMatNo, warmWaterMatNo, dryIceMatNo);
 
-            string coldWater = tempFromService.FirstOrDefault(c => c.Water == WaterType.ColdWater)?.MaterialNo;
-            string cityWater = tempFromService.FirstOrDefault(c => c.Water == WaterType.CityWater)?.MaterialNo;
-            string warmWater = tempFromService.FirstOrDefault(c => c.Water == WaterType.WarmWater)?.MaterialNo;
-            string dryIce = "";
-
-            if (string.IsNullOrEmpty(coldWater) || string.IsNullOrEmpty(cityWater) || string.IsNullOrEmpty(warmWater) || string.IsNullOrEmpty(dryIce))
-            {
-                //TODO error
-            }
-
-            ProdOrderPartslistPos endBatchPos = pwMethodProduction.CurrentProdOrderPartslistPos.FromAppContext<ProdOrderPartslistPos>(dbApp);
-
-            if (pwMethodProduction.CurrentProdOrderBatch == null)
-            {
-                // Error50276: No batch assigned to last intermediate material of this workflow
-                Msg msg = new Msg(this, eMsgLevel.Error, PWClassName, "StartManualWeighingProd(30)", 1010, "Error50276");
-
-                //if (IsAlarmActive(ProcessAlarm, msg.Message) == null)
-                //    Messages.LogError(this.GetACUrl(), msg.ACIdentifier, msg.InnerMessage);
-                //OnNewAlarmOccurred(ProcessAlarm, msg, false);
-                //return StartNextCompResult.CycleWait;
-            }
-
-            var contentACClassWFVB = ContentACClassWF.FromAppContext<gip.mes.datamodel.ACClassWF>(dbApp);
-            ProdOrderBatch batch = pwMethodProduction.CurrentProdOrderBatch.FromAppContext<ProdOrderBatch>(dbApp);
-            ProdOrderBatchPlan batchPlan = batch.ProdOrderBatchPlan;
-
-            PartslistACClassMethod plMethod = endBatchPos.ProdOrderPartslist.Partslist.PartslistACClassMethod_Partslist.FirstOrDefault();
-            ProdOrderPartslist currentProdOrderPartslist = endBatchPos.ProdOrderPartslist.FromAppContext<ProdOrderPartslist>(dbApp);
-
-            IEnumerable<ProdOrderPartslistPos> intermediates = currentProdOrderPartslist.ProdOrderPartslistPos_ProdOrderPartslist
-                                                                                        .Where(c => c.MaterialID.HasValue
-                                                                                                 && c.MaterialPosType == GlobalApp.MaterialPosTypes.InwardIntern
-                                                                                                && !c.ParentProdOrderPartslistPosID.HasValue)
-                                                                                        .SelectMany(p => p.ProdOrderPartslistPos_ParentProdOrderPartslistPos)
-                                                                                        .ToArray();
-
-
-            List<MaterialTemperature> compTemps = DetermineComponentsTemperature(currentProdOrderPartslist, intermediates, recvPoint, plMethod, dbApp, tempFromService, coldWater, 
-                                                                                 cityWater, warmWater, dryIce);
-
-
-            var relations = intermediates.Select(c => new Tuple<bool?, ProdOrderPartslistPos>(c.Material.ACProperties.GetOrCreateACPropertyExtByName("UseInTemperatureCalculation", false)?.Value as bool?, c))
-                                         .Where(c => c.Item1.HasValue && c.Item1.Value)
-                                         .SelectMany(x => x.Item2.ProdOrderPartslistPosRelation_TargetProdOrderPartslistPos)
-                                         .Where(c => c.SourceProdOrderPartslistPos.IsOutwardRoot
-                                                  && c.SourceProdOrderPartslistPos.Material.MaterialNo != coldWater
-                                                  && c.SourceProdOrderPartslistPos.Material.MaterialNo != cityWater
-                                                  && c.SourceProdOrderPartslistPos.Material.MaterialNo != warmWater
-                                                  && c.SourceProdOrderPartslistPos.Material.MaterialNo != dryIce).ToArray();
+            var relationsWithoutWater = relations.Where(c => c.SourceProdOrderPartslistPos.Material.MaterialNo != coldWaterMatNo
+                                                          && c.SourceProdOrderPartslistPos.Material.MaterialNo != cityWaterMatNo
+                                                          && c.SourceProdOrderPartslistPos.Material.MaterialNo != warmWaterMatNo
+                                                          && c.SourceProdOrderPartslistPos.Material.MaterialNo != dryIceMatNo);
 
             double totalQ = 0;
 
             //n_Q_komp += n_C_spez * nSollKg * (n_T_TeigSollTempVorKneten - n_T_komp);
 
-            foreach (ProdOrderPartslistPosRelation rel in relations)
+            foreach (ProdOrderPartslistPosRelation rel in relationsWithoutWater)
             {
                 double componentTemperature = recvPoint.RoomTemperature.ValueT;
                 MaterialTemperature compTemp = compTemps.FirstOrDefault(c => c.Material.MaterialNo == rel.SourceProdOrderPartslistPos.Material.MaterialNo);
@@ -479,10 +488,55 @@ namespace gipbakery.mes.processapplication
             return totalQ;
         }
 
-        private double CalculateWaterTemperatureSuggestion()
+
+        private double CalculateWaterTemperatureSuggestion(bool calculateWaterTemp, IEnumerable<ProdOrderPartslistPosRelation> relations, double doughTargetTempAfterKneeding,
+                                                           double doughTargetTempBeforeKneeding, double componentsQ, string cityWaterMatNo)
         {
-            return 0;
+            double suggestedWaterTemperature = 20;
+            double defaultWaterTemp = 0; //TODO
+
+            bool isOnlyWater = relations.GroupBy(c => c.SourceProdOrderPartslistPos).Count(x => x.Key.Material.MaterialNo == cityWaterMatNo) == 1;
+            var waterComp = relations.FirstOrDefault(c => c.SourceProdOrderPartslistPos.Material.MaterialNo == cityWaterMatNo);
+            double? waterTargetQuantity = waterComp?.TargetQuantity;
+            double? waterSpecHeatCapacity = waterComp.SourceProdOrderPartslistPos.Material.SpecHeatCapacity;
+
+            if (calculateWaterTemp)
+            {
+                if (isOnlyWater)
+                {
+                    suggestedWaterTemperature = doughTargetTempAfterKneeding;
+                }
+                else
+                {
+                    double waterTemp = WaterTemp.Value;
+
+                    if (waterTemp > 0.00001 || waterTemp < -0.0001)
+                    {
+                        suggestedWaterTemperature = WaterTemp.Value;
+                    }
+                }
+            }
+            else
+            {
+                if (isOnlyWater)
+                {
+                    suggestedWaterTemperature = doughTargetTempAfterKneeding;
+                }
+                else if( waterTargetQuantity.HasValue && waterSpecHeatCapacity.HasValue && waterTargetQuantity > 0.00001 && waterSpecHeatCapacity > 0.00001)
+                {
+                    suggestedWaterTemperature = (componentsQ / (waterTargetQuantity.Value * waterSpecHeatCapacity.Value)) + doughTargetTempBeforeKneeding;
+                }
+            }
+
+
+            return suggestedWaterTemperature;
         }
+
+        private void CalculateWaterTypes()
+        {
+
+        }
+
 
         private List<MaterialTemperature> DetermineComponentsTemperature(ProdOrderPartslist prodOrderPartslist, IEnumerable<ProdOrderPartslistPos> intermediates, 
                                                                          BakeryReceivingPoint recvPoint, PartslistACClassMethod plMethod, DatabaseApp dbApp, 
@@ -608,6 +662,95 @@ namespace gipbakery.mes.processapplication
                     compTemp.AverageTemperature = roomTemp;
                 }
             }
+        }
+
+        [ACMethodInfo("","",9999, true)]
+        public void SaveWorkplaceTemperatureSettings(double waterTemperature, bool isOnlyForWaterTempCalculation)
+        {
+            using (DatabaseApp dbApp = new DatabaseApp())
+            {
+                IACConfigStore partslistConfigStore = (MandatoryConfigStores?.FirstOrDefault(c => c is Partslist) as Partslist)?.FromAppContext<Partslist>(dbApp);
+                if (partslistConfigStore != null)
+                {
+                    Guid? accessedProcessModuleID = ParentPWGroup?.AccessedProcessModule?.ComponentClass?.ACClassID;
+
+                    if (accessedProcessModuleID.HasValue)
+                    {
+                        var configEntries = partslistConfigStore.ConfigurationEntries.Where(c => c.PreConfigACUrl == PreValueACUrl && c.LocalConfigACUrl.StartsWith(ConfigACUrl)
+                                                                                              && c.VBiACClassID == accessedProcessModuleID);
+
+                        if (configEntries != null)
+                        {
+                            if (isOnlyForWaterTempCalculation)
+                            {
+                                string propertyACUrl = string.Format("{0}\\{1}\\WaterTemp", ConfigACUrl, ACStateEnum.SMStarting);
+
+                                // Water temp 
+                                IACConfig waterTempConfig = configEntries.FirstOrDefault(c => c.LocalConfigACUrl == propertyACUrl);
+                                if (waterTempConfig == null)
+                                {
+                                    waterTempConfig = InsertTemperatureConfiguration(propertyACUrl, "WaterTemp", accessedProcessModuleID.Value, partslistConfigStore); 
+                                }
+
+                                if(waterTempConfig == null)
+                                {
+                                    //TODO: alarm
+                                }
+                                else
+                                    waterTempConfig.Value = waterTemperature;
+
+                                // Water temp 
+                                propertyACUrl = string.Format("{0}\\{1}\\UseWaterTemp", ConfigACUrl, ACStateEnum.SMStarting);
+                                IACConfig useOnlyForWaterTempCalculation = configEntries.FirstOrDefault(c => c.LocalConfigACUrl == propertyACUrl);
+                                if (useOnlyForWaterTempCalculation == null)
+                                {
+                                    useOnlyForWaterTempCalculation = InsertTemperatureConfiguration(propertyACUrl, "UseWaterTemp", accessedProcessModuleID.Value, partslistConfigStore);
+                                }
+
+                                if(useOnlyForWaterTempCalculation == null)
+                                {
+                                    //TODO: alarm
+                                }
+                                else
+                                    useOnlyForWaterTempCalculation.Value = isOnlyForWaterTempCalculation;
+                            }
+                        }
+                    }
+                }
+
+                //TODO: alarm
+                dbApp.ACSaveChanges();
+
+                ClearMyConfiguration();
+
+            }
+            //ConfigManagerIPlus.ACConfigFactory(CurrentConfigStore, )
+        }
+
+        private IACConfig InsertTemperatureConfiguration(string propertyACUrl, string paramACIdentifier, Guid processModuleID, IACConfigStore configStore)
+        {
+            ACMethod acMethod = ACClassMethods.FirstOrDefault(c => c.ACIdentifier == ACStateConst.SMStarting)?.ACMethod;
+            if (acMethod != null)
+            {
+                ACValue valItem = acMethod.ParameterValueList.GetACValue(paramACIdentifier);
+
+                ACConfigParam param = new ACConfigParam()
+                {
+                    ACIdentifier = valItem.ACIdentifier,
+                    ACCaption = acMethod.GetACCaptionForACIdentifier(valItem.ACIdentifier),
+                    ValueTypeACClassID = valItem.ValueTypeACClass.ACClassID,
+                    ACClassWF = ContentACClassWF
+                };
+
+                IACConfig configParam = ConfigManagerIPlus.ACConfigFactory(configStore, param, PreValueACUrl, propertyACUrl, processModuleID);
+                param.ConfigurationList.Insert(0, configParam);
+
+                configStore.ConfigurationEntries.Append(configParam);
+
+                return configParam;
+            }
+
+            return null;
         }
 
         #endregion

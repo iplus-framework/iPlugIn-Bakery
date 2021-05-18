@@ -152,6 +152,11 @@ namespace gipbakery.mes.processapplication
             return new ACValueList(cacheItem.Value.Value.MaterialTempInfos.Where(t => !string.IsNullOrEmpty(t.MaterialNo)).Select(c => new ACValue(c.MaterialNo, c.AverageTemperature)).ToArray());
         }
 
+        public void GetWaterTemperatures()
+        {
+
+        }
+
         //TODO Deinit service (event handlers)
         private void InitializeService()
         {
