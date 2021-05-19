@@ -12,6 +12,7 @@ using System.Threading.Tasks;
 
 namespace gipbakery.mes.processapplication
 {
+    //Todo: move config to material
     [ACClassInfo(Const.PackName_VarioAutomation, "en{'Bakery temperature service'}de{'Bäckerei-Temperaturservice'}", Global.ACKinds.TPAModule, IsRightmanagement = true)]
     public class PABakeryTempService : PAJobScheduler
     {
@@ -152,7 +153,7 @@ namespace gipbakery.mes.processapplication
             return new ACValueList(cacheItem.Value.Value.MaterialTempInfos.Where(t => !string.IsNullOrEmpty(t.MaterialNo)).Select(c => new ACValue(c.MaterialNo, c.AverageTemperature)).ToArray());
         }
 
-        public void GetWaterTemperatures()
+        public void GetDefaultWaterTemperatures(Guid receivingPointID)
         {
 
         }
@@ -358,6 +359,7 @@ namespace gipbakery.mes.processapplication
                         {
                             materialTempInfo = new MaterialTemperature();
                             materialTempInfo.MaterialNo = materialNo;
+                            materialTempInfo.WaterMinDosingQuantity = dosing.CurrentScaleForWeighing.MinDosingWeight.ValueT;
                             materialTempInfo.Water = wType;
                             cacheItem.Value.MaterialTempInfos.Add(materialTempInfo);
                         }
@@ -473,7 +475,6 @@ namespace gipbakery.mes.processapplication
                             }
 
                             mt.AddSilo(silo);
-
                         }
                     }
                 }
@@ -619,6 +620,13 @@ namespace gipbakery.mes.processapplication
 
         [DataMember]
         public WaterType Water
+        {
+            get;
+            set;
+        }
+
+        [DataMember]
+        public double? WaterMinDosingQuantity
         {
             get;
             set;

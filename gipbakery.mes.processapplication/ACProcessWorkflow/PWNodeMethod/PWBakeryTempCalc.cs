@@ -329,7 +329,7 @@ namespace gipbakery.mes.processapplication
                     string coldWater = tempFromService.FirstOrDefault(c => c.Water == WaterType.ColdWater)?.MaterialNo;
                     string cityWater = tempFromService.FirstOrDefault(c => c.Water == WaterType.CityWater)?.MaterialNo;
                     string warmWater = tempFromService.FirstOrDefault(c => c.Water == WaterType.WarmWater)?.MaterialNo;
-                    string dryIce = "";
+                    string dryIce = ""; //TODO: configuration ice
 
                     if (string.IsNullOrEmpty(coldWater) || string.IsNullOrEmpty(cityWater) || string.IsNullOrEmpty(warmWater) || string.IsNullOrEmpty(dryIce))
                     {
@@ -370,9 +370,11 @@ namespace gipbakery.mes.processapplication
                                                  .SelectMany(x => x.Item2.ProdOrderPartslistPosRelation_TargetProdOrderPartslistPos)
                                                  .Where(c => c.SourceProdOrderPartslistPos.IsOutwardRoot).ToArray();
 
+                    List<MaterialTemperature> compTemps = DetermineComponentsTemperature(currentProdOrderPartslist, intermediates, recvPoint, plMethod, dbApp, tempFromService, coldWater,
+                                                                                         cityWater, warmWater, dryIce);
 
-                    double componentsQ = CalculateComponents_Q_(recvPoint, dbApp, pwMethodProduction, kneedingRiseTemperature, currentProdOrderPartslist, intermediates,
-                                                                relations, plMethod, tempFromService, coldWater, cityWater, warmWater, dryIce);
+
+                    double componentsQ = CalculateComponents_Q_(recvPoint, kneedingRiseTemperature, relations, coldWater, cityWater, warmWater, dryIce, compTemps);
 
                     double suggestedWaterTemp = CalculateWaterTemperatureSuggestion(UseWaterTemp, relations, DoughTemp.Value, doughTargetTempBeforeKneeding,
                                                                                     componentsQ, cityWater);
@@ -457,23 +459,15 @@ namespace gipbakery.mes.processapplication
             return true;
         }
 
-        private double CalculateComponents_Q_(BakeryReceivingPoint recvPoint, DatabaseApp dbApp, PWMethodProduction pwMethodProduction, double kneedingTemperature,
-                                              ProdOrderPartslist poPartslist, IEnumerable<ProdOrderPartslistPos> intermediates, IEnumerable<ProdOrderPartslistPosRelation> relations,
-                                              PartslistACClassMethod plMethod, List<MaterialTemperature> tempFromService, string coldWaterMatNo, string cityWaterMatNo, 
-                                              string warmWaterMatNo, string dryIceMatNo)
+        private double CalculateComponents_Q_(BakeryReceivingPoint recvPoint, double kneedingTemperature, IEnumerable<ProdOrderPartslistPosRelation> relations,
+                                              string coldWaterMatNo, string cityWaterMatNo, string warmWaterMatNo, string dryIceMatNo, List<MaterialTemperature> compTemps)
         {
-
-            List<MaterialTemperature> compTemps = DetermineComponentsTemperature(poPartslist, intermediates, recvPoint, plMethod, dbApp, tempFromService, coldWaterMatNo,
-                                                                                 cityWaterMatNo, warmWaterMatNo, dryIceMatNo);
-
             var relationsWithoutWater = relations.Where(c => c.SourceProdOrderPartslistPos.Material.MaterialNo != coldWaterMatNo
                                                           && c.SourceProdOrderPartslistPos.Material.MaterialNo != cityWaterMatNo
                                                           && c.SourceProdOrderPartslistPos.Material.MaterialNo != warmWaterMatNo
                                                           && c.SourceProdOrderPartslistPos.Material.MaterialNo != dryIceMatNo);
 
             double totalQ = 0;
-
-            //n_Q_komp += n_C_spez * nSollKg * (n_T_TeigSollTempVorKneten - n_T_komp);
 
             foreach (ProdOrderPartslistPosRelation rel in relationsWithoutWater)
             {
@@ -532,10 +526,31 @@ namespace gipbakery.mes.processapplication
             return suggestedWaterTemperature;
         }
 
-        private void CalculateWaterTypes()
+        private void CalculateWaterTypes(IEnumerable<MaterialTemperature> componentTemperatures)
         {
+            MaterialTemperature coldWater = componentTemperatures.FirstOrDefault(c => c.Water == WaterType.ColdWater);
+            MaterialTemperature cityWater = componentTemperatures.FirstOrDefault(c => c.Water == WaterType.CityWater);
+            MaterialTemperature warmWater = componentTemperatures.FirstOrDefault(c => c.Water == WaterType.WarmWater);
+
+            if (coldWater == null)
+            {
+                //TODO: error
+            }
+
+            if (cityWater == null)
+            {
+                //TODO: error
+            }
+
+            if (warmWater == null)
+            {
+                //TODO error
+            }
+
+
 
         }
+
 
 
         private List<MaterialTemperature> DetermineComponentsTemperature(ProdOrderPartslist prodOrderPartslist, IEnumerable<ProdOrderPartslistPos> intermediates, 
@@ -681,8 +696,8 @@ namespace gipbakery.mes.processapplication
 
                         if (configEntries != null)
                         {
-                            if (isOnlyForWaterTempCalculation)
-                            {
+                            //if (isOnlyForWaterTempCalculation)
+                            //{
                                 string propertyACUrl = string.Format("{0}\\{1}\\WaterTemp", ConfigACUrl, ACStateEnum.SMStarting);
 
                                 // Water temp 
@@ -713,13 +728,15 @@ namespace gipbakery.mes.processapplication
                                 }
                                 else
                                     useOnlyForWaterTempCalculation.Value = isOnlyForWaterTempCalculation;
-                            }
+                            //}
                         }
                     }
                 }
 
                 //TODO: alarm
                 dbApp.ACSaveChanges();
+
+                RootPW.ReloadConfig();
 
                 ClearMyConfiguration();
 
