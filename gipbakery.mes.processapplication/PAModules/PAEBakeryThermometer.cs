@@ -36,6 +36,19 @@ namespace gipbakery.mes.processapplication
             set;
         }
 
+        public double ActualValueForCalculation
+        {
+            get
+            {
+                if (ActualValue.ValueT > LowerLimit1.ValueT && ActualValue.ValueT < UpperLimit1.ValueT) //TODO: check if is lower or upper limit set
+                {
+                    return ActualValue.ValueT;
+                }
+
+                return TemperatureDefault;
+            }
+        }
+
         #endregion
 
         #region Methods

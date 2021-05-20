@@ -11,7 +11,7 @@ using gip.mes.datamodel;
 
 namespace gipbakery.mes.processapplication
 {
-    [ACClassInfo(Const.PackName_VarioAutomation, "en{'Dough temperature calculato'}de{'Teigtemperaturberechnung'}", Global.ACKinds.TPWNodeMethod, Global.ACStorableTypes.Optional, false, PWMethodVBBase.PWClassName, true)]
+    [ACClassInfo(Const.PackName_VarioAutomation, "en{'Dough temperature calculation'}de{'Teigtemperaturberechnung'}", Global.ACKinds.TPWNodeMethod, Global.ACStorableTypes.Optional, false, PWMethodVBBase.PWClassName, true)]
     public class PWBakeryTempCalc : PWNodeProcessMethod
     {
         public const string PWClassName = "PWBakeryTempCalc";
@@ -62,6 +62,14 @@ namespace gipbakery.mes.processapplication
         #endregion
 
         #region Properties
+
+        [ACPropertyBindingSource]
+        public IACContainerTNet<string> TemperatureCalculationResult
+        {
+            get;
+            set;
+        }
+
         public T ParentPWMethod<T>() where T : PWMethodVBBase
         {
             if (ParentRootWFNode == null)
@@ -378,6 +386,8 @@ namespace gipbakery.mes.processapplication
 
                     double suggestedWaterTemp = CalculateWaterTemperatureSuggestion(UseWaterTemp, relations, DoughTemp.Value, doughTargetTempBeforeKneeding,
                                                                                     componentsQ, cityWater);
+
+                    CalculateWaterTypes(compTemps, suggestedWaterTemp, 20);
                 }
             }
 
@@ -526,7 +536,7 @@ namespace gipbakery.mes.processapplication
             return suggestedWaterTemperature;
         }
 
-        private void CalculateWaterTypes(IEnumerable<MaterialTemperature> componentTemperatures)
+        private void CalculateWaterTypes(IEnumerable<MaterialTemperature> componentTemperatures, double targetWaterTemperature, double totalWaterQuantity)
         {
             MaterialTemperature coldWater = componentTemperatures.FirstOrDefault(c => c.Water == WaterType.ColdWater);
             MaterialTemperature cityWater = componentTemperatures.FirstOrDefault(c => c.Water == WaterType.CityWater);
@@ -545,6 +555,14 @@ namespace gipbakery.mes.processapplication
             if (warmWater == null)
             {
                 //TODO error
+                return;
+            }
+
+            if (targetWaterTemperature > warmWater.AverageTemperature)
+            {
+                string message = Root.Environment.TranslateText(this, "WaterTypes", totalWaterQuantity, 0, 0, 0, 0);
+
+                TemperatureCalculationResult.ValueT = message;
             }
 
 
@@ -561,6 +579,18 @@ namespace gipbakery.mes.processapplication
             IEnumerable<PartslistPos> partslistPosList = prodOrderPartslist.Partslist?.PartslistPos_Partslist.Where(c => c.IsOutwardRoot).ToArray();
 
             List<MaterialTemperature> componentTemp = partslistPosList.Select(c => new MaterialTemperature() { Material = c.Material }).ToList();
+
+            var coldWater = componentTemp.FirstOrDefault(c => c.Material.MaterialNo == matNoColdWater);
+            if (coldWater != null)
+                coldWater.Water = WaterType.ColdWater;
+
+            var cityWater = componentTemp.FirstOrDefault(c => c.Material.MaterialNo == matNoCityWater);
+            if (cityWater != null)
+                cityWater.Water = WaterType.CityWater;
+
+            var warmWater = componentTemp.FirstOrDefault(c => c.Material.MaterialNo == matNoWarmWater);
+            if (warmWater != null)
+                warmWater.Water = WaterType.WarmWater;
 
             DetermineCompTempFromPartslistOrMaterial(componentTemp, partslistPosList, recvPoint.RoomTemperature.ValueT);
 
@@ -580,7 +610,6 @@ namespace gipbakery.mes.processapplication
 
                     SetManualCompTemp(componentTemp, components, recvPoint.RoomTemperature.ValueT);
                 }
-
             }
 
             SetCompTempFromService(componentTemp, tempFromService, recvPoint.RoomTemperature.ValueT);

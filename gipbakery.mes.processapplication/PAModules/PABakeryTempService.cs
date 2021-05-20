@@ -360,6 +360,7 @@ namespace gipbakery.mes.processapplication
                             materialTempInfo = new MaterialTemperature();
                             materialTempInfo.MaterialNo = materialNo;
                             materialTempInfo.WaterMinDosingQuantity = dosing.CurrentScaleForWeighing.MinDosingWeight.ValueT;
+                            materialTempInfo.WaterDefaultTemperature = thermometer.TemperatureDefault;
                             materialTempInfo.Water = wType;
                             cacheItem.Value.MaterialTempInfos.Add(materialTempInfo);
                         }
@@ -584,7 +585,7 @@ namespace gipbakery.mes.processapplication
                 var temp = GetBakeryThermometers();
                 if (temp.Any())
                 {
-                    return temp.Sum(c => c.ActualValue.ValueT) / temp.Count();
+                    return temp.Sum(c => c.ActualValueForCalculation) / temp.Count();
                 }
                 return 0.0;
             }
@@ -627,6 +628,13 @@ namespace gipbakery.mes.processapplication
 
         [DataMember]
         public double? WaterMinDosingQuantity
+        {
+            get;
+            set;
+        }
+
+        [DataMember]
+        public double? WaterDefaultTemperature
         {
             get;
             set;
