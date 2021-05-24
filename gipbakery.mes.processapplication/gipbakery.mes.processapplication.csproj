@@ -75,7 +75,6 @@
     <Compile Include="PAModules\PABakeryTempService.cs" />
     <Compile Include="PAModules\PAEBakeryThermometer.cs" />
     <Compile Include="PAProcessFunction\PAFBakeryManualWeighing.cs" />
-    <Compile Include="PAProcessFunction\PAFBakeryTempCalc.cs" />
     <Compile Include="PAProcessFunction\PAFBakeryWorkBaking.cs" />
     <Compile Include="PAProcessFunction\PAFBakeryWorkKneading.cs" />
     <Compile Include="PAProcessFunction\PAFBakeryWorkDecoring.cs" />

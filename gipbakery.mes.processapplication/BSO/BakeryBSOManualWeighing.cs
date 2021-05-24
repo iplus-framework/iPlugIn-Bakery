@@ -23,13 +23,29 @@ namespace gipbakery.mes.processapplication
 
         #region Properties
 
+        [ACPropertyInfo(9999)]
         public ACRef<IACComponentPWNode> BakeryTempCalculator
         {
             get;
             set;
         }
 
+        [ACPropertyInfo(9999)]
+        public IACComponentPWNode CurrentBakeryTempCalc
+        {
+            get
+            {
+                return BakeryTempCalculator?.ValueT;
+            }
+        }
+
         private IACContainerTNet<ACStateEnum> BakeryTempCalcACState
+        {
+            get;
+            set;
+        }
+
+        private IACContainerTNet<string> TempCalcResultMessage
         {
             get;
             set;
@@ -97,18 +113,6 @@ namespace gipbakery.mes.processapplication
             }
         }
 
-        private double _WaterCalcTemperature;
-        [ACPropertyInfo(803)]
-        public double WaterCalcTemperature
-        {
-            get => _WaterCalcTemperature;
-            set
-            {
-                _WaterCalcTemperature = value;
-                OnPropertyChanged("WaterCalcTemperature");
-            }
-        }
-
         #endregion
 
         #endregion
@@ -118,6 +122,10 @@ namespace gipbakery.mes.processapplication
         [ACMethodInfo("","",800)]
         public void ShowTemperaturesDialog()
         {
+            var corrTemp = CurrentProcessModule.ACUrlCommand("DoughCorrTemp") as double?;
+            if (corrTemp.HasValue)
+                DoughCorrTemperature = corrTemp.Value;
+
             ShowDialog(this, "TemperaturesDialog");
         }
 
@@ -152,37 +160,86 @@ namespace gipbakery.mes.processapplication
                 Messages.Error(this, "Error50290", false, node.ACUrlParent + "\\" + node.ACIdentifier);
                 return;
             }
+
             BakeryTempCalculator = new ACRef<IACComponentPWNode>(pwNode, this);
 
             BakeryTempCalcACState = BakeryTempCalculator.ValueT.GetPropertyNet(Const.ACState) as IACContainerTNet<ACStateEnum>;
-
             if (BakeryTempCalcACState != null)
             {
                 BakeryTempCalcACState.PropertyChanged += BakeryTempCalcACState_PropertyChanged;
             }
+            HandleTempCalcACState();
+
+            TempCalcResultMessage = BakeryTempCalculator.ValueT.GetPropertyNet("TemperatureCalculationResult") as IACContainerTNet<string>;
+            if (TempCalcResultMessage != null)
+            {
+                TempCalcResultMessage.PropertyChanged += TempCalcResultMessage_PropertyChanged;
+            }
+            HandleTempCalcResultMsg();
 
             GetTemperaturesFromPWBakeryTempCalc();
 
+        }
+
+        public override void UnloadWFNode()
+        {
+            if (BakeryTempCalcACState != null)
+            {
+                BakeryTempCalcACState.PropertyChanged -= BakeryTempCalcACState_PropertyChanged;
+                BakeryTempCalcACState = null;
+            }
+
+            if (TempCalcResultMessage != null)
+            {
+                TempCalcResultMessage.PropertyChanged -= TempCalcResultMessage_PropertyChanged;
+                TempCalcResultMessage = null;
+            }
+
+            base.UnloadWFNode();
+        }
+
+        private void TempCalcResultMessage_PropertyChanged(object sender, System.ComponentModel.PropertyChangedEventArgs e)
+        {
+            if (e.PropertyName == Const.ValueT)
+            {
+                HandleTempCalcResultMsg();
+            }
+        }
+
+        private void HandleTempCalcResultMsg()
+        {
+            if (BakeryTempCalcACState != null && BakeryTempCalcACState.ValueT == ACStateEnum.SMRunning)
+            {
+                MessageItem msgItem = new MessageItem(BakeryTempCalculator.ValueT, this);
+                msgItem.Message = TempCalcResultMessage.ValueT;
+
+                AddToMessageList(msgItem);
+            }
         }
 
         private void BakeryTempCalcACState_PropertyChanged(object sender, System.ComponentModel.PropertyChangedEventArgs e)
         {
             if (e.PropertyName == Const.ValueT)
             {
-                if( BakeryTempCalcACState.ValueT == ACStateEnum.SMRunning)
-                {
-                    ItemFunction.IsFunctionActive = true;
-                }
-                else
-                {
-                    ItemFunction.IsFunctionActive = false;
-                }
+                HandleTempCalcACState();
             }
         }
 
-        private void StartBakeryTempCalc()
+        private void HandleTempCalcACState()
         {
-
+            if (BakeryTempCalcACState.ValueT == ACStateEnum.SMRunning)
+            {
+                ItemFunction.IsFunctionActive = true;
+            }
+            else
+            {
+                ItemFunction.IsFunctionActive = false;
+                MessageItem msgItem = MessagesList.FirstOrDefault(c => c.UserAckPWNode == BakeryTempCalculator.ValueT);
+                if (msgItem != null)
+                {
+                    RemoveFromMessageList(msgItem);
+                }
+            }
         }
 
         private void GetTemperaturesFromPWBakeryTempCalc()
@@ -254,6 +311,19 @@ namespace gipbakery.mes.processapplication
         }
 
         public bool IsEnabledApplyTemperatures()
+        {
+            return BakeryTempCalculator != null && BakeryTempCalculator.ValueT != null && CurrentProcessModule != null;
+        }
+
+        [ACMethodInfo("", "en{'Recalculate temperatures'}de{'Temperaturen neu berechnen'}", 801)]
+        public void RecalcTemperatures()
+        {
+            CurrentProcessModule.ACUrlCommand("DoughCorrTemp", DoughCorrTemperature); //Save dough correct temperature on bakery recieving point
+
+            BakeryTempCalculator.ValueT.ExecuteMethod("SaveWorkplaceTemperatureSettings", WaterTargetTemperature, IsOnlyWaterTemperatureCalculation);//TODO parameters
+        }
+
+        public bool IsEnabledRecalcTemperatures()
         {
             return BakeryTempCalculator != null && BakeryTempCalculator.ValueT != null && CurrentProcessModule != null;
         }

@@ -40,12 +40,17 @@ namespace gipbakery.mes.processapplication
         {
             get
             {
-                if (ActualValue.ValueT > LowerLimit1.ValueT && ActualValue.ValueT < UpperLimit1.ValueT) //TODO: check if is lower or upper limit set
-                {
-                    return ActualValue.ValueT;
-                }
+                bool checkLower = LowerLimit1.ValueT > 0.00001 || LowerLimit1.ValueT < -0.00001;
 
-                return TemperatureDefault;
+                if (checkLower && ActualValue.ValueT < LowerLimit1.ValueT)
+                    return TemperatureDefault;
+
+                bool checkUpper = UpperLimit1.ValueT > 0.00001 || UpperLimit1.ValueT < -0.00001;
+
+                if (checkUpper && ActualValue.ValueT > UpperLimit1.ValueT)
+                    return TemperatureDefault;
+
+                return ActualValue.ValueT;
             }
         }
 

@@ -275,11 +275,11 @@ namespace gipbakery.mes.processapplication
 
                 foreach (var cacheItem in Temperatures)
                 {
-                    //Cold water
-                    InitializeWaterSensor(cacheItem, cacheItem.Key.PAPointMatIn2, db, WaterType.ColdWater);
-
                     //City water
-                    InitializeWaterSensor(cacheItem, cacheItem.Key.PAPointMatIn3, db, WaterType.CityWater);
+                    InitializeWaterSensor(cacheItem, cacheItem.Key.PAPointMatIn2, db, WaterType.CityWater);
+
+                    //Cold water
+                    InitializeWaterSensor(cacheItem, cacheItem.Key.PAPointMatIn3, db, WaterType.ColdWater);
 
                     //Warm water
                     InitializeWaterSensor(cacheItem, cacheItem.Key.PAPointMatIn4, db, WaterType.WarmWater);
@@ -740,7 +740,8 @@ namespace gipbakery.mes.processapplication
         NotWater = 0,
         ColdWater = 10,
         CityWater = 20,
-        WarmWater = 30
+        WarmWater = 30,
+        DryIce = 40
     }
 
     #endregion

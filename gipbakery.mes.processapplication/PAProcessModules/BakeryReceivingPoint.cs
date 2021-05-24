@@ -114,12 +114,12 @@ namespace gipbakery.mes.processapplication
         #region Points
         PAPoint _PAPointMatIn2;
         /// <summary>
-        /// Cold water Point
+        /// City water Point
         /// </summary>
         /// <value>
-        /// Cold water Point
+        /// City water Point
         /// </value>
-        [ACPropertyConnectionPoint(9999, "PointMaterial", "en{'ONLY for cold water'}de{'NUR für kaltes Wasser'}")]
+        [ACPropertyConnectionPoint(9999, "PointMaterial", "en{'ONLY for city water'}de{'NUR für Stadtwasser'}")]
         public PAPoint PAPointMatIn2
         {
             get
@@ -130,12 +130,12 @@ namespace gipbakery.mes.processapplication
 
         PAPoint _PAPointMatIn3;
         /// <summary>
-        /// City water Point
+        /// Cold water Point
         /// </summary>
         /// <value>
-        /// City water Point
+        /// Cold water Point
         /// </value>
-        [ACPropertyConnectionPoint(9999, "PointMaterial", "en{'ONLY for city water'}de{'NUR für Stadtwasser'}")]
+        [ACPropertyConnectionPoint(9999, "PointMaterial", "en{'ONLY for Cold water'}de{'NUR für kaltes Wasser'}")]
         public PAPoint PAPointMatIn3
         {
             get
