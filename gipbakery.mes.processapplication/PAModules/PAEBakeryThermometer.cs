@@ -50,6 +50,9 @@ namespace gipbakery.mes.processapplication
                 if (checkUpper && ActualValue.ValueT > UpperLimit1.ValueT)
                     return TemperatureDefault;
 
+                if (ActualValue.ValueT < 0.00001 && ActualValue.ValueT > -0.00001)
+                    return TemperatureDefault;
+
                 return ActualValue.ValueT;
             }
         }

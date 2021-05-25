@@ -428,7 +428,7 @@ namespace gipbakery.mes.processapplication
         {
             bool recalc = false;
 
-            using(ACMonitor.Lock(_20015_LockValue))
+            using (ACMonitor.Lock(_20015_LockValue))
             {
                 recalc = _RecalculateTemperatures;
             }
@@ -466,95 +466,98 @@ namespace gipbakery.mes.processapplication
             using (Database db = new gip.core.datamodel.Database())
             using (DatabaseApp dbApp = new DatabaseApp())
             {
-                // Dough temperature active
+                if (!UseWaterTemp && DoughTemp == null)
+                {
+                    //TODO: alarm
+                    return;
+                }
+
+                double kneedingRiseTemperature = 0;
+                double recvPointCorrTemp = 0;
+                double doughTargetTempBeforeKneeding = 0;
+
                 if (!UseWaterTemp)
                 {
-                    if (DoughTemp == null)
-                    {
-                        //TODO: alarm
-                        return;
-                    }
-
-                    double kneedingRiseTemperature = 0;
                     bool kneedingTempResult = GetKneedingRiseTemperature(dbApp, out kneedingRiseTemperature);
                     if (!kneedingTempResult)
                         return;
 
-                    double recvPointCorrTemp = recvPoint.DoughCorrTemp.ValueT;
 
-                    double doughTargetTempBeforeKneeding = DoughTemp.Value - kneedingRiseTemperature + recvPointCorrTemp;
+                    recvPointCorrTemp = recvPoint.DoughCorrTemp.ValueT;
 
-                    ACValueList componentTemperaturesService = recvPoint.GetComponentTemperatures();
-                    List<MaterialTemperature> tempFromService = componentTemperaturesService.Select(c => c.Value as MaterialTemperature).ToList();
+                    doughTargetTempBeforeKneeding = DoughTemp.Value - kneedingRiseTemperature + recvPointCorrTemp;
 
-                    string coldWater = tempFromService.FirstOrDefault(c => c.Water == WaterType.ColdWater)?.MaterialNo;
-                    string cityWater = tempFromService.FirstOrDefault(c => c.Water == WaterType.CityWater)?.MaterialNo;
-                    string warmWater = tempFromService.FirstOrDefault(c => c.Water == WaterType.WarmWater)?.MaterialNo;
-                    string dryIce = DryIceMaterialNo;
-
-                    if (string.IsNullOrEmpty(coldWater) || string.IsNullOrEmpty(cityWater) || string.IsNullOrEmpty(warmWater) || string.IsNullOrEmpty(dryIce))
-                    {
-                        //TODO error
-                    }
-
-                    ProdOrderPartslistPos endBatchPos = pwMethodProduction.CurrentProdOrderPartslistPos.FromAppContext<ProdOrderPartslistPos>(dbApp);
-
-                    if (pwMethodProduction.CurrentProdOrderBatch == null)
-                    {
-                        // Error50276: No batch assigned to last intermediate material of this workflow
-                        Msg msg = new Msg(this, eMsgLevel.Error, PWClassName, "StartManualWeighingProd(30)", 1010, "Error50276");
-
-                        //if (IsAlarmActive(ProcessAlarm, msg.Message) == null)
-                        //    Messages.LogError(this.GetACUrl(), msg.ACIdentifier, msg.InnerMessage);
-                        //OnNewAlarmOccurred(ProcessAlarm, msg, false);
-                        //return StartNextCompResult.CycleWait;
-                    }
-
-                    var contentACClassWFVB = ContentACClassWF.FromAppContext<gip.mes.datamodel.ACClassWF>(dbApp);
-                    ProdOrderBatch batch = pwMethodProduction.CurrentProdOrderBatch.FromAppContext<ProdOrderBatch>(dbApp);
-                    ProdOrderBatchPlan batchPlan = batch.ProdOrderBatchPlan;
-
-                    PartslistACClassMethod plMethod = endBatchPos.ProdOrderPartslist.Partslist.PartslistACClassMethod_Partslist.FirstOrDefault();
-                    ProdOrderPartslist currentProdOrderPartslist = endBatchPos.ProdOrderPartslist.FromAppContext<ProdOrderPartslist>(dbApp);
-
-                    IEnumerable<ProdOrderPartslistPos> intermediates = currentProdOrderPartslist.ProdOrderPartslistPos_ProdOrderPartslist
-                                                                                                .Where(c => c.MaterialID.HasValue
-                                                                                                         && c.MaterialPosType == GlobalApp.MaterialPosTypes.InwardIntern
-                                                                                                        && !c.ParentProdOrderPartslistPosID.HasValue)
-                                                                                                .SelectMany(p => p.ProdOrderPartslistPos_ParentProdOrderPartslistPos)
-                                                                                                .ToArray();
-
-
-                    var relations = intermediates.Select(c => new Tuple<bool?, ProdOrderPartslistPos>(c.Material.ACProperties
-                                                             .GetOrCreateACPropertyExtByName("UseInTemperatureCalculation", false)?.Value as bool?, c))
-                                                 .Where(c => c.Item1.HasValue && c.Item1.Value)
-                                                 .SelectMany(x => x.Item2.ProdOrderPartslistPosRelation_TargetProdOrderPartslistPos)
-                                                 .Where(c => c.SourceProdOrderPartslistPos.IsOutwardRoot).ToArray();
-
-                    List<MaterialTemperature> compTemps = DetermineComponentsTemperature(currentProdOrderPartslist, intermediates, recvPoint, plMethod, dbApp, tempFromService, coldWater,
-                                                                                         cityWater, warmWater, dryIce);
-
-
-                    double componentsQ = CalculateComponents_Q_(recvPoint, kneedingRiseTemperature, relations, coldWater, cityWater, warmWater, dryIce, compTemps);
-
-                    bool isOnlyWaterCompsInPartslist = relations.Count() == 1 && relations.FirstOrDefault(c => c.SourceProdOrderPartslistPos.Material.MaterialNo == cityWater) != null;
-                    var waterComp = relations.FirstOrDefault(c => c.SourceProdOrderPartslistPos.Material.MaterialNo == cityWater);
-                    double? waterTargetQuantity = waterComp?.TargetQuantity;
-                    if (!waterTargetQuantity.HasValue)
-                    {
-                        //todo error: in partslist missing water
-                    }
-
-                    double defaultWaterTemp = 0;
-                    double suggestedWaterTemp = CalculateWaterTemperatureSuggestion(UseWaterTemp, isOnlyWaterCompsInPartslist, waterComp, DoughTemp.Value, doughTargetTempBeforeKneeding,
-                                                                                    componentsQ, cityWater, out defaultWaterTemp);
-
-                    CalculateWaterTypes(compTemps, suggestedWaterTemp, waterTargetQuantity.Value, defaultWaterTemp, componentsQ, isOnlyWaterCompsInPartslist, doughTargetTempBeforeKneeding);
                 }
-                else
+
+                ACValueList componentTemperaturesService = recvPoint.GetComponentTemperatures();
+                List<MaterialTemperature> tempFromService = componentTemperaturesService.Select(c => c.Value as MaterialTemperature).ToList();
+
+                string coldWater = tempFromService.FirstOrDefault(c => c.Water == WaterType.ColdWater)?.MaterialNo;
+                string cityWater = tempFromService.FirstOrDefault(c => c.Water == WaterType.CityWater)?.MaterialNo;
+                string warmWater = tempFromService.FirstOrDefault(c => c.Water == WaterType.WarmWater)?.MaterialNo;
+                string dryIce = DryIceMaterialNo;
+
+                if (string.IsNullOrEmpty(coldWater) || string.IsNullOrEmpty(cityWater) || string.IsNullOrEmpty(warmWater) || string.IsNullOrEmpty(dryIce))
                 {
-                    //TODO only water calc
+                    //TODO error
                 }
+
+                ProdOrderPartslistPos endBatchPos = pwMethodProduction.CurrentProdOrderPartslistPos.FromAppContext<ProdOrderPartslistPos>(dbApp);
+
+                if (pwMethodProduction.CurrentProdOrderBatch == null)
+                {
+                    // Error50276: No batch assigned to last intermediate material of this workflow
+                    Msg msg = new Msg(this, eMsgLevel.Error, PWClassName, "StartManualWeighingProd(30)", 1010, "Error50276");
+
+                    //if (IsAlarmActive(ProcessAlarm, msg.Message) == null)
+                    //    Messages.LogError(this.GetACUrl(), msg.ACIdentifier, msg.InnerMessage);
+                    //OnNewAlarmOccurred(ProcessAlarm, msg, false);
+                    //return StartNextCompResult.CycleWait;
+                }
+
+                var contentACClassWFVB = ContentACClassWF.FromAppContext<gip.mes.datamodel.ACClassWF>(dbApp);
+                ProdOrderBatch batch = pwMethodProduction.CurrentProdOrderBatch.FromAppContext<ProdOrderBatch>(dbApp);
+                ProdOrderBatchPlan batchPlan = batch.ProdOrderBatchPlan;
+
+                PartslistACClassMethod plMethod = endBatchPos.ProdOrderPartslist.Partslist.PartslistACClassMethod_Partslist.FirstOrDefault();
+                ProdOrderPartslist currentProdOrderPartslist = endBatchPos.ProdOrderPartslist.FromAppContext<ProdOrderPartslist>(dbApp);
+
+                IEnumerable<ProdOrderPartslistPos> intermediates = currentProdOrderPartslist.ProdOrderPartslistPos_ProdOrderPartslist
+                                                                                            .Where(c => c.MaterialID.HasValue
+                                                                                                     && c.MaterialPosType == GlobalApp.MaterialPosTypes.InwardIntern
+                                                                                                    && !c.ParentProdOrderPartslistPosID.HasValue)
+                                                                                            .SelectMany(p => p.ProdOrderPartslistPos_ParentProdOrderPartslistPos)
+                                                                                            .ToArray();
+
+
+                var relations = intermediates.Select(c => new Tuple<bool?, ProdOrderPartslistPos>(c.Material.ACProperties
+                                                         .GetOrCreateACPropertyExtByName("UseInTemperatureCalculation", false)?.Value as bool?, c))
+                                             .Where(c => c.Item1.HasValue && c.Item1.Value)
+                                             .SelectMany(x => x.Item2.ProdOrderPartslistPosRelation_TargetProdOrderPartslistPos)
+                                             .Where(c => c.SourceProdOrderPartslistPos.IsOutwardRoot).ToArray();
+
+                List<MaterialTemperature> compTemps = DetermineComponentsTemperature(currentProdOrderPartslist, intermediates, recvPoint, plMethod, dbApp, tempFromService, coldWater,
+                                                                                     cityWater, warmWater, dryIce);
+
+                double componentsQ = 0;
+
+                if (!UseWaterTemp)
+                    componentsQ = CalculateComponents_Q_(recvPoint, kneedingRiseTemperature, relations, coldWater, cityWater, warmWater, dryIce, compTemps);
+
+                bool isOnlyWaterCompsInPartslist = relations.Count() == 1 && relations.FirstOrDefault(c => c.SourceProdOrderPartslistPos.Material.MaterialNo == cityWater) != null;
+                var waterComp = relations.FirstOrDefault(c => c.SourceProdOrderPartslistPos.Material.MaterialNo == cityWater);
+                double? waterTargetQuantity = waterComp?.TargetQuantity;
+                if (!waterTargetQuantity.HasValue)
+                {
+                    //todo error: in partslist missing water
+                }
+
+                double defaultWaterTemp = 0;
+                double suggestedWaterTemp = CalculateWaterTemperatureSuggestion(UseWaterTemp, isOnlyWaterCompsInPartslist, waterComp, DoughTemp.Value, doughTargetTempBeforeKneeding,
+                                                                                componentsQ, cityWater, out defaultWaterTemp);
+
+                CalculateWaterTypes(compTemps, suggestedWaterTemp, waterTargetQuantity.Value, defaultWaterTemp, componentsQ, isOnlyWaterCompsInPartslist, doughTargetTempBeforeKneeding);
+
             }
 
             using (ACMonitor.Lock(_20015_LockValue))
@@ -1239,7 +1242,7 @@ namespace gipbakery.mes.processapplication
 
             }
             //ConfigManagerIPlus.ACConfigFactory(CurrentConfigStore, )
-            using(ACMonitor.Lock(_20015_LockValue))
+            using (ACMonitor.Lock(_20015_LockValue))
             {
                 _RecalculateTemperatures = true;
             }

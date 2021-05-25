@@ -210,6 +210,15 @@ namespace gipbakery.mes.processapplication
         {
             if (BakeryTempCalcACState != null && BakeryTempCalcACState.ValueT == ACStateEnum.SMRunning)
             {
+                var existingMessageItems = MessagesList.Where(c => c.UserAckPWNode.ValueT == CurrentBakeryTempCalc).ToArray();
+                if (existingMessageItems != null)
+                {
+                    foreach (MessageItem mItem in existingMessageItems)
+                    {
+                        RemoveFromMessageList(mItem);
+                    }
+                }
+
                 MessageItem msgItem = new MessageItem(BakeryTempCalculator.ValueT, this);
                 msgItem.Message = TempCalcResultMessage.ValueT;
 
@@ -234,7 +243,7 @@ namespace gipbakery.mes.processapplication
             else
             {
                 ItemFunction.IsFunctionActive = false;
-                MessageItem msgItem = MessagesList.FirstOrDefault(c => c.UserAckPWNode == BakeryTempCalculator.ValueT);
+                MessageItem msgItem = MessagesList.FirstOrDefault(c => c.UserAckPWNode.ValueT == BakeryTempCalculator.ValueT);
                 if (msgItem != null)
                 {
                     RemoveFromMessageList(msgItem);
