@@ -164,11 +164,6 @@ namespace gipbakery.mes.processapplication
             BakeryTempCalculator = new ACRef<IACComponentPWNode>(pwNode, this);
 
             BakeryTempCalcACState = BakeryTempCalculator.ValueT.GetPropertyNet(Const.ACState) as IACContainerTNet<ACStateEnum>;
-            if (BakeryTempCalcACState != null)
-            {
-                BakeryTempCalcACState.PropertyChanged += BakeryTempCalcACState_PropertyChanged;
-            }
-            HandleTempCalcACState();
 
             TempCalcResultMessage = BakeryTempCalculator.ValueT.GetPropertyNet("TemperatureCalculationResult") as IACContainerTNet<string>;
             if (TempCalcResultMessage != null)
@@ -184,10 +179,7 @@ namespace gipbakery.mes.processapplication
         public override void UnloadWFNode()
         {
             if (BakeryTempCalcACState != null)
-            {
-                BakeryTempCalcACState.PropertyChanged -= BakeryTempCalcACState_PropertyChanged;
                 BakeryTempCalcACState = null;
-            }
 
             if (TempCalcResultMessage != null)
             {
@@ -223,31 +215,6 @@ namespace gipbakery.mes.processapplication
                 msgItem.Message = TempCalcResultMessage.ValueT;
 
                 AddToMessageList(msgItem);
-            }
-        }
-
-        private void BakeryTempCalcACState_PropertyChanged(object sender, System.ComponentModel.PropertyChangedEventArgs e)
-        {
-            if (e.PropertyName == Const.ValueT)
-            {
-                HandleTempCalcACState();
-            }
-        }
-
-        private void HandleTempCalcACState()
-        {
-            if (BakeryTempCalcACState.ValueT == ACStateEnum.SMRunning)
-            {
-                ItemFunction.IsFunctionActive = true;
-            }
-            else
-            {
-                ItemFunction.IsFunctionActive = false;
-                MessageItem msgItem = MessagesList.FirstOrDefault(c => c.UserAckPWNode.ValueT == BakeryTempCalculator.ValueT);
-                if (msgItem != null)
-                {
-                    RemoveFromMessageList(msgItem);
-                }
             }
         }
 

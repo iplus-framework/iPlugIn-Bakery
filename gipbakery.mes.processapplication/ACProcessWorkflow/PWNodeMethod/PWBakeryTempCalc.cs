@@ -291,35 +291,17 @@ namespace gipbakery.mes.processapplication
 
         #region Methods
 
-        #region Execute-Helper-Handlers
-        protected override bool HandleExecuteACMethod(out object result, AsyncMethodInvocationMode invocationMode, string acMethodName, gip.core.datamodel.ACClassMethod acClassMethod, params object[] acParameter)
-        {
-            //result = null;
-            //switch (acMethodName)
-            //{
-            //}
-            return base.HandleExecuteACMethod(out result, invocationMode, acMethodName, acClassMethod, acParameter);
-        }
-
-        public static bool HandleExecuteACMethod_PWBakeryTempCalc(out object result, IACComponent acComponent, string acMethodName, gip.core.datamodel.ACClassMethod acClassMethod, params object[] acParameter)
-        {
-            result = null;
-            //switch (acMethodName)
-            //{
-            //    case MN_AckStartClient:
-            //        AckStartClient(acComponent);
-            //        return true;
-            //    case Const.IsEnabledPrefix + MN_AckStartClient:
-            //        result = IsEnabledAckStartClient(acComponent);
-            //        return true;
-            //}
-            return HandleExecuteACMethod_PWBaseNodeProcess(out result, acComponent, acMethodName, acClassMethod, acParameter);
-        }
-        #endregion
+        #region Methods => ACState
 
         public override void Start()
         {
             base.Start();
+        }
+
+        public override void Reset()
+        {
+            ResetPrivateMembers();
+            base.Reset();
         }
 
         public override void SMIdle()
@@ -338,6 +320,8 @@ namespace gipbakery.mes.processapplication
         {
             if (Root.Initialized)
                 CalculateTargetTemperature();
+            else
+                SubscribeToProjectWorkCycle();
 
             base.SMRunning();
         }
@@ -348,81 +332,22 @@ namespace gipbakery.mes.processapplication
             base.SMCompleted();
         }
 
-        public override void Reset()
+        #endregion
+
+        public override void AckStart()
         {
-            ResetPrivateMembers();
-            base.Reset();
-        }
+            AcknowledgeAllAlarms();
+            if (CurrentACState == ACStateEnum.SMStarting)
+                CurrentACState = ACStateEnum.SMRunning;
 
-        [ACMethodInteractionClient("", "en{'Acknowledge'}de{'Bestätigen'}", 450, false)]
-        public new static void AckStartClient(IACComponent acComponent)
-        {
-            ACComponent _this = acComponent as ACComponent;
-            if (!IsEnabledAckStartClient(acComponent))
-                return;
-            ACStateEnum acState = (ACStateEnum)_this.ACUrlCommand("ACState");
-
-            // TODO: Open Businesobject with calculation of water components
-            string result = _this.Messages.InputBox("Temperatur", "0.0");
-
-            // If needs Password
-            if (acState == ACStateEnum.SMStarting)
+            else if (CurrentACState == ACStateEnum.SMRunning)
             {
-                string bsoName = "BSOChangeMyPW";
-                ACBSO childBSO = acComponent.Root.Businessobjects.ACUrlCommand("?" + bsoName) as ACBSO;
-                if (childBSO == null)
-                    childBSO = acComponent.Root.Businessobjects.StartComponent(bsoName, null, new object[] { }) as ACBSO;
-                if (childBSO == null)
-                    return;
-                VBDialogResult dlgResult = childBSO.ACUrlCommand("!ShowCheckUserDialog") as VBDialogResult;
-                if (dlgResult != null && dlgResult.SelectedCommand == eMsgButton.OK)
-                {
-                    acComponent.ACUrlCommand("!AckStart");
-                }
-                childBSO.Stop();
-            }
-            else
-                acComponent.ACUrlCommand("!AckStart");
-        }
-
-        public new static bool IsEnabledAckStartClient(IACComponent acComponent)
-        {
-            ACComponent _this = acComponent as ACComponent;
-            ACStateEnum acState = (ACStateEnum)_this.ACUrlCommand("ACState");
-            return acState == ACStateEnum.SMRunning || acState == ACStateEnum.SMStarting;
-        }
-
-
-        protected override void DumpPropertyList(XmlDocument doc, XmlElement xmlACPropertyList)
-        {
-            base.DumpPropertyList(doc, xmlACPropertyList);
-
-            XmlElement xmlChild = xmlACPropertyList["DoughTemp"];
-            if (xmlChild == null)
-            {
-                xmlChild = doc.CreateElement("DoughTemp");
-                if (xmlChild != null)
-                    xmlChild.InnerText = DoughTemp.ToString();
-                xmlACPropertyList.AppendChild(xmlChild);
-            }
-
-            xmlChild = xmlACPropertyList["WaterTemp"];
-            if (xmlChild == null)
-            {
-                xmlChild = doc.CreateElement("WaterTemp");
-                if (xmlChild != null)
-                    xmlChild.InnerText = WaterTemp.ToString();
-                xmlACPropertyList.AppendChild(xmlChild);
+                //TODO: modify partslist
+                CurrentACState = ACStateEnum.SMCompleted;
             }
         }
 
-        public void ResetPrivateMembers()
-        {
-            using (ACMonitor.Lock(_20015_LockValue))
-            {
-                _RecalculateTemperatures = true;
-            }
-        }
+        #region Methods => Temperature calculation
 
         private void CalculateTargetTemperature()
         {
@@ -490,6 +415,9 @@ namespace gipbakery.mes.processapplication
                 }
 
                 ACValueList componentTemperaturesService = recvPoint.GetComponentTemperatures();
+                if (componentTemperaturesService == null)
+                    return;
+
                 List<MaterialTemperature> tempFromService = componentTemperaturesService.Select(c => c.Value as MaterialTemperature).ToList();
 
                 string coldWater = tempFromService.FirstOrDefault(c => c.Water == WaterType.ColdWater)?.MaterialNo;
@@ -1021,6 +949,39 @@ namespace gipbakery.mes.processapplication
             return false;
         }
 
+        #endregion
+
+        #region Methods => ModifyProdOrderPartslist
+
+        public void AdjustProdOrderPartslist()
+        {
+            double cityWaterQ = 0, coldWaterQ = 0, warmWaterQ = 0, dryIceQ = 0;
+
+            using (ACMonitor.Lock(_20015_LockValue))
+            {
+                cityWaterQ = CityWaterQuantity.ValueT;
+                coldWaterQ = ColdWaterQuantity.ValueT;
+                warmWaterQ = WarmWaterQuantity.ValueT;
+                dryIceQ = DryIceQuantity.ValueT;
+            }
+
+            if (cityWaterQ < 0.0001 && coldWaterQ < 0.0001 && warmWaterQ < 0.0001 && dryIceQ < 0.0001)
+            {
+                //TODO: alarm
+                return;
+            }
+
+            PWMethodProduction pwMethodProduction = ParentPWMethod<PWMethodProduction>();
+            // If dosing is not for production, then do nothing
+            if (pwMethodProduction == null)
+                return;
+
+
+        }
+
+        #endregion
+
+        #region Methods => Components temperature
 
         private List<MaterialTemperature> DetermineComponentsTemperature(ProdOrderPartslist prodOrderPartslist, IEnumerable<ProdOrderPartslistPos> intermediates,
                                                                          BakeryReceivingPoint recvPoint, PartslistACClassMethod plMethod, DatabaseApp dbApp,
@@ -1178,7 +1139,6 @@ namespace gipbakery.mes.processapplication
             }
         }
 
-
         [ACMethodInfo("", "", 9999, true)]
         public void SaveWorkplaceTemperatureSettings(double waterTemperature, bool isOnlyForWaterTempCalculation)
         {
@@ -1277,9 +1237,72 @@ namespace gipbakery.mes.processapplication
 
         #endregion
 
-        #region User Interaction
+        #region Methods => Other
+
+        //TODO: dump
+        protected override void DumpPropertyList(XmlDocument doc, XmlElement xmlACPropertyList)
+        {
+            base.DumpPropertyList(doc, xmlACPropertyList);
+
+            XmlElement xmlChild = xmlACPropertyList["DoughTemp"];
+            if (xmlChild == null)
+            {
+                xmlChild = doc.CreateElement("DoughTemp");
+                if (xmlChild != null)
+                    xmlChild.InnerText = DoughTemp.ToString();
+                xmlACPropertyList.AppendChild(xmlChild);
+            }
+
+            xmlChild = xmlACPropertyList["WaterTemp"];
+            if (xmlChild == null)
+            {
+                xmlChild = doc.CreateElement("WaterTemp");
+                if (xmlChild != null)
+                    xmlChild.InnerText = WaterTemp.ToString();
+                xmlACPropertyList.AppendChild(xmlChild);
+            }
+        }
+
+        public void ResetPrivateMembers()
+        {
+            using (ACMonitor.Lock(_20015_LockValue))
+            {
+                _RecalculateTemperatures = true;
+            }
+        }
+
         #endregion
 
+        #region Execute-Helper-Handlers
+
+        //TODO: correct this
+        protected override bool HandleExecuteACMethod(out object result, AsyncMethodInvocationMode invocationMode, string acMethodName, gip.core.datamodel.ACClassMethod acClassMethod, params object[] acParameter)
+        {
+            //result = null;
+            //switch (acMethodName)
+            //{
+            //}
+            return base.HandleExecuteACMethod(out result, invocationMode, acMethodName, acClassMethod, acParameter);
+        }
+
+        public static bool HandleExecuteACMethod_PWBakeryTempCalc(out object result, IACComponent acComponent, string acMethodName, gip.core.datamodel.ACClassMethod acClassMethod, params object[] acParameter)
+        {
+            result = null;
+            //switch (acMethodName)
+            //{
+            //    case MN_AckStartClient:
+            //        AckStartClient(acComponent);
+            //        return true;
+            //    case Const.IsEnabledPrefix + MN_AckStartClient:
+            //        result = IsEnabledAckStartClient(acComponent);
+            //        return true;
+            //}
+            return HandleExecuteACMethod_PWBaseNodeProcess(out result, acComponent, acMethodName, acClassMethod, acParameter);
+        }
+        
+        #endregion
+
+        #endregion
     }
 
     [ACSerializeableInfo]

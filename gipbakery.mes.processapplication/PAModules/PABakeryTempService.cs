@@ -62,6 +62,8 @@ namespace gipbakery.mes.processapplication
 
         #region Properties
 
+        private bool _RecalculationComplete = false;
+
         public Dictionary<BakeryReceivingPoint, BakeryRecvPointTemperature> Temperatures
         {
             get;
@@ -130,7 +132,7 @@ namespace gipbakery.mes.processapplication
         [ACMethodInfo("","",9999)]
         public ACValueList GetTemperaturesInfo(Guid receivingPointID)
         {
-            if (Temperatures == null)
+            if (Temperatures == null || !_RecalculationComplete)
                 return null;
 
             KeyValuePair<BakeryReceivingPoint, BakeryRecvPointTemperature>? cacheItem = Temperatures.FirstOrDefault(c => c.Key.ComponentClass.ACClassID == receivingPointID);
@@ -377,6 +379,8 @@ namespace gipbakery.mes.processapplication
             if (Temperatures == null)
                 return;
 
+            _RecalculationComplete = false;
+
             TemperatureServiceInfo.ValueT = 0;
 
             foreach (var recvPoint in Temperatures)
@@ -385,6 +389,8 @@ namespace gipbakery.mes.processapplication
             }
 
             TemperatureServiceInfo.ValueT = 1;
+
+            _RecalculationComplete = true;
         }
 
         #endregion
