@@ -383,8 +383,6 @@ namespace gipbakery.mes.processapplication
                 return;
             }
 
-            //TODO: check if something changed (water temp or dough temp ....)
-
             if (string.IsNullOrEmpty(DryIceMaterialNo))
             {
                 //TODO: error => configure dry ice material number
@@ -409,11 +407,9 @@ namespace gipbakery.mes.processapplication
                     if (!kneedingTempResult)
                         return;
 
-
                     recvPointCorrTemp = recvPoint.DoughCorrTemp.ValueT;
 
                     doughTargetTempBeforeKneeding = DoughTemp.Value - kneedingRiseTemperature + recvPointCorrTemp;
-
                 }
 
                 ACValueList componentTemperaturesService = recvPoint.GetComponentTemperatures();
@@ -452,12 +448,6 @@ namespace gipbakery.mes.processapplication
                 PartslistACClassMethod plMethod = endBatchPos.ProdOrderPartslist.Partslist.PartslistACClassMethod_Partslist.FirstOrDefault();
                 ProdOrderPartslist currentProdOrderPartslist = endBatchPos.ProdOrderPartslist.FromAppContext<ProdOrderPartslist>(dbApp);
 
-                var cityWater = currentProdOrderPartslist?.ProdOrderPartslistPos_ProdOrderPartslist.FirstOrDefault(c => c.Material.MaterialNo == _CityWaterMaterialNo);
-                if (cityWater == null)
-                {
-                    //ask Damir: error or skip node
-                }
-
                 //TODO: null check
                 IEnumerable<ProdOrderPartslistPos> intermediates = currentProdOrderPartslist.ProdOrderPartslistPos_ProdOrderPartslist
                                                                                             .Where(c => c.MaterialID.HasValue
@@ -473,6 +463,17 @@ namespace gipbakery.mes.processapplication
                                              .SelectMany(x => x.Item2.ProdOrderPartslistPosRelation_TargetProdOrderPartslistPos)
                                              .Where(c => c.SourceProdOrderPartslistPos.IsOutwardRoot).ToArray();
 
+                ProdOrderPartslistPosRelation cityWaterComp = relations.FirstOrDefault(c => c.SourceProdOrderPartslistPos.Material.MaterialNo == _CityWaterMaterialNo);
+                if (cityWaterComp == null)
+                {
+                    //ask Damir: error or skip node
+                    return;
+                }
+
+                ProdOrderPartslistPosRelation coldWaterComp = relations.FirstOrDefault(c => c.SourceProdOrderPartslistPos.Material.MaterialNo == _ColdWaterMaterialNo);
+                ProdOrderPartslistPosRelation warmWaterComp = relations.FirstOrDefault(c => c.SourceProdOrderPartslistPos.Material.MaterialNo == _WarmWaterMaterialNo);
+                ProdOrderPartslistPosRelation iceComp = relations.FirstOrDefault(c => c.SourceProdOrderPartslistPos.Material.MaterialNo == DryIceMaterialNo);
+
                 List<MaterialTemperature> compTemps = DetermineComponentsTemperature(currentProdOrderPartslist, intermediates, recvPoint, plMethod, dbApp, tempFromService, _ColdWaterMaterialNo,
                                                                                      _CityWaterMaterialNo, _WarmWaterMaterialNo, dryIce);
 
@@ -482,16 +483,24 @@ namespace gipbakery.mes.processapplication
                     componentsQ = CalculateComponents_Q_(recvPoint, kneedingRiseTemperature, relations, _ColdWaterMaterialNo, _CityWaterMaterialNo, _WarmWaterMaterialNo, dryIce, compTemps);
 
                 bool isOnlyWaterCompsInPartslist = relations.Count() == 1 && relations.FirstOrDefault(c => c.SourceProdOrderPartslistPos.Material.MaterialNo == _CityWaterMaterialNo) != null;
-                var waterComp = relations.FirstOrDefault(c => c.SourceProdOrderPartslistPos.Material.MaterialNo == _CityWaterMaterialNo);
-                double? waterTargetQuantity = waterComp?.TargetQuantity; //TODO if node start again, sum all waters quantity
+                double? waterTargetQuantity = cityWaterComp?.TargetQuantity;
                 if (!waterTargetQuantity.HasValue)
                 {
                     //todo error: in partslist missing water
                 }
 
+                if (coldWaterComp != null && coldWaterComp.TargetQuantity > 0)
+                    waterTargetQuantity += coldWaterComp.TargetQuantity;
+
+                if (warmWaterComp != null && warmWaterComp.TargetQuantity > 0)
+                    waterTargetQuantity += warmWaterComp.TargetQuantity;
+
+                if (iceComp != null && iceComp.TargetQuantity > 0)
+                    waterTargetQuantity += iceComp.TargetQuantity;
+
                 double defaultWaterTemp = 0;
-                double suggestedWaterTemp = CalculateWaterTemperatureSuggestion(UseWaterTemp, isOnlyWaterCompsInPartslist, waterComp, DoughTemp.Value, doughTargetTempBeforeKneeding,
-                                                                                componentsQ, _CityWaterMaterialNo, out defaultWaterTemp);
+                double suggestedWaterTemp = CalculateWaterTemperatureSuggestion(UseWaterTemp, isOnlyWaterCompsInPartslist, cityWaterComp, DoughTemp.Value, doughTargetTempBeforeKneeding,
+                                                                                componentsQ, waterTargetQuantity, out defaultWaterTemp);
 
                 CalculateWaterTypes(compTemps, suggestedWaterTemp, waterTargetQuantity.Value, defaultWaterTemp, componentsQ, isOnlyWaterCompsInPartslist, doughTargetTempBeforeKneeding);
             }
@@ -502,6 +511,7 @@ namespace gipbakery.mes.processapplication
             }
             UnSubscribeToProjectWorkCycle();
         }
+
 
         //TODO: half quantity
         private bool GetKneedingRiseTemperature(DatabaseApp dbApp, out double kneedingTemperature)
@@ -578,6 +588,8 @@ namespace gipbakery.mes.processapplication
             return true;
         }
 
+
+
         private double CalculateComponents_Q_(BakeryReceivingPoint recvPoint, double kneedingTemperature, IEnumerable<ProdOrderPartslistPosRelation> relations,
                                               string coldWaterMatNo, string cityWaterMatNo, string warmWaterMatNo, string dryIceMatNo, List<MaterialTemperature> compTemps)
         {
@@ -602,13 +614,13 @@ namespace gipbakery.mes.processapplication
         }
 
 
+
         private double CalculateWaterTemperatureSuggestion(bool calculateWaterTemp, bool isOnlyWater, ProdOrderPartslistPosRelation waterComp, double doughTargetTempAfterKneeding,
-                                                           double doughTargetTempBeforeKneeding, double componentsQ, string cityWaterMatNo, out double defaultWaterTemp)
+                                                           double doughTargetTempBeforeKneeding, double componentsQ, double? waterTargetQuantity, out double defaultWaterTemp)
         {
             double suggestedWaterTemperature = 20;
             defaultWaterTemp = 0; //TODO
 
-            double? waterTargetQuantity = waterComp?.TargetQuantity;
             double? waterSpecHeatCapacity = waterComp.SourceProdOrderPartslistPos.Material.SpecHeatCapacity;
 
             if (calculateWaterTemp)
@@ -645,13 +657,15 @@ namespace gipbakery.mes.processapplication
             return suggestedWaterTemperature;
         }
 
+
+
         private void CalculateWaterTypes(IEnumerable<MaterialTemperature> componentTemperatures, double targetWaterTemperature, double totalWaterQuantity, double defaultWaterTemp,
                                          double componentsQ, bool isOnlyWaterCompInPartslist, double doughTempBeforeKneeding)
         {
             MaterialTemperature coldWater = componentTemperatures.FirstOrDefault(c => c.Water == WaterType.ColdWater);
             MaterialTemperature cityWater = componentTemperatures.FirstOrDefault(c => c.Water == WaterType.CityWater);
             MaterialTemperature warmWater = componentTemperatures.FirstOrDefault(c => c.Water == WaterType.WarmWater);
-            MaterialTemperature dryIce = componentTemperatures.FirstOrDefault(c => c.Water == WaterType.DryIce); //TODO ice from config
+            MaterialTemperature dryIce = componentTemperatures.FirstOrDefault(c => c.Water == WaterType.DryIce);
 
             if (coldWater == null)
             {
@@ -1262,7 +1276,6 @@ namespace gipbakery.mes.processapplication
                 if (dryIce != null)
                 {
                     MaterialTemperature mt = new MaterialTemperature() { Material = dryIce, AverageTemperature = -5, Water = WaterType.DryIce }; //TODO get temp from material, if is not set error
-
                     componentTemp.Add(mt);
                 }
                 else
