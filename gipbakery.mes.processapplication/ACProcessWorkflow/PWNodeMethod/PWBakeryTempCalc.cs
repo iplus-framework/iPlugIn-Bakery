@@ -126,6 +126,7 @@ namespace gipbakery.mes.processapplication
         }
 
         private Type _PWManualWeighingType = typeof(PWManualWeighing);
+        private Type _PWDosingType = typeof(PWDosing);
 
         public T ParentPWMethod<T>() where T : PWMethodVBBase
         {
@@ -144,26 +145,11 @@ namespace gipbakery.mes.processapplication
 
         private bool _RecalculateTemperatures = true;
 
+        private string _CityWaterMaterialNo;
+        private string _ColdWaterMaterialNo;
+        private string _WarmWaterMaterialNo;
+
         #region Properties => Configuration
-
-        ////TODO: clear config on idle or recycle
-        //private ACMethod _MyConfiguration;
-        //[ACPropertyInfo(9999)]
-        //public ACMethod MyConfiguration
-        //{
-        //    get
-        //    {
-        //        using (ACMonitor.Lock(_20015_LockValue))
-        //        {
-        //            if (_MyConfiguration != null)
-        //                return _MyConfiguration;
-        //        }
-
-        //        var myNewConfig = NewACMethodWithConfiguration();
-        //        _MyConfiguration = myNewConfig;
-        //        return myNewConfig;
-        //    }
-        //}
 
         protected double? DoughTemp
         {
@@ -233,6 +219,23 @@ namespace gipbakery.mes.processapplication
             }
         }
 
+        protected bool UseWaterMixer
+        {
+            get
+            {
+                var method = MyConfiguration;
+                if (method != null)
+                {
+                    var acValue = method.ParameterValueList.GetACValue("UseWaterMixer");
+                    if (acValue != null)
+                    {
+                        return acValue.ParamAsBoolean;
+                    }
+                }
+                return false;
+            }
+        }
+
         protected MeltingHeatOptionEnum IncludeMeltingHeat
         {
             get
@@ -288,7 +291,6 @@ namespace gipbakery.mes.processapplication
 
         #endregion
 
-
         #region Methods
 
         #region Methods => ACState
@@ -342,7 +344,7 @@ namespace gipbakery.mes.processapplication
 
             else if (CurrentACState == ACStateEnum.SMRunning)
             {
-                //TODO: modify partslist
+                AdjustWatersInProdOrderPartslist();
                 CurrentACState = ACStateEnum.SMCompleted;
             }
         }
@@ -420,12 +422,12 @@ namespace gipbakery.mes.processapplication
 
                 List<MaterialTemperature> tempFromService = componentTemperaturesService.Select(c => c.Value as MaterialTemperature).ToList();
 
-                string coldWater = tempFromService.FirstOrDefault(c => c.Water == WaterType.ColdWater)?.MaterialNo;
-                string cityWater = tempFromService.FirstOrDefault(c => c.Water == WaterType.CityWater)?.MaterialNo;
-                string warmWater = tempFromService.FirstOrDefault(c => c.Water == WaterType.WarmWater)?.MaterialNo;
+                _ColdWaterMaterialNo = tempFromService.FirstOrDefault(c => c.Water == WaterType.ColdWater)?.MaterialNo;
+                _CityWaterMaterialNo = tempFromService.FirstOrDefault(c => c.Water == WaterType.CityWater)?.MaterialNo;
+                _WarmWaterMaterialNo = tempFromService.FirstOrDefault(c => c.Water == WaterType.WarmWater)?.MaterialNo;
                 string dryIce = DryIceMaterialNo;
 
-                if (string.IsNullOrEmpty(coldWater) || string.IsNullOrEmpty(cityWater) || string.IsNullOrEmpty(warmWater) || string.IsNullOrEmpty(dryIce))
+                if (string.IsNullOrEmpty(_ColdWaterMaterialNo) || string.IsNullOrEmpty(_CityWaterMaterialNo) || string.IsNullOrEmpty(_WarmWaterMaterialNo) || string.IsNullOrEmpty(dryIce))
                 {
                     //TODO error
                 }
@@ -450,6 +452,13 @@ namespace gipbakery.mes.processapplication
                 PartslistACClassMethod plMethod = endBatchPos.ProdOrderPartslist.Partslist.PartslistACClassMethod_Partslist.FirstOrDefault();
                 ProdOrderPartslist currentProdOrderPartslist = endBatchPos.ProdOrderPartslist.FromAppContext<ProdOrderPartslist>(dbApp);
 
+                var cityWater = currentProdOrderPartslist?.ProdOrderPartslistPos_ProdOrderPartslist.FirstOrDefault(c => c.Material.MaterialNo == _CityWaterMaterialNo);
+                if (cityWater == null)
+                {
+                    //ask Damir: error or skip node
+                }
+
+                //TODO: null check
                 IEnumerable<ProdOrderPartslistPos> intermediates = currentProdOrderPartslist.ProdOrderPartslistPos_ProdOrderPartslist
                                                                                             .Where(c => c.MaterialID.HasValue
                                                                                                      && c.MaterialPosType == GlobalApp.MaterialPosTypes.InwardIntern
@@ -460,21 +469,21 @@ namespace gipbakery.mes.processapplication
 
                 var relations = intermediates.Select(c => new Tuple<bool?, ProdOrderPartslistPos>(c.Material.ACProperties
                                                          .GetOrCreateACPropertyExtByName("UseInTemperatureCalculation", false)?.Value as bool?, c))
-                                             .Where(c => c.Item1.HasValue && c.Item1.Value)
+                                             .Where(c => c.Item1.HasValue && c.Item1.Value && c.Item2.ProdOrderBatchID == batch.ProdOrderBatchID)
                                              .SelectMany(x => x.Item2.ProdOrderPartslistPosRelation_TargetProdOrderPartslistPos)
                                              .Where(c => c.SourceProdOrderPartslistPos.IsOutwardRoot).ToArray();
 
-                List<MaterialTemperature> compTemps = DetermineComponentsTemperature(currentProdOrderPartslist, intermediates, recvPoint, plMethod, dbApp, tempFromService, coldWater,
-                                                                                     cityWater, warmWater, dryIce);
+                List<MaterialTemperature> compTemps = DetermineComponentsTemperature(currentProdOrderPartslist, intermediates, recvPoint, plMethod, dbApp, tempFromService, _ColdWaterMaterialNo,
+                                                                                     _CityWaterMaterialNo, _WarmWaterMaterialNo, dryIce);
 
                 double componentsQ = 0;
 
                 if (!UseWaterTemp)
-                    componentsQ = CalculateComponents_Q_(recvPoint, kneedingRiseTemperature, relations, coldWater, cityWater, warmWater, dryIce, compTemps);
+                    componentsQ = CalculateComponents_Q_(recvPoint, kneedingRiseTemperature, relations, _ColdWaterMaterialNo, _CityWaterMaterialNo, _WarmWaterMaterialNo, dryIce, compTemps);
 
-                bool isOnlyWaterCompsInPartslist = relations.Count() == 1 && relations.FirstOrDefault(c => c.SourceProdOrderPartslistPos.Material.MaterialNo == cityWater) != null;
-                var waterComp = relations.FirstOrDefault(c => c.SourceProdOrderPartslistPos.Material.MaterialNo == cityWater);
-                double? waterTargetQuantity = waterComp?.TargetQuantity;
+                bool isOnlyWaterCompsInPartslist = relations.Count() == 1 && relations.FirstOrDefault(c => c.SourceProdOrderPartslistPos.Material.MaterialNo == _CityWaterMaterialNo) != null;
+                var waterComp = relations.FirstOrDefault(c => c.SourceProdOrderPartslistPos.Material.MaterialNo == _CityWaterMaterialNo);
+                double? waterTargetQuantity = waterComp?.TargetQuantity; //TODO if node start again, sum all waters quantity
                 if (!waterTargetQuantity.HasValue)
                 {
                     //todo error: in partslist missing water
@@ -482,10 +491,9 @@ namespace gipbakery.mes.processapplication
 
                 double defaultWaterTemp = 0;
                 double suggestedWaterTemp = CalculateWaterTemperatureSuggestion(UseWaterTemp, isOnlyWaterCompsInPartslist, waterComp, DoughTemp.Value, doughTargetTempBeforeKneeding,
-                                                                                componentsQ, cityWater, out defaultWaterTemp);
+                                                                                componentsQ, _CityWaterMaterialNo, out defaultWaterTemp);
 
                 CalculateWaterTypes(compTemps, suggestedWaterTemp, waterTargetQuantity.Value, defaultWaterTemp, componentsQ, isOnlyWaterCompsInPartslist, doughTargetTempBeforeKneeding);
-
             }
 
             using (ACMonitor.Lock(_20015_LockValue))
@@ -953,19 +961,25 @@ namespace gipbakery.mes.processapplication
 
         #region Methods => ModifyProdOrderPartslist
 
-        public void AdjustProdOrderPartslist()
+        public void AdjustWatersInProdOrderPartslist()
         {
             double cityWaterQ = 0, coldWaterQ = 0, warmWaterQ = 0, dryIceQ = 0;
 
             using (ACMonitor.Lock(_20015_LockValue))
             {
-                cityWaterQ = CityWaterQuantity.ValueT;
-                coldWaterQ = ColdWaterQuantity.ValueT;
-                warmWaterQ = WarmWaterQuantity.ValueT;
-                dryIceQ = DryIceQuantity.ValueT;
+                cityWaterQ = Math.Round(CityWaterQuantity.ValueT,2);
+                coldWaterQ = Math.Round(ColdWaterQuantity.ValueT,2);
+                warmWaterQ = Math.Round(WarmWaterQuantity.ValueT, 2);
+                dryIceQ = Math.Round(DryIceQuantity.ValueT, 2);
             }
 
             if (cityWaterQ < 0.0001 && coldWaterQ < 0.0001 && warmWaterQ < 0.0001 && dryIceQ < 0.0001)
+            {
+                //TODO: alarm
+                return;
+            }
+
+            if (string.IsNullOrEmpty(_CityWaterMaterialNo) || string.IsNullOrEmpty(_ColdWaterMaterialNo) || string.IsNullOrEmpty(_WarmWaterMaterialNo) || string.IsNullOrEmpty(DryIceMaterialNo))
             {
                 //TODO: alarm
                 return;
@@ -976,7 +990,203 @@ namespace gipbakery.mes.processapplication
             if (pwMethodProduction == null)
                 return;
 
+            using (Database db = new gip.core.datamodel.Database())
+            using (DatabaseApp dbApp = new DatabaseApp(db))
+            {
+                ProdOrderPartslistPos endBatchPos = pwMethodProduction.CurrentProdOrderPartslistPos.FromAppContext<ProdOrderPartslistPos>(dbApp);
 
+                if (pwMethodProduction.CurrentProdOrderBatch == null)
+                {
+                    // Error50276: No batch assigned to last intermediate material of this workflow
+                    Msg msg1 = new Msg(this, eMsgLevel.Error, PWClassName, "StartManualWeighingProd(30)", 1010, "Error50276");
+
+                    //if (IsAlarmActive(ProcessAlarm, msg.Message) == null)
+                    //    Messages.LogError(this.GetACUrl(), msg.ACIdentifier, msg.InnerMessage);
+                    //OnNewAlarmOccurred(ProcessAlarm, msg, false);
+                }
+
+                var contentACClassWFVB = ContentACClassWF.FromAppContext<gip.mes.datamodel.ACClassWF>(dbApp);
+                ProdOrderBatch batch = pwMethodProduction.CurrentProdOrderBatch.FromAppContext<ProdOrderBatch>(dbApp);
+                ProdOrderBatchPlan batchPlan = batch.ProdOrderBatchPlan;
+
+                PartslistACClassMethod plMethod = endBatchPos.ProdOrderPartslist.Partslist.PartslistACClassMethod_Partslist.FirstOrDefault();
+                ProdOrderPartslist currentProdOrderPartslist = endBatchPos.ProdOrderPartslist.FromAppContext<ProdOrderPartslist>(dbApp);
+
+                IEnumerable<MaterialWFConnection> matWFConnections = null;
+                if (batchPlan != null && batchPlan.MaterialWFACClassMethodID.HasValue)
+                {
+                    matWFConnections = dbApp.MaterialWFConnection
+                                            .Where(c => c.MaterialWFACClassMethod.MaterialWFACClassMethodID == batchPlan.MaterialWFACClassMethodID.Value
+                                                    && c.ACClassWFID == contentACClassWFVB.ACClassWFID).ToArray();
+                }
+
+                if (matWFConnections == null || !matWFConnections.Any())
+                {
+                    // Error50277: No relation defined between Workflownode and intermediate material in Materialworkflow //TODO
+                    Msg msg1 = new Msg(this, eMsgLevel.Error, PWClassName, "StartManualWeighingProd(40)", 761, "Error50277");
+
+                    if (IsAlarmActive(ProcessAlarm, msg1.Message) == null)
+                        Messages.LogError(this.GetACUrl(), msg1.ACIdentifier, msg1.InnerMessage);
+                    OnNewAlarmOccurred(ProcessAlarm, msg1, false);
+                    return;
+                }
+
+                var components = currentProdOrderPartslist.ProdOrderPartslistPos_ProdOrderPartslist.Where(c => c.MaterialID.HasValue && c.MaterialPosType == GlobalApp.MaterialPosTypes.OutwardRoot);
+
+                Material intermediateAutomatic = matWFConnections.FirstOrDefault(c => c.Material.MaterialWFConnection_Material
+                                                                                       .FirstOrDefault(x => _PWDosingType.IsAssignableFrom(x.ACClassWF.PWACClass.FromIPlusContext<gip.core.datamodel.ACClass>(db).ObjectType)) != null)?.Material;
+                
+                Material intermediateManual = matWFConnections.FirstOrDefault(c => c.Material.MaterialWFConnection_Material
+                                                                                       .FirstOrDefault(x => _PWManualWeighingType.IsAssignableFrom(x.ACClassWF.PWACClass.FromIPlusContext<gip.core.datamodel.ACClass>(db).ObjectType)) != null)?.Material; ;
+
+                if (intermediateAutomatic == null && intermediateManual == null)
+                {
+                    //TODO:error
+                    return;
+                }
+
+                if (UseWaterMixer)
+                    cityWaterQ = cityWaterQ + coldWaterQ + warmWaterQ;
+
+                ProdOrderPartslistPos posCity = components.FirstOrDefault(c => c.Material.MaterialNo == _CityWaterMaterialNo);
+                if (posCity == null)
+                {
+                    posCity = AddProdOrderPartslistPos(dbApp, currentProdOrderPartslist, _CityWaterMaterialNo, components);
+                }
+
+                Material intermediateCity = intermediateAutomatic != null ? intermediateAutomatic : intermediateManual;
+
+                AdjustBatchPosInProdOrderPartslist(dbApp, currentProdOrderPartslist, intermediateCity, posCity, batch, cityWaterQ);
+                
+
+                if (!UseWaterMixer)
+                {
+                    if (coldWaterQ > 0.00001)
+                    {
+                        ProdOrderPartslistPos pos = components.FirstOrDefault(c => c.Material.MaterialNo == _ColdWaterMaterialNo);
+                        if (pos == null)
+                        {
+                            pos = AddProdOrderPartslistPos(dbApp, currentProdOrderPartslist, _ColdWaterMaterialNo, components);
+                        }
+
+                        Material intermediate = intermediateAutomatic != null ? intermediateAutomatic : intermediateManual;
+
+                        AdjustBatchPosInProdOrderPartslist(dbApp, currentProdOrderPartslist, intermediate, pos, batch, coldWaterQ);
+                    }
+
+                    if (warmWaterQ > 0.00001)
+                    {
+                        ProdOrderPartslistPos pos = components.FirstOrDefault(c => c.Material.MaterialNo == _WarmWaterMaterialNo);
+                        if (pos == null)
+                        {
+                            pos = AddProdOrderPartslistPos(dbApp, currentProdOrderPartslist, _WarmWaterMaterialNo, components);
+                        }
+
+                        Material intermediate = intermediateAutomatic != null ? intermediateAutomatic : intermediateManual;
+
+                        AdjustBatchPosInProdOrderPartslist(dbApp, currentProdOrderPartslist, intermediate, pos, batch, warmWaterQ);
+                    }
+                }
+
+                if (dryIceQ > 0.00001 && !string.IsNullOrEmpty(DryIceMaterialNo))
+                {
+                    ProdOrderPartslistPos pos = components.FirstOrDefault(c => c.Material.MaterialNo == DryIceMaterialNo);
+                    if (pos == null)
+                    {
+                        pos = AddProdOrderPartslistPos(dbApp, currentProdOrderPartslist, DryIceMaterialNo, components);
+                    }
+
+                    if (intermediateManual != null)
+                    {
+                        AdjustBatchPosInProdOrderPartslist(dbApp, currentProdOrderPartslist, intermediateManual, pos, batch, dryIceQ);
+                    }
+                }
+
+                Msg result = dbApp.ACSaveChanges();
+            }
+        }
+
+        private ProdOrderPartslistPos AddProdOrderPartslistPos(DatabaseApp dbApp, ProdOrderPartslist poPartslist, string waterMaterialNo, IEnumerable<ProdOrderPartslistPos> components)
+        {
+            Material water = dbApp.Material.FirstOrDefault(c => c.MaterialNo == waterMaterialNo);
+            if (water == null)
+            {
+                //TODO: Error
+            }
+
+            ProdOrderPartslistPos pos = ProdOrderPartslistPos.NewACObject(dbApp, poPartslist);
+            pos.Material = water;
+            pos.MaterialPosTypeIndex = (short)GlobalApp.MaterialPosTypes.OutwardRoot;
+            pos.Sequence = 1;
+            if (components.Any())
+            {
+                pos.Sequence = components.Max(x => x.Sequence) + 1;
+            }
+            dbApp.ProdOrderPartslistPos.AddObject(pos);
+
+            return pos;
+        }
+
+        private void AdjustBatchPosInProdOrderPartslist (DatabaseApp dbApp, ProdOrderPartslist poPartslist, Material intermediateMaterial, ProdOrderPartslistPos sourcePos, ProdOrderBatch batch,
+                                                      double waterQuantity)
+        {
+            ProdOrderPartslistPos targetPos = poPartslist.ProdOrderPartslistPos_ProdOrderPartslist
+                                                             .FirstOrDefault(c => c.MaterialID == intermediateMaterial.MaterialID
+                                                                               && c.MaterialPosType == GlobalApp.MaterialPosTypes.InwardIntern);
+
+            if (targetPos == null)
+            {
+                targetPos = ProdOrderPartslistPos.NewACObject(dbApp, null);
+                targetPos.Sequence = 1;
+                targetPos.MaterialPosTypeIndex = (short)GlobalApp.MaterialPosTypes.InwardIntern;
+                dbApp.ProdOrderPartslistPos.AddObject(targetPos);
+            }
+
+            ProdOrderPartslistPosRelation topRelation = sourcePos.ProdOrderPartslistPosRelation_SourceProdOrderPartslistPos
+                                                           .FirstOrDefault(c => c.TargetProdOrderPartslistPos.MaterialID == targetPos.MaterialID
+                                                                             && c.TargetProdOrderPartslistPos.MaterialPosType == GlobalApp.MaterialPosTypes.InwardIntern);
+
+            if (topRelation == null)
+            {
+                topRelation = ProdOrderPartslistPosRelation.NewACObject(dbApp, null);
+                topRelation.SourceProdOrderPartslistPos = sourcePos;
+                topRelation.TargetProdOrderPartslistPos = targetPos;
+                topRelation.Sequence = targetPos.ProdOrderPartslistPosRelation_TargetProdOrderPartslistPos
+                                                .Where(c => c.TargetProdOrderPartslistPos.MaterialID == targetPos.MaterialID
+                                                         && c.TargetProdOrderPartslistPos.MaterialPosType == GlobalApp.MaterialPosTypes.InwardIntern)
+                                                .Max(x => x.Sequence) + 1;
+
+                dbApp.ProdOrderPartslistPosRelation.AddObject(topRelation);
+            }
+
+            ProdOrderPartslistPosRelation batchRelation = batch.ProdOrderPartslistPosRelation_ProdOrderBatch
+                                                               .FirstOrDefault(c => c.ParentProdOrderPartslistPosRelationID == topRelation.ProdOrderPartslistPosRelationID);
+
+            ProdOrderPartslistPos batchPos = batch.ProdOrderPartslistPos_ProdOrderBatch.FirstOrDefault(c => c.MaterialID == intermediateMaterial.MaterialID
+                                                                                     && c.MaterialPosType == GlobalApp.MaterialPosTypes.InwardPartIntern);
+
+            if (batchPos == null)
+            {
+                batchPos = ProdOrderPartslistPos.NewACObject(dbApp, targetPos);
+                batchPos.Sequence = 1; //TODO
+
+                batchPos.ProdOrderBatch = batch;
+                targetPos.ProdOrderPartslistPos_ParentProdOrderPartslistPos.Add(batchPos);
+            }
+
+            batchPos.TargetQuantityUOM = waterQuantity;
+            targetPos.CalledUpQuantityUOM += waterQuantity; //TODO
+
+            if (batchRelation == null)
+            {
+                batchRelation = ProdOrderPartslistPosRelation.NewACObject(dbApp, topRelation);
+                batchRelation.Sequence = topRelation.Sequence;
+                batchRelation.TargetProdOrderPartslistPos = batchPos;
+                batchRelation.SourceProdOrderPartslistPos = topRelation.SourceProdOrderPartslistPos;
+                batchRelation.ProdOrderBatch = batch;
+            }
+
+            batchRelation.TargetQuantityUOM = waterQuantity;
         }
 
         #endregion
@@ -992,15 +1202,31 @@ namespace gipbakery.mes.processapplication
 
             List<MaterialTemperature> componentTemp = partslistPosList.Select(c => new MaterialTemperature() { Material = c.Material }).ToList();
 
-            var coldWater = componentTemp.FirstOrDefault(c => c.Material.MaterialNo == matNoColdWater);
-            if (coldWater != null)
-                coldWater.Water = WaterType.ColdWater;
-
             var cityWater = componentTemp.FirstOrDefault(c => c.Material.MaterialNo == matNoCityWater);
             if (cityWater != null)
                 cityWater.Water = WaterType.CityWater;
 
+            var coldWater = componentTemp.FirstOrDefault(c => c.Material.MaterialNo == matNoColdWater);
+            if (cityWater != null && coldWater == null)
+            {
+                Material mat = dbApp.Material.FirstOrDefault(c => c.MaterialNo == matNoColdWater);
+                MaterialTemperature mt = new MaterialTemperature() { Material = mat };
+                componentTemp.Add(mt);
+                coldWater = mt;
+            }
+
+            if (coldWater != null)
+                coldWater.Water = WaterType.ColdWater;
+
             var warmWater = componentTemp.FirstOrDefault(c => c.Material.MaterialNo == matNoWarmWater);
+            if (cityWater != null && warmWater == null)
+            {
+                Material mat = dbApp.Material.FirstOrDefault(c => c.MaterialNo == matNoWarmWater);
+                MaterialTemperature mt = new MaterialTemperature() { Material = mat };
+                componentTemp.Add(mt);
+                warmWater = mt;
+            }
+
             if (warmWater != null)
                 warmWater.Water = WaterType.WarmWater;
 
