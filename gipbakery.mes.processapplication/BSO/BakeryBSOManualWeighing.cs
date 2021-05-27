@@ -119,6 +119,13 @@ namespace gipbakery.mes.processapplication
 
         #region Methods
 
+        public override void Activate(ACComponent selectedProcessModule)
+        {
+            UnloadBakeryTempCalc();
+            ResetTemperatureDialogParam();
+            base.Activate(selectedProcessModule);
+        }
+
         [ACMethodInfo("","",800)]
         public void ShowTemperaturesDialog()
         {
@@ -129,9 +136,9 @@ namespace gipbakery.mes.processapplication
             ShowDialog(this, "TemperaturesDialog");
         }
 
-        public bool IsShowTemperaturesDialog()
+        public bool IsEnabledShowTemperaturesDialog()
         {
-            return true;
+            return CurrentProcessModule != null;
         }
 
         public override void OnGetPWGroup(IACComponentPWNode pwGroup)
@@ -170,7 +177,7 @@ namespace gipbakery.mes.processapplication
             {
                 TempCalcResultMessage.PropertyChanged += TempCalcResultMessage_PropertyChanged;
             }
-            HandleTempCalcResultMsg();
+            HandleTempCalcResultMsg(TempCalcResultMessage.ValueT);
 
             GetTemperaturesFromPWBakeryTempCalc();
 
@@ -194,11 +201,13 @@ namespace gipbakery.mes.processapplication
         {
             if (e.PropertyName == Const.ValueT)
             {
-                HandleTempCalcResultMsg();
+                var prop = sender as IACContainerTNet<string>;
+                if (prop != null)
+                    HandleTempCalcResultMsg(prop.ValueT);
             }
         }
 
-        private void HandleTempCalcResultMsg()
+        private void HandleTempCalcResultMsg(string msg)
         {
             if (BakeryTempCalcACState != null && BakeryTempCalcACState.ValueT == ACStateEnum.SMRunning)
             {
@@ -211,8 +220,11 @@ namespace gipbakery.mes.processapplication
                     }
                 }
 
+                if (string.IsNullOrEmpty(msg))
+                    return;
+
                 MessageItem msgItem = new MessageItem(BakeryTempCalculator.ValueT, this);
-                msgItem.Message = TempCalcResultMessage.ValueT;
+                msgItem.Message = msg;
 
                 AddToMessageList(msgItem);
             }
@@ -249,6 +261,33 @@ namespace gipbakery.mes.processapplication
                     }
                 }
             }
+        }
+
+        private void UnloadBakeryTempCalc()
+        {
+            if (BakeryTempCalcACState != null)
+                BakeryTempCalcACState = null;
+
+            if (TempCalcResultMessage != null)
+            {
+                TempCalcResultMessage.PropertyChanged -= TempCalcResultMessage_PropertyChanged;
+                TempCalcResultMessage = null;
+            }
+
+            if (BakeryTempCalculator != null)
+            {
+                BakeryTempCalculator.Detach();
+                BakeryTempCalculator = null;
+            }
+        }
+
+        private void ResetTemperatureDialogParam()
+        {
+            IsOnlyWaterTemperatureCalculation = false;
+            IsDoughTemperatureCalculation = false;
+            DoughTargetTemperature = 0;
+            DoughCorrTemperature = 0;
+            WaterTargetTemperature = 0;
         }
 
         #region Methods => Temperature dialog

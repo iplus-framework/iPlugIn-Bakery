@@ -12,6 +12,7 @@ using System.Runtime.Serialization;
 
 namespace gipbakery.mes.processapplication
 {
+    //TODO ask water mixer save temperature to prodOrderPosRelation virtual property or in database
     [ACClassInfo(Const.PackName_VarioAutomation, "en{'Dough temperature calculation'}de{'Teigtemperaturberechnung'}", Global.ACKinds.TPWNodeStatic, Global.ACStorableTypes.Optional, false, PWMethodVBBase.PWClassName, true)]
     public class PWBakeryTempCalc : PWNodeUserAck
     {
@@ -69,13 +70,13 @@ namespace gipbakery.mes.processapplication
 
         public override bool ACDeInit(bool deleteACClassTask = false)
         {
-            ResetPrivateMembers();
+            ResetMembers();
             return base.ACDeInit(deleteACClassTask);
         }
 
         public override void Recycle(IACObject content, IACObject parentACObject, ACValueList parameter, string acIdentifier = "")
         {
-            ResetPrivateMembers();
+            ResetMembers();
             base.Recycle(content, parentACObject, parameter, acIdentifier);
         }
 
@@ -302,30 +303,46 @@ namespace gipbakery.mes.processapplication
 
         public override void Reset()
         {
-            ResetPrivateMembers();
+            ResetMembers();
             base.Reset();
         }
 
         public override void SMIdle()
         {
-            ResetPrivateMembers();
+            ResetMembers();
             base.SMIdle();
         }
 
         [ACMethodState("en{'Executing'}de{'Ausführend'}", 20, true)]
         public override void SMStarting()
         {
-            base.SMStarting();
+            RefreshNodeInfoOnModule();
+            if (CPasswordDlg)
+            {
+                string message = CMessageText;
+                if (string.IsNullOrEmpty(message))
+                    message = "Press acknowledge to authenitacate user..."; //TODO translation
+
+                AlarmsAsText.ValueT = message;
+            }
+
+            else if (string.IsNullOrEmpty(CMessageText))
+            {
+                CurrentACState = ACStateEnum.SMRunning;
+            }
+
+            //base.SMStarting();
         }
 
         public override void SMRunning()
         {
+            RefreshNodeInfoOnModule();
             if (Root.Initialized)
                 CalculateTargetTemperature();
             else
                 SubscribeToProjectWorkCycle();
 
-            base.SMRunning();
+            //base.SMRunning();
         }
 
         [ACMethodState("en{'Completed'}de{'Beendet'}", 40, true)]
@@ -1062,6 +1079,8 @@ namespace gipbakery.mes.processapplication
                 if (UseWaterMixer)
                     cityWaterQ = cityWaterQ + coldWaterQ + warmWaterQ;
 
+                double totalWatersQuantity = cityWaterQ + coldWaterQ + warmWaterQ + dryIceQ;
+
                 ProdOrderPartslistPos posCity = components.FirstOrDefault(c => c.Material.MaterialNo == _CityWaterMaterialNo);
                 if (posCity == null)
                 {
@@ -1070,7 +1089,7 @@ namespace gipbakery.mes.processapplication
 
                 Material intermediateCity = intermediateAutomatic != null ? intermediateAutomatic : intermediateManual;
 
-                AdjustBatchPosInProdOrderPartslist(dbApp, currentProdOrderPartslist, intermediateCity, posCity, batch, cityWaterQ);
+                AdjustBatchPosInProdOrderPartslist(dbApp, currentProdOrderPartslist, intermediateCity, posCity, batch, cityWaterQ, totalWatersQuantity);
                 
 
                 if (!UseWaterMixer)
@@ -1085,7 +1104,7 @@ namespace gipbakery.mes.processapplication
 
                         Material intermediate = intermediateAutomatic != null ? intermediateAutomatic : intermediateManual;
 
-                        AdjustBatchPosInProdOrderPartslist(dbApp, currentProdOrderPartslist, intermediate, pos, batch, coldWaterQ);
+                        AdjustBatchPosInProdOrderPartslist(dbApp, currentProdOrderPartslist, intermediate, pos, batch, coldWaterQ, totalWatersQuantity);
                     }
 
                     if (warmWaterQ > 0.00001)
@@ -1098,7 +1117,7 @@ namespace gipbakery.mes.processapplication
 
                         Material intermediate = intermediateAutomatic != null ? intermediateAutomatic : intermediateManual;
 
-                        AdjustBatchPosInProdOrderPartslist(dbApp, currentProdOrderPartslist, intermediate, pos, batch, warmWaterQ);
+                        AdjustBatchPosInProdOrderPartslist(dbApp, currentProdOrderPartslist, intermediate, pos, batch, warmWaterQ, totalWatersQuantity);
                     }
                 }
 
@@ -1112,7 +1131,7 @@ namespace gipbakery.mes.processapplication
 
                     if (intermediateManual != null)
                     {
-                        AdjustBatchPosInProdOrderPartslist(dbApp, currentProdOrderPartslist, intermediateManual, pos, batch, dryIceQ);
+                        AdjustBatchPosInProdOrderPartslist(dbApp, currentProdOrderPartslist, intermediateManual, pos, batch, dryIceQ, totalWatersQuantity);
                     }
                 }
 
@@ -1120,7 +1139,8 @@ namespace gipbakery.mes.processapplication
             }
         }
 
-        private ProdOrderPartslistPos AddProdOrderPartslistPos(DatabaseApp dbApp, ProdOrderPartslist poPartslist, string waterMaterialNo, IEnumerable<ProdOrderPartslistPos> components)
+        private ProdOrderPartslistPos AddProdOrderPartslistPos(DatabaseApp dbApp, ProdOrderPartslist poPartslist, string waterMaterialNo, 
+                                                               IEnumerable<ProdOrderPartslistPos> components)
         {
             Material water = dbApp.Material.FirstOrDefault(c => c.MaterialNo == waterMaterialNo);
             if (water == null)
@@ -1136,13 +1156,14 @@ namespace gipbakery.mes.processapplication
             {
                 pos.Sequence = components.Max(x => x.Sequence) + 1;
             }
+            pos.MDUnit = water.BaseMDUnit;
             dbApp.ProdOrderPartslistPos.AddObject(pos);
 
             return pos;
         }
 
         private void AdjustBatchPosInProdOrderPartslist (DatabaseApp dbApp, ProdOrderPartslist poPartslist, Material intermediateMaterial, ProdOrderPartslistPos sourcePos, ProdOrderBatch batch,
-                                                      double waterQuantity)
+                                                         double waterQuantity, double totalWatersQuantity)
         {
             ProdOrderPartslistPos targetPos = poPartslist.ProdOrderPartslistPos_ProdOrderPartslist
                                                              .FirstOrDefault(c => c.MaterialID == intermediateMaterial.MaterialID
@@ -1182,14 +1203,20 @@ namespace gipbakery.mes.processapplication
             if (batchPos == null)
             {
                 batchPos = ProdOrderPartslistPos.NewACObject(dbApp, targetPos);
-                batchPos.Sequence = 1; //TODO
+                batchPos.Sequence = 1; 
+                var existingBatchPos = batch.ProdOrderPartslistPos_ProdOrderBatch.Where(c => c.MaterialID == intermediateMaterial.MaterialID
+                                                                                     && c.MaterialPosType == GlobalApp.MaterialPosTypes.InwardPartIntern);
 
+                if (existingBatchPos != null && existingBatchPos.Any())
+                    batchPos.Sequence = existingBatchPos.Max(c => c.Sequence) + 1;
+
+                batchPos.TargetQuantityUOM = totalWatersQuantity;
                 batchPos.ProdOrderBatch = batch;
+                batchPos.MDUnit = targetPos.MDUnit;
                 targetPos.ProdOrderPartslistPos_ParentProdOrderPartslistPos.Add(batchPos);
             }
 
-            batchPos.TargetQuantityUOM = waterQuantity;
-            targetPos.CalledUpQuantityUOM += waterQuantity; //TODO
+            targetPos.CalledUpQuantityUOM += waterQuantity; //TODO is this OK? and adjust targetQuantity
 
             if (batchRelation == null)
             {
@@ -1437,7 +1464,7 @@ namespace gipbakery.mes.processapplication
 
                 RootPW.ReloadConfig();
 
-                ResetPrivateMembers();
+                ResetMembers();
 
             }
             //ConfigManagerIPlus.ACConfigFactory(CurrentConfigStore, )
@@ -1502,11 +1529,17 @@ namespace gipbakery.mes.processapplication
             }
         }
 
-        public void ResetPrivateMembers()
+        private void ResetMembers()
         {
             using (ACMonitor.Lock(_20015_LockValue))
             {
                 _RecalculateTemperatures = true;
+                TemperatureCalculationResult.ValueT = null;
+                WaterCalcResult.ValueT = 0;
+                ColdWaterQuantity.ValueT = 0;
+                CityWaterQuantity.ValueT = 0;
+                WarmWaterQuantity.ValueT = 0;
+                DryIceQuantity.ValueT = 0;
             }
         }
 
