@@ -108,7 +108,6 @@ namespace gipbakery.mes.processapplication
             return TemperatureService.ExecuteMethod(PABakeryTempService.MN_GetTemperaturesInfo, ComponentClass.ACClassID) as ACValueList;
         }
 
-
         #endregion
 
         #region Points

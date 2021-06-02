@@ -115,6 +115,22 @@ namespace gipbakery.mes.processapplication
 
         #endregion
 
+        #region Properties => SingleDosing dialog
+
+        private double _SingleDosTargetTemperature;
+        [ACPropertyInfo(850, "", "en{'Temperature'}de{'Temperatur'}")]
+        public double SingleDosTargetTemperature
+        {
+            get => _SingleDosTargetTemperature;
+            set
+            {
+                _SingleDosTargetTemperature = value;
+                OnPropertyChanged("SingleDosTargetTemperature");
+            }
+        }
+
+        #endregion
+
         #endregion
 
         #region Methods
@@ -124,21 +140,6 @@ namespace gipbakery.mes.processapplication
             UnloadBakeryTempCalc();
             ResetTemperatureDialogParam();
             base.Activate(selectedProcessModule);
-        }
-
-        [ACMethodInfo("","",800)]
-        public void ShowTemperaturesDialog()
-        {
-            var corrTemp = CurrentProcessModule.ACUrlCommand("DoughCorrTemp") as double?;
-            if (corrTemp.HasValue)
-                DoughCorrTemperature = corrTemp.Value;
-
-            ShowDialog(this, "TemperaturesDialog");
-        }
-
-        public bool IsEnabledShowTemperaturesDialog()
-        {
-            return CurrentProcessModule != null;
         }
 
         public override void OnGetPWGroup(IACComponentPWNode pwGroup)
@@ -292,6 +293,21 @@ namespace gipbakery.mes.processapplication
 
         #region Methods => Temperature dialog
 
+        [ACMethodInfo("", "", 800)]
+        public void ShowTemperaturesDialog()
+        {
+            var corrTemp = CurrentProcessModule.ACUrlCommand("DoughCorrTemp") as double?;
+            if (corrTemp.HasValue)
+                DoughCorrTemperature = corrTemp.Value;
+
+            ShowDialog(this, "TemperaturesDialog");
+        }
+
+        public bool IsEnabledShowTemperaturesDialog()
+        {
+            return CurrentProcessModule != null;
+        }
+
         [ACMethodInfo("","",880, true)]
         public void DoughTempCorrPlus()
         {
@@ -344,6 +360,8 @@ namespace gipbakery.mes.processapplication
         }
 
         #endregion
+
+
 
         //TODO: Handle execute ACMethods
 

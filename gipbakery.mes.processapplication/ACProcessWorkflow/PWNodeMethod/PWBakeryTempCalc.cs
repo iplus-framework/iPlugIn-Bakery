@@ -12,7 +12,7 @@ using System.Runtime.Serialization;
 
 namespace gipbakery.mes.processapplication
 {
-    //TODO ask water mixer save temperature to prodOrderPosRelation virtual property or in database
+    //TODO pwdosingnode find pwbakerytempcalc and set water calc temp result to function param
     [ACClassInfo(Const.PackName_VarioAutomation, "en{'Dough temperature calculation'}de{'Teigtemperaturberechnung'}", Global.ACKinds.TPWNodeStatic, Global.ACStorableTypes.Optional, false, PWMethodVBBase.PWClassName, true)]
     public class PWBakeryTempCalc : PWNodeUserAck
     {
@@ -119,7 +119,10 @@ namespace gipbakery.mes.processapplication
             set;
         }
 
-        [ACPropertyBindingSource]
+        /// <summary>
+        /// Represents the calculated water temperature
+        /// </summary>
+        [ACPropertyBindingSource(9999, "", "en{'Water calculation temperature result'}de{'Water calculation temperature result'}", "", false, true)]
         public IACContainerTNet<double> WaterCalcResult
         {
             get;
@@ -361,6 +364,7 @@ namespace gipbakery.mes.processapplication
 
             else if (CurrentACState == ACStateEnum.SMRunning)
             {
+                //TODO: delegate to application queue
                 AdjustWatersInProdOrderPartslist();
                 CurrentACState = ACStateEnum.SMCompleted;
             }
@@ -1157,6 +1161,7 @@ namespace gipbakery.mes.processapplication
                 pos.Sequence = components.Max(x => x.Sequence) + 1;
             }
             pos.MDUnit = water.BaseMDUnit;
+
             dbApp.ProdOrderPartslistPos.AddObject(pos);
 
             return pos;
@@ -1535,7 +1540,6 @@ namespace gipbakery.mes.processapplication
             {
                 _RecalculateTemperatures = true;
                 TemperatureCalculationResult.ValueT = null;
-                WaterCalcResult.ValueT = 0;
                 ColdWaterQuantity.ValueT = 0;
                 CityWaterQuantity.ValueT = 0;
                 WarmWaterQuantity.ValueT = 0;
