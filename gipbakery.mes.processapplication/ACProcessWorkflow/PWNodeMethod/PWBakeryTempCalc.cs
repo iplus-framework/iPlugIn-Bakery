@@ -392,10 +392,7 @@ namespace gipbakery.mes.processapplication
                 DryIceQuantity.ValueT = 0;
             }
 
-            PWMethodProduction pwMethodProduction = ParentPWMethod<PWMethodProduction>();
-            // If dosing is not for production, then do nothing
-            if (pwMethodProduction == null)
-                return;
+
 
             BakeryReceivingPoint recvPoint = ParentPWGroup.AccessedProcessModule as BakeryReceivingPoint;
             if (recvPoint == null)
@@ -409,6 +406,31 @@ namespace gipbakery.mes.processapplication
                 //TODO: error => configure dry ice material number
             }
 
+            PWMethodProduction pwMethodProduction = ParentPWMethod<PWMethodProduction>();
+            // If dosing is not for production, then do nothing
+            if (pwMethodProduction != null)
+            {
+                CalculateProdOrderTargetTemperature(recvPoint, pwMethodProduction);
+            }
+            else
+            {
+                PWMethodRelocation pwMethodRelocation = ParentPWMethod<PWMethodRelocation>();
+                if (pwMethodRelocation != null)
+                {
+                    CalculateRelocationTargetTempreature(recvPoint, pwMethodRelocation);
+                }
+
+            }
+
+            using (ACMonitor.Lock(_20015_LockValue))
+            {
+                _RecalculateTemperatures = false;
+            }
+            UnSubscribeToProjectWorkCycle();
+        }
+
+        private void CalculateProdOrderTargetTemperature(BakeryReceivingPoint recvPoint, PWMethodProduction pwMethodProduction)
+        {
             using (Database db = new gip.core.datamodel.Database())
             using (DatabaseApp dbApp = new DatabaseApp())
             {
@@ -520,19 +542,76 @@ namespace gipbakery.mes.processapplication
                     waterTargetQuantity += iceComp.TargetQuantity;
 
                 double defaultWaterTemp = 0;
-                double suggestedWaterTemp = CalculateWaterTemperatureSuggestion(UseWaterTemp, isOnlyWaterCompsInPartslist, cityWaterComp, DoughTemp.Value, doughTargetTempBeforeKneeding,
-                                                                                componentsQ, waterTargetQuantity, out defaultWaterTemp);
+                double suggestedWaterTemp = CalculateWaterTemperatureSuggestion(UseWaterTemp, isOnlyWaterCompsInPartslist, cityWaterComp.SourceProdOrderPartslistPos.Material, DoughTemp.Value, 
+                                                                                doughTargetTempBeforeKneeding, componentsQ, waterTargetQuantity, out defaultWaterTemp);
 
                 CalculateWaterTypes(compTemps, suggestedWaterTemp, waterTargetQuantity.Value, defaultWaterTemp, componentsQ, isOnlyWaterCompsInPartslist, doughTargetTempBeforeKneeding);
             }
-
-            using (ACMonitor.Lock(_20015_LockValue))
-            {
-                _RecalculateTemperatures = false;
-            }
-            UnSubscribeToProjectWorkCycle();
         }
 
+        private void CalculateRelocationTargetTempreature(BakeryReceivingPoint recvPoint, PWMethodRelocation pwMethodRelocation)
+        {
+            using (Database db = new gip.core.datamodel.Database())
+            using (DatabaseApp dbApp = new DatabaseApp())
+            {
+                ACValueList componentTemperaturesService = recvPoint.GetComponentTemperatures();
+                if (componentTemperaturesService == null)
+                    return;
+
+                List<MaterialTemperature> tempFromService = componentTemperaturesService.Select(c => c.Value as MaterialTemperature).ToList();
+
+                _ColdWaterMaterialNo = tempFromService.FirstOrDefault(c => c.Water == WaterType.ColdWater)?.MaterialNo;
+                _CityWaterMaterialNo = tempFromService.FirstOrDefault(c => c.Water == WaterType.CityWater)?.MaterialNo;
+                _WarmWaterMaterialNo = tempFromService.FirstOrDefault(c => c.Water == WaterType.WarmWater)?.MaterialNo;
+                string dryIce = DryIceMaterialNo;
+
+                if (string.IsNullOrEmpty(_ColdWaterMaterialNo) || string.IsNullOrEmpty(_CityWaterMaterialNo) || string.IsNullOrEmpty(_WarmWaterMaterialNo) || string.IsNullOrEmpty(dryIce))
+                {
+                    //TODO error
+                }
+
+
+                Picking picking = pwMethodRelocation.CurrentPicking.FromAppContext<Picking>(dbApp);
+                PickingPos pickingPos = pwMethodRelocation.CurrentPickingPos.FromAppContext<PickingPos>(dbApp);
+
+                Material cityWaterComp = pickingPos.Material.MaterialNo == _CityWaterMaterialNo ? pickingPos.Material : null;
+                if (cityWaterComp == null)
+                {
+                    //ask Damir: error or skip node
+                    return;
+                }
+
+                PickingPos coldWaterComp = picking.PickingPos_Picking.FirstOrDefault(c => c.Material.MaterialNo == _ColdWaterMaterialNo);
+                PickingPos warmWaterComp = picking.PickingPos_Picking.FirstOrDefault(c => c.Material.MaterialNo == _WarmWaterMaterialNo);
+                PickingPos iceComp = picking.PickingPos_Picking.FirstOrDefault(c => c.Material.MaterialNo == DryIceMaterialNo);
+
+                List<MaterialTemperature> compTemps = DetermineComponentsTemperature(picking, recvPoint, dbApp, tempFromService, _ColdWaterMaterialNo, _CityWaterMaterialNo, _WarmWaterMaterialNo,
+                                                                                    dryIce);
+
+
+                bool isOnlyWaterCompsInPartslist = true;
+                double? waterTargetQuantity = pickingPos.TargetQuantity;
+                if (!waterTargetQuantity.HasValue)
+                {
+                    //todo error: in partslist missing water
+                }
+
+                if (coldWaterComp != null && coldWaterComp.TargetQuantity > 0)
+                    waterTargetQuantity += coldWaterComp.TargetQuantity;
+
+                if (warmWaterComp != null && warmWaterComp.TargetQuantity > 0)
+                    waterTargetQuantity += warmWaterComp.TargetQuantity;
+
+                if (iceComp != null && iceComp.TargetQuantity > 0)
+                    waterTargetQuantity += iceComp.TargetQuantity;
+
+                double defaultWaterTemp = 0;
+                double suggestedWaterTemp = CalculateWaterTemperatureSuggestion(UseWaterTemp, isOnlyWaterCompsInPartslist, cityWaterComp, WaterTemp.Value, 0,
+                                                                                0, waterTargetQuantity, out defaultWaterTemp);
+
+                CalculateWaterTypes(compTemps, suggestedWaterTemp, waterTargetQuantity.Value, defaultWaterTemp, 0, isOnlyWaterCompsInPartslist, 0);
+            }
+        }
 
         //TODO: half quantity
         private bool GetKneedingRiseTemperature(DatabaseApp dbApp, out double kneedingTemperature)
@@ -636,13 +715,13 @@ namespace gipbakery.mes.processapplication
 
 
 
-        private double CalculateWaterTemperatureSuggestion(bool calculateWaterTemp, bool isOnlyWater, ProdOrderPartslistPosRelation waterComp, double doughTargetTempAfterKneeding,
+        private double CalculateWaterTemperatureSuggestion(bool calculateWaterTemp, bool isOnlyWater, Material waterComp, double doughTargetTempAfterKneeding,
                                                            double doughTargetTempBeforeKneeding, double componentsQ, double? waterTargetQuantity, out double defaultWaterTemp)
         {
             double suggestedWaterTemperature = 20;
             defaultWaterTemp = 0; //TODO
 
-            double? waterSpecHeatCapacity = waterComp.SourceProdOrderPartslistPos.Material.SpecHeatCapacity;
+            double? waterSpecHeatCapacity = waterComp.SpecHeatCapacity;
 
             if (calculateWaterTemp)
             {
@@ -1319,6 +1398,65 @@ namespace gipbakery.mes.processapplication
             return componentTemp;
         }
 
+        private List<MaterialTemperature> DetermineComponentsTemperature(Picking picking, BakeryReceivingPoint recvPoint, DatabaseApp dbApp,
+                                                                         List<MaterialTemperature> tempFromService, string matNoColdWater,
+                                                                         string matNoCityWater, string matNoWarmWater, string matNoDryIce)
+        {
+            List<MaterialTemperature> componentTemp = picking.PickingPos_Picking.Select(c => new MaterialTemperature() { Material = c.Material }).ToList();
+
+            var cityWater = componentTemp.FirstOrDefault(c => c.Material.MaterialNo == matNoCityWater);
+            if (cityWater != null)
+                cityWater.Water = WaterType.CityWater;
+
+            var coldWater = componentTemp.FirstOrDefault(c => c.Material.MaterialNo == matNoColdWater);
+            if (cityWater != null && coldWater == null)
+            {
+                Material mat = dbApp.Material.FirstOrDefault(c => c.MaterialNo == matNoColdWater);
+                MaterialTemperature mt = new MaterialTemperature() { Material = mat };
+                componentTemp.Add(mt);
+                coldWater = mt;
+            }
+
+            if (coldWater != null)
+                coldWater.Water = WaterType.ColdWater;
+
+            var warmWater = componentTemp.FirstOrDefault(c => c.Material.MaterialNo == matNoWarmWater);
+            if (cityWater != null && warmWater == null)
+            {
+                Material mat = dbApp.Material.FirstOrDefault(c => c.MaterialNo == matNoWarmWater);
+                MaterialTemperature mt = new MaterialTemperature() { Material = mat };
+                componentTemp.Add(mt);
+                warmWater = mt;
+            }
+
+            if (warmWater != null)
+                warmWater.Water = WaterType.WarmWater;
+
+            var dryIceMaterial = componentTemp.FirstOrDefault(c => c.Material.MaterialNo == matNoDryIce);
+            if (dryIceMaterial != null)
+                dryIceMaterial.Water = WaterType.DryIce;
+
+            DetermineCompTempFromMaterial(componentTemp, picking, recvPoint.RoomTemperature.ValueT);
+
+            SetCompTempFromService(componentTemp, tempFromService, recvPoint.RoomTemperature.ValueT);
+
+            if (!componentTemp.Any(c => c.Material.MaterialNo == matNoDryIce))
+            {
+                Material dryIce = dbApp.Material.FirstOrDefault(c => c.MaterialNo == matNoDryIce);
+                if (dryIce != null)
+                {
+                    MaterialTemperature mt = new MaterialTemperature() { Material = dryIce, AverageTemperature = -5, Water = WaterType.DryIce }; //TODO get temp from material, if is not set error
+                    componentTemp.Add(mt);
+                }
+                else
+                {
+                    // TODO: error 
+                }
+            }
+
+            return componentTemp;
+        }
+
         //TODO: double comparation with 0
         private void DetermineCompTempFromPartslistOrMaterial(List<MaterialTemperature> componentTemp, IEnumerable<PartslistPos> partslistPosList, double roomTemp)
         {
@@ -1354,6 +1492,38 @@ namespace gipbakery.mes.processapplication
                 }
 
                 ext = pos.Material.ACProperties.GetOrCreateACPropertyExtByName("Temperature", false);
+                if (ext != null)
+                {
+                    double? value = (ext.Value as double?);
+                    if (value.HasValue && value.Value != 0)
+                    {
+                        MaterialTemperature mt = componentTemp.FirstOrDefault(c => c.Material.MaterialID == pos.Material.MaterialID);
+                        if (mt != null)
+                            mt.AverageTemperature = value.Value;
+                        continue;
+                    }
+                }
+
+                ext = pos.Material.ACProperties.GetOrCreateACPropertyExtByName("UseRoomTemperature", false);
+                if (ext != null)
+                {
+                    bool? value = (ext.Value as bool?);
+                    if (value.HasValue && value.Value)
+                    {
+                        MaterialTemperature mt = componentTemp.FirstOrDefault(c => c.Material.MaterialID == pos.Material.MaterialID);
+                        if (mt != null)
+                            mt.AverageTemperature = roomTemp;
+                        continue;
+                    }
+                }
+            }
+        }
+
+        private void DetermineCompTempFromMaterial(List<MaterialTemperature> componentTemp, Picking picking, double roomTemp)
+        {
+            foreach(PickingPos pos in picking.PickingPos_Picking)
+            {
+                ACPropertyExt ext = pos.Material.ACProperties.GetOrCreateACPropertyExtByName("Temperature", false);
                 if (ext != null)
                 {
                     double? value = (ext.Value as double?);
