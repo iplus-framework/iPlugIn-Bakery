@@ -4,6 +4,7 @@ using gip.core.datamodel;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using vd = gip.mes.datamodel;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -14,7 +15,7 @@ namespace gipbakery.mes.processapplication
     {
         #region c'tors
 
-        public BakeryBSOManualWeighing(ACClass acType, IACObject content, IACObject parentACObject, ACValueList parameter, string acIdentifier = "") : 
+        public BakeryBSOManualWeighing(ACClass acType, IACObject content, IACObject parentACObject, ACValueList parameter, string acIdentifier = "") :
             base(acType, content, parentACObject, parameter, acIdentifier)
         {
         }
@@ -117,9 +118,9 @@ namespace gipbakery.mes.processapplication
 
         #region Properties => SingleDosing dialog
 
-        private double _SingleDosTargetTemperature;
+        private double? _SingleDosTargetTemperature;
         [ACPropertyInfo(850, "", "en{'Temperature'}de{'Temperatur'}")]
-        public double SingleDosTargetTemperature
+        public double? SingleDosTargetTemperature
         {
             get => _SingleDosTargetTemperature;
             set
@@ -308,7 +309,7 @@ namespace gipbakery.mes.processapplication
             return CurrentProcessModule != null;
         }
 
-        [ACMethodInfo("","",880, true)]
+        [ACMethodInfo("", "", 880, true)]
         public void DoughTempCorrPlus()
         {
             DoughCorrTemperature++;
@@ -337,7 +338,7 @@ namespace gipbakery.mes.processapplication
         {
             CurrentProcessModule.ACUrlCommand("DoughCorrTemp", DoughCorrTemperature); //Save dough correct temperature on bakery recieving point
 
-            BakeryTempCalculator.ValueT.ExecuteMethod("SaveWorkplaceTemperatureSettings", WaterTargetTemperature , IsOnlyWaterTemperatureCalculation);//TODO parameters
+            BakeryTempCalculator.ValueT.ExecuteMethod("SaveWorkplaceTemperatureSettings", WaterTargetTemperature, IsOnlyWaterTemperatureCalculation);//TODO parameters
             CloseTopDialog();
         }
 
@@ -361,7 +362,90 @@ namespace gipbakery.mes.processapplication
 
         #endregion
 
+        #region Methods => SingleDosing
 
+        public override void OnSetPickingRoutingRules(gip.mes.datamodel.Picking picking, ACClassWF rootWF, List<SingleDosingConfigItem> configItems)
+        {
+            base.OnSetPickingRoutingRules(picking, rootWF, configItems);
+
+            if (SingleDosTargetTemperature.HasValue)
+            {
+                SingleDosingConfigItem configItem = configItems.FirstOrDefault(c => c.PWGroup.ACClassWF_ParentACClassWF
+                                                                                             .Any(x => typeof(PWBakeryTempCalc).IsAssignableFrom(x.PWACClass.ObjectType)));
+
+                if (configItem != null)
+                {
+                    ACClassWF tempCalc = configItem.PWGroup.ACClassWF_ParentACClassWF.FirstOrDefault(x => typeof(PWBakeryTempCalc).IsAssignableFrom(x.PWACClass.ObjectType));
+                    if (tempCalc == null)
+                        return;
+
+                    string preConfigACUrl = configItem.PreConfigACUrl + "\\";
+                    string propertyACUrl = string.Format("{0}\\{1}\\WaterTemp", tempCalc.ConfigACUrl, ACStateEnum.SMStarting);
+
+                    // Water temp 
+                    IACConfig waterTempConfig = picking.ConfigurationEntries.FirstOrDefault(c => c.PreConfigACUrl == preConfigACUrl && c.LocalConfigACUrl == propertyACUrl);
+                    if (waterTempConfig == null)
+                    {
+                        waterTempConfig = InsertTemperatureConfiguration(propertyACUrl, preConfigACUrl, "WaterTemp", tempCalc, picking);
+                    }
+
+                    if (waterTempConfig == null)
+                    {
+                        //TODO: alarm
+                    }
+                    else
+                        waterTempConfig.Value = SingleDosTargetTemperature;
+
+                    // Water temp 
+                    propertyACUrl = string.Format("{0}\\{1}\\UseWaterTemp", tempCalc.ConfigACUrl, ACStateEnum.SMStarting);
+                    IACConfig useOnlyForWaterTempCalculation = picking.ConfigurationEntries.FirstOrDefault(c => c.PreConfigACUrl == preConfigACUrl
+                                                                                                             && c.LocalConfigACUrl == propertyACUrl);
+                    if (useOnlyForWaterTempCalculation == null)
+                    {
+                        useOnlyForWaterTempCalculation = InsertTemperatureConfiguration(propertyACUrl, preConfigACUrl, "UseWaterTemp", tempCalc, picking);
+                    }
+
+                    if (useOnlyForWaterTempCalculation == null)
+                    {
+                        //TODO: alarm
+                    }
+                    else
+                        useOnlyForWaterTempCalculation.Value = true;
+
+                    var msg = DatabaseApp.ACSaveChanges();
+
+                }
+
+            }
+        }
+
+        private IACConfig InsertTemperatureConfiguration(string propertyACUrl, string preConfigACUrl, string paramACIdentifier, ACClassWF acClassWF, IACConfigStore configStore)
+        {
+            ACMethod acMethod = acClassWF.PWACClass.ACClassMethod_ACClass.FirstOrDefault(c => c.ACIdentifier == ACStateConst.SMStarting)?.ACMethod;
+            if (acMethod != null)
+            {
+                ACValue valItem = acMethod.ParameterValueList.GetACValue(paramACIdentifier);
+
+                ACConfigParam param = new ACConfigParam()
+                {
+                    ACIdentifier = valItem.ACIdentifier,
+                    ACCaption = acMethod.GetACCaptionForACIdentifier(valItem.ACIdentifier),
+                    ValueTypeACClassID = valItem.ValueTypeACClass.ACClassID,
+                    ACClassWF = acClassWF
+                };
+
+                IACConfig configParam = ConfigManagerIPlus.ACConfigFactory(configStore, param, preConfigACUrl, propertyACUrl, null);
+                param.ConfigurationList.Insert(0, configParam);
+
+                configStore.ConfigurationEntries.Append(configParam);
+
+                return configParam;
+            }
+
+            return null;
+        }
+
+        #endregion
 
         //TODO: Handle execute ACMethods
 

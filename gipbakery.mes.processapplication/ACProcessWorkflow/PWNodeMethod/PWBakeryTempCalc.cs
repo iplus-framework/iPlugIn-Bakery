@@ -147,6 +147,16 @@ namespace gipbakery.mes.processapplication
             }
         }
 
+        public bool IsRelocation
+        {
+            get
+            {
+                return ParentPWMethod<PWMethodRelocation>() != null;
+            }
+        }
+
+        private TempCalcMode _CalculatorMode = TempCalcMode.Calcuate;
+
         private bool _RecalculateTemperatures = true;
 
         private string _CityWaterMaterialNo;
@@ -341,7 +351,20 @@ namespace gipbakery.mes.processapplication
         {
             RefreshNodeInfoOnModule();
             if (Root.Initialized)
-                CalculateTargetTemperature();
+            {
+                TempCalcMode calcMode = TempCalcMode.Calcuate;
+                using (ACMonitor.Lock(_20015_LockValue))
+                    calcMode = _CalculatorMode;
+
+                if (calcMode == TempCalcMode.Calcuate)
+                    CalculateTargetTemperature();
+                else if (calcMode == TempCalcMode.AdjustOrder)
+                {
+                    //TODO: errors
+                    AdjustOrder();
+                    CurrentACState = ACStateEnum.SMCompleted;
+                }
+            }
             else
                 SubscribeToProjectWorkCycle();
 
@@ -364,9 +387,11 @@ namespace gipbakery.mes.processapplication
 
             else if (CurrentACState == ACStateEnum.SMRunning)
             {
-                //TODO: delegate to application queue
-                AdjustWatersInProdOrderPartslist();
-                CurrentACState = ACStateEnum.SMCompleted;
+                using (ACMonitor.Lock(_20015_LockValue))
+                {
+                    _CalculatorMode = TempCalcMode.AdjustOrder;
+                }
+                SubscribeToProjectWorkCycle();
             }
         }
 
@@ -1073,7 +1098,19 @@ namespace gipbakery.mes.processapplication
 
         #endregion
 
-        #region Methods => ModifyProdOrderPartslist
+        #region Methods => ModifyProdOrderPartslist/Picking
+
+        public void AdjustOrder()
+        {
+            if (IsProduction)
+            {
+                AdjustWatersInProdOrderPartslist();
+            }
+            else if (IsRelocation)
+            {
+                AdjustWatersInPicking();
+            }
+        }
 
         public void AdjustWatersInProdOrderPartslist()
         {
@@ -1312,6 +1349,123 @@ namespace gipbakery.mes.processapplication
             }
 
             batchRelation.TargetQuantityUOM = waterQuantity;
+        }
+
+        private void AdjustWatersInPicking()
+        {
+            double cityWaterQ = 0, coldWaterQ = 0, warmWaterQ = 0, dryIceQ = 0;
+
+            using (ACMonitor.Lock(_20015_LockValue))
+            {
+                cityWaterQ = Math.Round(CityWaterQuantity.ValueT, 2);
+                coldWaterQ = Math.Round(ColdWaterQuantity.ValueT, 2);
+                warmWaterQ = Math.Round(WarmWaterQuantity.ValueT, 2);
+                dryIceQ = Math.Round(DryIceQuantity.ValueT, 2);
+            }
+
+            if (cityWaterQ < 0.0001 && coldWaterQ < 0.0001 && warmWaterQ < 0.0001 && dryIceQ < 0.0001)
+            {
+                //TODO: alarm
+                return;
+            }
+
+            if (string.IsNullOrEmpty(_CityWaterMaterialNo) || string.IsNullOrEmpty(_ColdWaterMaterialNo) || string.IsNullOrEmpty(_WarmWaterMaterialNo) || string.IsNullOrEmpty(DryIceMaterialNo))
+            {
+                //TODO: alarm
+                return;
+            }
+
+            PWMethodRelocation pwMethodRelocation = ParentPWMethod<PWMethodRelocation>();
+            if (pwMethodRelocation == null)
+                return;
+
+            if(!UseWaterMixer)
+            {
+                using(DatabaseApp dbApp = new DatabaseApp())
+                {
+                    Picking picking = pwMethodRelocation.CurrentPicking.FromAppContext<Picking>(dbApp);
+                    if (picking == null)
+                        return;
+
+
+                    PickingPos cityWaterPos = picking.PickingPos_Picking.FirstOrDefault(c => c.Material.MaterialNo == _CityWaterMaterialNo);
+                    if (cityWaterPos == null)
+                    {
+                        //Error
+                    }
+
+                    Facility targetFacility = cityWaterPos.ToFacility;
+
+                    cityWaterPos.PickingQuantityUOM = cityWaterQ;
+                    
+                    if (coldWaterQ > 0.00001)
+                    {
+                        PickingPos coldWaterPos = picking.PickingPos_Picking.FirstOrDefault(c => c.Material.MaterialNo == _ColdWaterMaterialNo);
+                        if (coldWaterPos == null)
+                        {
+                            coldWaterPos = AddPickingPos(dbApp, picking, _ColdWaterMaterialNo, targetFacility);
+                        }
+                        coldWaterPos.PickingQuantityUOM = coldWaterQ;
+                    }
+
+                    if (warmWaterQ > 0.00001)
+                    {
+                        PickingPos warmWaterPos = picking.PickingPos_Picking.FirstOrDefault(c => c.Material.MaterialNo == _WarmWaterMaterialNo);
+                        if (warmWaterPos == null)
+                        {
+                            warmWaterPos = AddPickingPos(dbApp, picking, _WarmWaterMaterialNo, targetFacility);
+                        }
+                        warmWaterPos.PickingQuantityUOM = warmWaterQ;
+                    }
+
+                    //TODO: ice
+
+                    dbApp.ACSaveChanges();
+                }
+            }
+        }
+
+        private PickingPos AddPickingPos(DatabaseApp dbApp, Picking picking, string materialNo, Facility toFacility)
+        {
+            Material material = dbApp.Material.FirstOrDefault(c => c.MaterialNo == materialNo);
+            if (material == null)
+            {
+                //TODO:error
+            }
+
+            Facility source = null;
+            var possibleSources = material.Facility_Material.ToList();
+            if (possibleSources.Count > 1)
+            {
+                IEnumerable<string> sources = possibleSources.Where(c => c.VBiFacilityACClassID != null).Select(x => x.VBiFacilityACClass.ACURLComponentCached);
+                gip.core.datamodel.ACClass module = ParentPWGroup.AccessedProcessModule.ComponentClass.FromIPlusContext<gip.core.datamodel.ACClass>(dbApp.ContextIPlus);
+
+                RoutingResult rResult = ACRoutingService.SelectRoutes(RoutingService, dbApp.ContextIPlus, false, module, sources, RouteDirections.Backwards, PAMTank.SelRuleID_Silo, 
+                                                                      null, null, null, 10, true, true);
+
+                if (rResult != null)
+                {
+                    if (rResult.Routes.Any())
+                    {
+                        Route route = rResult.Routes.FirstOrDefault();
+                        source = possibleSources.FirstOrDefault(c => c.VBiFacilityACClass.ACClassID == route.GetRouteSource().SourceGuid);
+                    }
+                }
+            }
+            else
+            {
+                source = possibleSources.FirstOrDefault();
+            }
+
+            PickingPos pos = PickingPos.NewACObject(dbApp, picking);
+            pos.PickingMaterial = material;
+            pos.Sequence = picking.PickingPos_Picking.Max(c => c.Sequence) + 1;
+            pos.FromFacility = source;
+            pos.ToFacility = toFacility;
+            picking.PickingPos_Picking.Add(pos);
+            dbApp.PickingPos.AddObject(pos);
+
+            return pos;
         }
 
         #endregion
@@ -1585,15 +1739,21 @@ namespace gipbakery.mes.processapplication
         {
             using (DatabaseApp dbApp = new DatabaseApp())
             {
-                IACConfigStore partslistConfigStore = (MandatoryConfigStores?.FirstOrDefault(c => c is Partslist) as Partslist)?.FromAppContext<Partslist>(dbApp);
-                if (partslistConfigStore != null)
+                IACConfigStore configStore = (MandatoryConfigStores?.FirstOrDefault(c => c is Partslist) as Partslist)?.FromAppContext<Partslist>(dbApp);
+                if (configStore == null)
                 {
-                    Guid? accessedProcessModuleID = ParentPWGroup?.AccessedProcessModule?.ComponentClass?.ACClassID;
+                    configStore = (MandatoryConfigStores?.FirstOrDefault(c => c is Picking) as Picking)?.FromAppContext<Picking>(dbApp);
+                }
 
-                    if (accessedProcessModuleID.HasValue)
-                    {
-                        var configEntries = partslistConfigStore.ConfigurationEntries.Where(c => c.PreConfigACUrl == PreValueACUrl && c.LocalConfigACUrl.StartsWith(ConfigACUrl)
-                                                                                              && c.VBiACClassID == accessedProcessModuleID);
+
+                if (configStore != null)
+                {
+                    Guid? accessedProcessModuleID = configStore is Picking ? null : ParentPWGroup?.AccessedProcessModule?.ComponentClass?.ACClassID;
+
+                    //if (accessedProcessModuleID.HasValue)
+                    //{
+                        var configEntries = configStore.ConfigurationEntries.Where(c => c.PreConfigACUrl == PreValueACUrl && c.LocalConfigACUrl.StartsWith(ConfigACUrl)
+                                                                                                                          && c.VBiACClassID == accessedProcessModuleID);
 
                         if (configEntries != null)
                         {
@@ -1605,7 +1765,7 @@ namespace gipbakery.mes.processapplication
                             IACConfig waterTempConfig = configEntries.FirstOrDefault(c => c.LocalConfigACUrl == propertyACUrl);
                             if (waterTempConfig == null)
                             {
-                                waterTempConfig = InsertTemperatureConfiguration(propertyACUrl, "WaterTemp", accessedProcessModuleID.Value, partslistConfigStore);
+                                waterTempConfig = InsertTemperatureConfiguration(propertyACUrl, "WaterTemp", accessedProcessModuleID, configStore);
                             }
 
                             if (waterTempConfig == null)
@@ -1620,7 +1780,7 @@ namespace gipbakery.mes.processapplication
                             IACConfig useOnlyForWaterTempCalculation = configEntries.FirstOrDefault(c => c.LocalConfigACUrl == propertyACUrl);
                             if (useOnlyForWaterTempCalculation == null)
                             {
-                                useOnlyForWaterTempCalculation = InsertTemperatureConfiguration(propertyACUrl, "UseWaterTemp", accessedProcessModuleID.Value, partslistConfigStore);
+                                useOnlyForWaterTempCalculation = InsertTemperatureConfiguration(propertyACUrl, "UseWaterTemp", accessedProcessModuleID, configStore);
                             }
 
                             if (useOnlyForWaterTempCalculation == null)
@@ -1631,11 +1791,11 @@ namespace gipbakery.mes.processapplication
                                 useOnlyForWaterTempCalculation.Value = isOnlyForWaterTempCalculation;
                             //}
                         }
-                    }
+                    //}
                 }
 
                 //TODO: alarm
-                dbApp.ACSaveChanges();
+                var msg = dbApp.ACSaveChanges();
 
                 RootPW.ReloadConfig();
 
@@ -1650,7 +1810,7 @@ namespace gipbakery.mes.processapplication
             SubscribeToProjectWorkCycle();
         }
 
-        private IACConfig InsertTemperatureConfiguration(string propertyACUrl, string paramACIdentifier, Guid processModuleID, IACConfigStore configStore)
+        private IACConfig InsertTemperatureConfiguration(string propertyACUrl, string paramACIdentifier, Guid? processModuleID, IACConfigStore configStore)
         {
             ACMethod acMethod = ACClassMethods.FirstOrDefault(c => c.ACIdentifier == ACStateConst.SMStarting)?.ACMethod;
             if (acMethod != null)
@@ -1714,6 +1874,7 @@ namespace gipbakery.mes.processapplication
                 CityWaterQuantity.ValueT = 0;
                 WarmWaterQuantity.ValueT = 0;
                 DryIceQuantity.ValueT = 0;
+                _CalculatorMode = TempCalcMode.Calcuate;
             }
         }
 
@@ -1749,6 +1910,12 @@ namespace gipbakery.mes.processapplication
         #endregion
 
         #endregion
+
+        private enum TempCalcMode : short
+        {
+            Calcuate = 0,
+            AdjustOrder = 10
+        }
     }
 
     [ACSerializeableInfo]
