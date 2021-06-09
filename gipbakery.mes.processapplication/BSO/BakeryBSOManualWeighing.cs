@@ -114,6 +114,34 @@ namespace gipbakery.mes.processapplication
             }
         }
 
+        [ACPropertyInfo(803)]
+        public double? CityWaterTemp
+        {
+            get;
+            set;
+        }
+
+        [ACPropertyInfo(804)]
+        public double? ColdWaterTemp
+        {
+            get;
+            set;
+        }
+
+        [ACPropertyInfo(805)]
+        public double? WarmWaterTemp
+        {
+            get;
+            set;
+        }
+
+        [ACPropertyInfo(806)]
+        public double? IceTemp
+        {
+            get;
+            set;
+        }
+
         #endregion
 
         #region Properties => SingleDosing dialog
@@ -300,6 +328,34 @@ namespace gipbakery.mes.processapplication
             var corrTemp = CurrentProcessModule.ACUrlCommand("DoughCorrTemp") as double?;
             if (corrTemp.HasValue)
                 DoughCorrTemperature = corrTemp.Value;
+
+            ACValueList watersTempInCalc = BakeryTempCalculator?.ValueT?.ACUrlCommand("WaterTemperaturesUsedInCalc") as ACValueList;
+            if (watersTempInCalc != null)
+            {
+                var cityWater = watersTempInCalc.GetACValue(WaterType.CityWater.ToString());
+                if (cityWater != null)
+                {
+                    CityWaterTemp = (cityWater.Value as MaterialTemperature)?.AverageTemperature;
+                }
+
+                var coldWater = watersTempInCalc.GetACValue(WaterType.ColdWater.ToString());
+                if (coldWater != null)
+                {
+                    ColdWaterTemp = (coldWater.Value as MaterialTemperature)?.AverageTemperature;
+                }
+
+                var warmWater = watersTempInCalc.GetACValue(WaterType.WarmWater.ToString());
+                if (warmWater != null)
+                {
+                    WarmWaterTemp = (warmWater.Value as MaterialTemperature)?.AverageTemperature;
+                }
+
+                var ice = watersTempInCalc.GetACValue(WaterType.DryIce.ToString());
+                if (ice != null)
+                {
+                    IceTemp = (ice.Value as MaterialTemperature)?.AverageTemperature;
+                }
+            }
 
             ShowDialog(this, "TemperaturesDialog");
         }

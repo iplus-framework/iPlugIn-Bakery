@@ -1,5 +1,6 @@
 ﻿using gip.core.autocomponent;
 using gip.core.datamodel;
+using gip.core.processapplication;
 using gip.mes.processapplication;
 using System;
 using System.Collections.Generic;
@@ -25,6 +26,8 @@ namespace gipbakery.mes.processapplication
             _PAPointMatIn3 = new PAPoint(this, "PAPointMatIn3");
             _PAPointMatIn4 = new PAPoint(this, "PAPointMatIn4");
             _PAPointMatIn5 = new PAPoint(this, "PAPointMatIn5");
+
+            _ManualTempMeasurementSensorACUrl = new ACPropertyConfigValue<string>(this, "ManualTempMeasurementSensorACUrl", "");
         }
 
         public override bool ACInit(Global.ACStartTypes startChildMode = Global.ACStartTypes.Automatic)
@@ -32,6 +35,15 @@ namespace gipbakery.mes.processapplication
             if (!base.ACInit(startChildMode))
                 return false;
             return true;
+        }
+
+        public override bool ACPostInit()
+        {
+            string temp = ManualTempMeasurementSensorACUrl;
+            if (!string.IsNullOrEmpty(temp))
+                ManualTempMeasurementSensor = ACUrlCommand(temp) as PAEThermometer;
+
+            return base.ACPostInit();
         }
 
         public override bool ACDeInit(bool deleteACClassTask = false)
@@ -89,6 +101,24 @@ namespace gipbakery.mes.processapplication
                 }
                 return null;
             }
+        }
+
+        private ACPropertyConfigValue<string> _ManualTempMeasurementSensorACUrl;
+        [ACPropertyConfig("en{'Sensor ACUrl for the manual temperature measurement'}de{'Sensor ACUrl für die manuelle Temperaturmessung'}")]
+        public string ManualTempMeasurementSensorACUrl
+        {
+            get => _ManualTempMeasurementSensorACUrl.ValueT;
+            set
+            {
+                _ManualTempMeasurementSensorACUrl.ValueT = value;
+                OnPropertyChanged("ManualTempMeasurementSensorACUrl");
+            }
+        }
+
+        public PAEThermometer ManualTempMeasurementSensor
+        {
+            get;
+            set;
         }
 
         #endregion

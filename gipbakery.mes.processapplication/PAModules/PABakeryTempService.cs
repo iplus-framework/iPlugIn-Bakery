@@ -2,6 +2,7 @@
 using gip.core.datamodel;
 using gip.core.processapplication;
 using gip.mes.processapplication;
+using gip.mes.datamodel;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -18,7 +19,7 @@ namespace gipbakery.mes.processapplication
     {
         #region c'tors
 
-        public PABakeryTempService(ACClass acType, IACObject content, IACObject parentACObject, ACValueList parameter, string acIdentifier = "") :
+        public PABakeryTempService(gip.core.datamodel.ACClass acType, IACObject content, IACObject parentACObject, ACValueList parameter, string acIdentifier = "") :
             base(acType, content, parentACObject, parameter, acIdentifier)
         {
         }
@@ -57,6 +58,8 @@ namespace gipbakery.mes.processapplication
         public const string MN_GetTemperaturesInfo = "GetTemperaturesInfo";
         public const string MN_GetAverageTemperatures = "GetAverageTemperatures";
         public const string PN_TemperatureServiceInfo = "TemperatureServiceInfo";
+
+        public const string MaterialTempertureConfigKeyACUrl = "MaterialTemperatureConfiguration";
 
         #endregion
 
@@ -192,6 +195,7 @@ namespace gipbakery.mes.processapplication
             }
 
             using (Database db = new gip.core.datamodel.Database())
+            using (gip.mes.datamodel.DatabaseApp dbApp = new gip.mes.datamodel.DatabaseApp(db))
             {
                 foreach (var receivingPoint in receivingPoints)
                 {
@@ -245,6 +249,7 @@ namespace gipbakery.mes.processapplication
                             {
                                 materialInfo = new MaterialTemperature();
                                 materialInfo.MaterialNo = config.MaterialNo;
+                                materialInfo.Material = dbApp.Material.FirstOrDefault(c => c.MaterialNo == config.MaterialNo);
                                 materialInfo.Water = WaterType.NotWater;
                                 tempInfo.MaterialTempInfos.Add(materialInfo);
                             }
@@ -263,6 +268,7 @@ namespace gipbakery.mes.processapplication
                                 {
                                     materialInfo = new MaterialTemperature();
                                     materialInfo.MaterialNo = config.MaterialNo;
+                                    materialInfo.Material = dbApp.Material.FirstOrDefault(c => c.MaterialNo == config.MaterialNo);
                                     materialInfo.Water = WaterType.NotWater;
                                     tempInfo.MaterialTempInfos.Add(materialInfo);
                                 }
@@ -278,13 +284,13 @@ namespace gipbakery.mes.processapplication
                 foreach (var cacheItem in Temperatures)
                 {
                     //City water
-                    InitializeWaterSensor(cacheItem, cacheItem.Key.PAPointMatIn2, db, WaterType.CityWater);
+                    InitializeWaterSensor(cacheItem, cacheItem.Key.PAPointMatIn2, dbApp, WaterType.CityWater);
 
                     //Cold water
-                    InitializeWaterSensor(cacheItem, cacheItem.Key.PAPointMatIn3, db, WaterType.ColdWater);
+                    InitializeWaterSensor(cacheItem, cacheItem.Key.PAPointMatIn3, dbApp, WaterType.ColdWater);
 
                     //Warm water
-                    InitializeWaterSensor(cacheItem, cacheItem.Key.PAPointMatIn4, db, WaterType.WarmWater);
+                    InitializeWaterSensor(cacheItem, cacheItem.Key.PAPointMatIn4, dbApp, WaterType.WarmWater);
 
                     //Room temp
                     cacheItem.Value.AddRoomTemperature(cacheItem.Key);
@@ -316,9 +322,9 @@ namespace gipbakery.mes.processapplication
             }
         }
 
-        private void InitializeWaterSensor(KeyValuePair<BakeryReceivingPoint, BakeryRecvPointTemperature> cacheItem, PAPoint paPointMatIn, Database db, WaterType wType)
+        private void InitializeWaterSensor(KeyValuePair<BakeryReceivingPoint, BakeryRecvPointTemperature> cacheItem, PAPoint paPointMatIn, gip.mes.datamodel.DatabaseApp dbApp, WaterType wType)
         {
-            RoutingResult rr = ACRoutingService.FindSuccessorsFromPoint(RoutingService, db, false, cacheItem.Key.ComponentClass,
+            RoutingResult rr = ACRoutingService.FindSuccessorsFromPoint(RoutingService, dbApp.ContextIPlus, false, cacheItem.Key.ComponentClass,
                                                             paPointMatIn.PropertyInfo, PAMTank.SelRuleID_Silo, RouteDirections.Backwards,
                                                             null, null, null, 1, true, true);
 
@@ -361,6 +367,7 @@ namespace gipbakery.mes.processapplication
                         {
                             materialTempInfo = new MaterialTemperature();
                             materialTempInfo.MaterialNo = materialNo;
+                            materialTempInfo.Material = dbApp.Material.FirstOrDefault(c => c.MaterialNo == materialNo);
                             materialTempInfo.WaterMinDosingQuantity = dosing.CurrentScaleForWeighing.MinDosingWeight.ValueT;
                             materialTempInfo.WaterDefaultTemperature = thermometer.TemperatureDefault;
                             materialTempInfo.Water = wType;
@@ -391,6 +398,46 @@ namespace gipbakery.mes.processapplication
             TemperatureServiceInfo.ValueT = 1;
 
             _RecalculationComplete = true;
+
+            WriteAverageTemperatureToMaterialConfig();
+        }
+
+        private void WriteAverageTemperatureToMaterialConfig()
+        {
+            var temperatures = Temperatures.ToArray();
+
+            using (gip.mes.datamodel.DatabaseApp dbApp = new gip.mes.datamodel.DatabaseApp())
+            {
+                foreach (var temp in temperatures)
+                {
+                    Guid acClassID = temp.Key.ComponentClass.ACClassID;
+
+                    foreach (var material in temp.Value.MaterialTempInfos)
+                    {
+                        if (material.Material == null)
+                            continue;
+
+                        Material mt = material.Material.FromAppContext<Material>(dbApp);
+                        //TODO nullcheck
+                        MaterialConfig materialConfig = mt.MaterialConfig_Material.FirstOrDefault(c => c.VBiACClassID == acClassID && c.KeyACUrl == MaterialTempertureConfigKeyACUrl);
+                        if (materialConfig == null)
+                        {
+                            materialConfig = MaterialConfig.NewACObject(dbApp, mt);
+                            materialConfig.VBiACClassID = acClassID;
+                            materialConfig.KeyACUrl = MaterialTempertureConfigKeyACUrl;
+                            materialConfig.SetValueTypeACClass(dbApp.ContextIPlus.GetACType("double"));
+
+                            mt.MaterialConfig_Material.Add(materialConfig);
+                            dbApp.MaterialConfig.AddObject(materialConfig);
+                        }
+
+                        materialConfig.Value = material.AverageTemperature;
+                    }
+                }
+
+                var msg = dbApp.ACSaveChanges();
+
+            }
         }
 
         #endregion
@@ -434,10 +481,14 @@ namespace gipbakery.mes.processapplication
                 var targetMaterialInfo = MaterialTempInfos.FirstOrDefault(c => c.MaterialNo == materialNo);
                 if (targetMaterialInfo == null)
                 {
-                    targetMaterialInfo = new MaterialTemperature();
-                    targetMaterialInfo.MaterialNo = materialNo;
-                    targetMaterialInfo.Water = WaterType.NotWater;
-                    MaterialTempInfos.Add(targetMaterialInfo);
+                    using (gip.mes.datamodel.DatabaseApp dbApp = new gip.mes.datamodel.DatabaseApp())
+                    {
+                        targetMaterialInfo = new MaterialTemperature();
+                        targetMaterialInfo.MaterialNo = materialNo;
+                        targetMaterialInfo.Material = dbApp.Material.Include(x => x.MaterialConfig_Material).FirstOrDefault(c => c.MaterialNo == materialNo);
+                        targetMaterialInfo.Water = WaterType.NotWater;
+                        MaterialTempInfos.Add(targetMaterialInfo);
+                    }
                 }
 
                 targetMaterialInfo.AddSilo(silo);
@@ -475,10 +526,14 @@ namespace gipbakery.mes.processapplication
                             var mt = MaterialTempInfos.FirstOrDefault(c => c.MaterialNo == materialNo);
                             if (mt == null)
                             {
-                                mt = new MaterialTemperature();
-                                mt.MaterialNo = materialNo;
-                                mt.Water = WaterType.NotWater;
-                                MaterialTempInfos.Add(mt);
+                                using (gip.mes.datamodel.DatabaseApp dbApp = new gip.mes.datamodel.DatabaseApp())
+                                {
+                                    mt = new MaterialTemperature();
+                                    mt.MaterialNo = materialNo;
+                                    mt.Material = dbApp.Material.Include(c => c.MaterialConfig_Material).FirstOrDefault(c => c.MaterialNo == materialNo);
+                                    mt.Water = WaterType.NotWater;
+                                    MaterialTempInfos.Add(mt);
+                                }
                             }
 
                             mt.AddSilo(silo);
@@ -517,7 +572,7 @@ namespace gipbakery.mes.processapplication
             MaterialTemperature mt = new MaterialTemperature();
             mt.IsRoomTemperature = true;
             mt.Water = WaterType.NotWater;
-            mt.MaterialNo = "Room temperature"; //TODO: Translation
+            mt.MaterialNo = TemperatureService.Root.Environment.TranslateText(TemperatureService, "RoomTemp");
             mt.AverageTemperature = recvPoint.RoomTemperature.ValueT;
             MaterialTempInfos.Add(mt);
         }
@@ -597,10 +652,10 @@ namespace gipbakery.mes.processapplication
             }
         }
 
-        private double _AverageTemperature;
+        private double? _AverageTemperature;
         [DataMember]
         [ACPropertyInfo(9999)]
-        public double AverageTemperature
+        public double? AverageTemperature
         {
             get => _AverageTemperature;
             set
@@ -691,7 +746,7 @@ namespace gipbakery.mes.processapplication
             return BakeryThermometers.Concat(SilosWithPTC.SelectMany(c => c.Thermometers.Where(t => !t.DisabledForTempCalculation)));
         }
 
-        public void BuildBakeryThermometersInfo(gip.mes.datamodel.DatabaseApp dbApp)
+        public void BuildBakeryThermometersInfo(DatabaseApp dbApp)
         {
             Material = dbApp.Material.FirstOrDefault(c => c.MaterialNo == MaterialNo);
             BakeryThermometersInfo = new List<Tuple<string, string, string>>();
