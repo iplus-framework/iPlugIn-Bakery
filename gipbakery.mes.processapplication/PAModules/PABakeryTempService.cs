@@ -59,7 +59,7 @@ namespace gipbakery.mes.processapplication
         public const string MN_GetAverageTemperatures = "GetAverageTemperatures";
         public const string PN_TemperatureServiceInfo = "TemperatureServiceInfo";
 
-        public const string MaterialTempertureConfigKeyACUrl = "MaterialTemperatureConfiguration";
+        public const string MaterialTempertureConfigKeyACUrl = "MaterialTempConfig";
 
         #endregion
 
@@ -295,6 +295,9 @@ namespace gipbakery.mes.processapplication
                     //Room temp
                     cacheItem.Value.AddRoomTemperature(cacheItem.Key);
                 }
+
+                //Cyclic measurement
+                BuildTempCyclicMeasurement(dbApp);
             }
         }
 
@@ -437,6 +440,60 @@ namespace gipbakery.mes.processapplication
 
                 var msg = dbApp.ACSaveChanges();
 
+            }
+        }
+
+        private void BuildTempCyclicMeasurement(DatabaseApp dbApp)
+        {
+            var materialConfisWithTempMeasurement = dbApp.MaterialConfig.Where(c => c.KeyACUrl == MaterialTempertureConfigKeyACUrl && c.Expression != null);
+
+            foreach (MaterialConfig matConfig in materialConfisWithTempMeasurement)
+            {
+                var prop = matConfig.Material.ACProperties?.GetOrCreateACPropertyExtByName("CyclicMeasurement", false);
+                if (prop == null)
+                    continue;
+
+                TimeSpan? ts = prop.Value as TimeSpan?;
+                if (!ts.HasValue)
+                    continue;
+
+                if (ts.Value.TotalMinutes > 1)
+                    continue;
+
+                matConfig.Expression = null;
+            }
+
+            Msg msg = dbApp.ACSaveChanges();
+
+            //TODO:improve this, include config
+            var materials = dbApp.Material.ToArray().Where(c => c.ACProperties != null && c.ACProperties.GetOrCreateACPropertyExtByName("CyclicMeasurement", false).Value != null);
+
+            var partslistPositions = dbApp.PartslistPos.Where(c => c.MaterialPosTypeIndex == (short)GlobalApp.MaterialPosTypes.OutwardRoot).ToArray()
+                                                       .Where(x => x.ACProperties != null && x.ACProperties.GetOrCreateACPropertyExtByName("CyclicMeasurement", false).Value != null);
+
+            var recvPoints = Temperatures.Select(c => c.Key).ToArray();
+
+            foreach (var recvPoint in recvPoints)
+            {
+                foreach (var material in materials)
+                {
+                    MaterialConfig matTempConfig = material.MaterialConfig_Material.FirstOrDefault(c => c.KeyACUrl == MaterialTempertureConfigKeyACUrl);
+                    if (matTempConfig == null)
+                    {
+                        matTempConfig = MaterialConfig.NewACObject(dbApp, material);
+                        matTempConfig.VBiACClassID = recvPoint.ComponentClass.ACClassID;
+                        matTempConfig.KeyACUrl = MaterialTempertureConfigKeyACUrl;
+                        matTempConfig.SetValueTypeACClass(dbApp.ContextIPlus.GetACType("double"));
+
+                        material.MaterialConfig_Material.Add(matTempConfig);
+                        dbApp.MaterialConfig.AddObject(matTempConfig);
+                    }
+
+                    if (matTempConfig.Expression != null)
+                        continue;
+
+                    matTempConfig.Expression = TempMeasurementMode.MatOn.ToString();
+                }
             }
         }
 
