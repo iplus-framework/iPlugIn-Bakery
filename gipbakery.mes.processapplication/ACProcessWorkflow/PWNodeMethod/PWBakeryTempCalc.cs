@@ -1551,24 +1551,6 @@ namespace gipbakery.mes.processapplication
 
             DetermineCompTempFromPartslistOrMaterial(componentTemp, partslistPosList, recvPoint.RoomTemperature.ValueT);
 
-            if (plMethod != null)
-            {
-                var intermediatesManual = intermediates.Where(c => c.Material.MaterialWFConnection_Material
-                                                                             .Any(x => x.MaterialWFACClassMethodID == plMethod.MaterialWFACClassMethodID
-                                                                          && _PWManualWeighingType.IsAssignableFrom(x.ACClassWF.PWACClass
-                                                                                                                     .FromIPlusContext<gip.core.datamodel.ACClass>(dbApp.ContextIPlus)
-                                                                                                                     .ObjectType)));
-
-                if (intermediatesManual != null && intermediatesManual.Any())
-                {
-                    var components = intermediatesManual.SelectMany(c => c.ProdOrderPartslistPosRelation_TargetProdOrderPartslistPos.Select(x => x.SourceProdOrderPartslistPos.Material))
-                                                        .ToArray().Where(m => m.MaterialNo != matNoColdWater && m.MaterialNo != matNoCityWater && m.MaterialNo != matNoWarmWater
-                                                                           && m.MaterialNo != matNoDryIce);
-
-                    SetManualCompTemp(componentTemp, components, recvPoint.RoomTemperature.ValueT);
-                }
-            }
-
             SetRoomTemp(componentTemp, recvPoint.RoomTemperature.ValueT);
 
             if (!componentTemp.Any(c => c.Material.MaterialNo == matNoDryIce))
@@ -1673,12 +1655,18 @@ namespace gipbakery.mes.processapplication
             return componentTemp;
         }
 
-        //TODO: double comparation with 0
         private void DetermineCompTempFromPartslistOrMaterial(List<MaterialTemperature> componentTemp, IEnumerable<PartslistPos> partslistPosList, double roomTemp)
         {
             foreach (PartslistPos pos in partslistPosList)
             {
-                if (pos.ACProperties == null)
+                MaterialTemperature mt = componentTemp.FirstOrDefault(c => c.Material.MaterialID == pos.Material.MaterialID);
+                if (mt == null)
+                {
+                    mt = new MaterialTemperature() { Material = pos.Material };
+                    componentTemp.Add(mt);
+                }
+
+                if (mt.AverageTemperature.HasValue)
                     continue;
 
                 ACPropertyExt ext = pos.ACProperties.GetOrCreateACPropertyExtByName("Temperature", false);
@@ -1687,22 +1675,7 @@ namespace gipbakery.mes.processapplication
                     double? value = (ext.Value as double?);
                     if (value.HasValue && value.Value != 0)
                     {
-                        MaterialTemperature mt = componentTemp.FirstOrDefault(c => c.Material.MaterialID == pos.Material.MaterialID);
-                        if (mt != null)
-                            mt.AverageTemperature = value.Value;
-                        continue;
-                    }
-                }
-
-                ext = pos.ACProperties.GetOrCreateACPropertyExtByName("UseRoomTemperature", false);
-                if (ext != null)
-                {
-                    bool? value = (ext.Value as bool?);
-                    if (value.HasValue && value.Value)
-                    {
-                        MaterialTemperature mt = componentTemp.FirstOrDefault(c => c.Material.MaterialID == pos.Material.MaterialID);
-                        if (mt != null)
-                            mt.AverageTemperature = roomTemp;
+                        mt.AverageTemperature = value.Value;
                         continue;
                     }
                 }
@@ -1713,22 +1686,7 @@ namespace gipbakery.mes.processapplication
                     double? value = (ext.Value as double?);
                     if (value.HasValue && value.Value != 0)
                     {
-                        MaterialTemperature mt = componentTemp.FirstOrDefault(c => c.Material.MaterialID == pos.Material.MaterialID);
-                        if (mt != null)
-                            mt.AverageTemperature = value.Value;
-                        continue;
-                    }
-                }
-
-                ext = pos.Material.ACProperties.GetOrCreateACPropertyExtByName("UseRoomTemperature", false);
-                if (ext != null)
-                {
-                    bool? value = (ext.Value as bool?);
-                    if (value.HasValue && value.Value)
-                    {
-                        MaterialTemperature mt = componentTemp.FirstOrDefault(c => c.Material.MaterialID == pos.Material.MaterialID);
-                        if (mt != null)
-                            mt.AverageTemperature = roomTemp;
+                        mt.AverageTemperature = value.Value;
                         continue;
                     }
                 }
@@ -1751,30 +1709,6 @@ namespace gipbakery.mes.processapplication
                         continue;
                     }
                 }
-
-                ext = pos.Material.ACProperties.GetOrCreateACPropertyExtByName("UseRoomTemperature", false);
-                if (ext != null)
-                {
-                    bool? value = (ext.Value as bool?);
-                    if (value.HasValue && value.Value)
-                    {
-                        MaterialTemperature mt = componentTemp.FirstOrDefault(c => c.Material.MaterialID == pos.Material.MaterialID);
-                        if (mt != null)
-                            mt.AverageTemperature = roomTemp;
-                        continue;
-                    }
-                }
-            }
-        }
-
-        private void SetManualCompTemp(List<MaterialTemperature> componentTempList, IEnumerable<Material> manualComponents, double roomTemp)
-        {
-            foreach (Material manualComponent in manualComponents)
-            {
-                MaterialTemperature mt = componentTempList.FirstOrDefault(c => c.Material.MaterialNo == manualComponent.MaterialNo && !c.AverageTemperature.HasValue);
-                if (mt != null)
-                    mt.AverageTemperature = roomTemp;
-
             }
         }
 
@@ -1886,6 +1820,12 @@ namespace gipbakery.mes.processapplication
             }
 
             return null;
+        }
+
+        [ACMethodInfo("","",9999,true)]
+        public ACValueList GetTemperaturesUsedInCalc()
+        {
+            return WaterTemperaturesUsedInCalc;
         }
 
         #endregion

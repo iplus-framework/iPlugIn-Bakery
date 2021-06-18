@@ -8,6 +8,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Runtime.Serialization;
+using System.ComponentModel;
 
 namespace gipbakery.mes.processapplication
 {
@@ -27,8 +29,6 @@ namespace gipbakery.mes.processapplication
             _PAPointMatIn3 = new PAPoint(this, "PAPointMatIn3");
             _PAPointMatIn4 = new PAPoint(this, "PAPointMatIn4");
             _PAPointMatIn5 = new PAPoint(this, "PAPointMatIn5");
-
-            _ManualTempMeasurementSensorACUrl = new ACPropertyConfigValue<string>(this, "ManualTempMeasurementSensorACUrl", "");
         }
 
         public override bool ACInit(Global.ACStartTypes startChildMode = Global.ACStartTypes.Automatic)
@@ -40,20 +40,11 @@ namespace gipbakery.mes.processapplication
 
         public override bool ACPostInit()
         {
-            string temp = ManualTempMeasurementSensorACUrl;
-            if (!string.IsNullOrEmpty(temp))
-                ManualTempMeasurementSensor = ACUrlCommand(temp) as PAEThermometer;
-
-            OrderInfo.PropertyChanged += OrderInfo_PropertyChanged;
-
             return base.ACPostInit();
         }
 
         public override bool ACDeInit(bool deleteACClassTask = false)
         {
-            if (OrderInfo != null)
-                OrderInfo.PropertyChanged -= OrderInfo_PropertyChanged;
-
             return base.ACDeInit(deleteACClassTask);
         }
         #endregion
@@ -109,34 +100,6 @@ namespace gipbakery.mes.processapplication
             }
         }
 
-        private ACPropertyConfigValue<string> _ManualTempMeasurementSensorACUrl;
-        [ACPropertyConfig("en{'Sensor ACUrl for the manual temperature measurement'}de{'Sensor ACUrl für die manuelle Temperaturmessung'}")]
-        public string ManualTempMeasurementSensorACUrl
-        {
-            get => _ManualTempMeasurementSensorACUrl.ValueT;
-            set
-            {
-                _ManualTempMeasurementSensorACUrl.ValueT = value;
-                OnPropertyChanged("ManualTempMeasurementSensorACUrl");
-            }
-        }
-
-        #region Properties => Manual temperature measurement
-
-        public PAEThermometer ManualTempMeasurementSensor
-        {
-            get;
-            set;
-        }
-
-        public List<MaterialTempMeasureItem> MaterialTempMeasureItems
-        {
-            get;
-            set;
-        }
-
-        #endregion
-
         #endregion
 
         #region Methods 
@@ -152,40 +115,6 @@ namespace gipbakery.mes.processapplication
                 return null;
 
             return TemperatureService.ExecuteMethod(PABakeryTempService.MN_GetTemperaturesInfo, ComponentClass.ACClassID) as ACValueList;
-        }
-
-        public void SetTempMeasureableMaterials()
-        {
-            using(DatabaseApp dbApp = new DatabaseApp())
-            {
-                var configs = dbApp.MaterialConfig.Where(c => c.VBiACClassID == this.ComponentClass.ACClassID && c.KeyACUrl == PABakeryTempService.MaterialTempertureConfigKeyACUrl)
-                                                  .Select(x => new MaterialTempMeasureItem()).ToList();
-
-                MaterialTempMeasureItems = configs;
-            }
-        }
-
-        public void MeasureMaterialTemperature(Guid materialConfig)
-        {
-
-        }
-
-        public void DeactivateMeasurement(Guid materialConfig)
-        {
-
-        }
-
-        private void OrderInfo_PropertyChanged(object sender, System.ComponentModel.PropertyChangedEventArgs e)
-        {
-            ApplicationManager.ApplicationQueue.Add(() => BuildTempCyclicMeasurementFromPartslist());
-        }
-
-        private void BuildTempCyclicMeasurementFromPartslist()
-        {
-            using (DatabaseApp dbApp = new DatabaseApp())
-            {
-
-            }
         }
 
         #endregion
@@ -263,49 +192,5 @@ namespace gipbakery.mes.processapplication
             return HandleExecuteACMethod_PAMPlatformscale(out result, acComponent, acMethodName, acClassMethod, acParameter);
         }
         #endregion
-    }
-
-    /// <summary>
-    /// Represents the mode enumeration for cylic material temperature measurement
-    /// </summary>
-    public enum TempMeasurementMode : short
-    {
-        Off = 0,  //  Off
-        MatOn = 10,  // Material On
-        PLOn = 20    // Partslist On
-    }
-
-    public class MaterialTempMeasureItem
-    {
-        public MaterialTempMeasureItem()
-        {
-
-        }
-
-        public MaterialTempMeasureItem(MaterialConfig materialConfig)
-        {
-            MaterialConfig = materialConfig;
-            MaterialConfigID = materialConfig.MaterialConfigID;
-            var temp = MaterialConfig?.Material;
-        }
-
-        public Guid MaterialConfigID
-        {
-            get;
-            set;
-        }
-
-        public MaterialConfig MaterialConfig
-        {
-            get;
-            set;
-        }
-        
-        public bool IsTempMeasureNeeded
-        {
-            get;
-            set;
-        }
-
     }
 }

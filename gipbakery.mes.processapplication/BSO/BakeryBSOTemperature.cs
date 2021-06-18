@@ -62,6 +62,45 @@ namespace gipbakery.mes.processapplication
         }
 
         private IACContainerTNet<short> _TemperatureServiceInfo;
+        
+        private ACRef<ACComponent> _TempMeasuringFunc;
+        public ACComponent TempMeasuringFunc
+        {
+            get => _TempMeasuringFunc?.ValueT;
+        }
+
+        private Type _BakeryTempMeasuringType = typeof(PAFBakeryTempMeasuring);
+
+        #region Properties => Cyclic measurement
+
+        IACContainerTNet<MaterialTempMeasureList> _ChangedItemsProp;
+
+        private MaterialTempMeasureItem _SelectedTempMeasureItem;
+        [ACPropertySelected(750, "CyclicMeasurement")]
+        public MaterialTempMeasureItem SelectedTempMeasureItem
+        {
+            get => _SelectedTempMeasureItem;
+            set
+            {
+                _SelectedTempMeasureItem = value;
+                OnPropertyChanged("SelectedTempMeasureItem");
+            }
+        }
+
+        private List<MaterialTempMeasureItem> _TempMeasureItemsList;
+        [ACPropertyList(750, "CyclicMeasurement")]
+        public List<MaterialTempMeasureItem> TempMeasureItemsList
+        {
+            get => _TempMeasureItemsList;
+            set
+            {
+                _TempMeasureItemsList = value;
+                OnPropertyChanged("TempMeasureItemsList");
+            }
+        }
+
+        #endregion
+
 
         private ACRef<ACComponent> _ManualTempMeasurementSensor;
 
@@ -113,17 +152,84 @@ namespace gipbakery.mes.processapplication
                     }
 
                     MaterialTemperatures = materialTempList;
+
                 }
             }
 
-            string sensorACUrl = ParentBSOWCS.CurrentProcessModule.ACUrlCommand("ManualTempMeasurementSensorACUrl") as string;
+            ACComponent tempMeasureFunc = ParentBSOWCS.CurrentProcessModule.ACComponentChildsOnServer.FirstOrDefault(c => _BakeryTempMeasuringType.IsAssignableFrom(c.ComponentClass.ObjectType)) as ACComponent;
+            if (tempMeasureFunc == null)
+            {
+                // error;
+                return;
+            }
 
-            var sensor = ParentBSOWCS.CurrentProcessModule.ACUrlCommand(sensorACUrl) as ACComponent;
+            _TempMeasuringFunc = new ACRef<ACComponent>(tempMeasureFunc, this);
+
+            string sensorACUrl = TempMeasuringFunc.ExecuteMethod("GetManualTempMeasurementACUrl") as string;
+
+            var sensor = Root.ACUrlCommand(sensorACUrl) as ACComponent;
             if (sensor != null)
             {
                 _ManualTempMeasurementSensor = new ACRef<ACComponent>(sensor, this);
             }
-        
+
+            MaterialTempMeasureList measureItems = TempMeasuringFunc.ACUrlCommand("!GetTempMeasureItems") as MaterialTempMeasureList;
+            if (measureItems == null)
+            {
+                //TODO: error
+                return;
+            }
+
+            _ChangedItemsProp = TempMeasuringFunc.GetPropertyNet("ChangedTemperatureMeasureItems") as IACContainerTNet<MaterialTempMeasureList>;
+            if (_ChangedItemsProp == null)
+            {
+                //TODO: error
+                return;
+            }
+
+            _ChangedItemsProp.PropertyChanged += ChangedItemsProp_PropertyChanged;
+
+            foreach (var measureItem in measureItems)
+            {
+                measureItem.AttachToDatabase(DatabaseApp);
+            }
+
+            TempMeasureItemsList = measureItems.OrderBy(c => c.NextMeasureTerm).ToList();
+        }
+
+        private void ChangedItemsProp_PropertyChanged(object sender, System.ComponentModel.PropertyChangedEventArgs e)
+        {
+            var temp = _ChangedItemsProp.ValueT.ToArray();
+            Task.Run(() => RefreshChangedItems(temp));
+        }
+
+        private void RefreshChangedItems(IEnumerable<MaterialTempMeasureItem> changedItems)
+        {
+            if (changedItems == null || !changedItems.Any())
+                return;
+
+            bool isAnyRemoved = false;
+
+            foreach(MaterialTempMeasureItem item in changedItems)
+            {
+                MaterialTempMeasureItem tempItem = TempMeasureItemsList.FirstOrDefault(c => c.MaterialConfigID == item.MaterialConfigID);
+                if (tempItem == null)
+                    continue;
+
+                if (item.IsMeasurementOff)
+                {
+                    TempMeasureItemsList.Remove(tempItem);
+                    isAnyRemoved = true;
+                    continue;
+                }
+
+                tempItem.IsTempMeasureNeeded = item.IsTempMeasureNeeded;
+                tempItem.NextMeasureTerm = item.NextMeasureTerm;
+                tempItem.Temperature = item.Temperature;
+            }
+
+            if (isAnyRemoved)
+                TempMeasureItemsList = TempMeasureItemsList.ToList();
         }
 
         //TODO: try/catch
@@ -194,28 +300,34 @@ namespace gipbakery.mes.processapplication
                 _ManualTempMeasurementSensor.Detach();
                 _ManualTempMeasurementSensor = null;
             }
+
+            if (_ChangedItemsProp != null)
+            {
+                _ChangedItemsProp.PropertyChanged -= ChangedItemsProp_PropertyChanged;
+                _ChangedItemsProp = null;
+            }
         }
 
         [ACMethodInfo("", "en{'Measure component temperature'}de{'Komponententemperatur messen'}", 700)]
         public void MeasureComponentTemp()
         {
-
+            TempMeasuringFunc.ACUrlCommand("!MeasureMaterialTemperature", SelectedTempMeasureItem.MaterialConfigID);
         }
 
         public bool IsEnabledMeasureComponentTemp()
         {
-            return true;
+            return ParentBSOWCS != null && ParentBSOWCS.CurrentProcessModule != null && SelectedTempMeasureItem != null;
         }
 
         [ACMethodInfo("", "en{'Delete temperature mesurement'}de{'Temperaturmessung löschen'}", 700)]
         public void DeleteComponentTempMeasurement()
         {
-
+            TempMeasuringFunc.ACUrlCommand("!DeactivateMeasurement", SelectedTempMeasureItem.MaterialConfigID);
         }
 
         public bool IsEnabledDeleteComponentTempMeasurement()
         {
-            return true;
+            return ParentBSOWCS != null && ParentBSOWCS.CurrentProcessModule != null && SelectedTempMeasureItem != null;
         }
 
         [ACMethodInfo("", "en{'Copy temperature measurement'}de{'Temperaturmessung kopieren'}", 700)]
@@ -226,7 +338,7 @@ namespace gipbakery.mes.processapplication
 
         public bool IsEnabledCopyComponentTempMeasurement()
         {
-            return true;
+            return SelectedTempMeasureItem != null;
         }
 
         #endregion

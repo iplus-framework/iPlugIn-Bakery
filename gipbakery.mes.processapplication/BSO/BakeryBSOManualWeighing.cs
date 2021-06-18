@@ -210,7 +210,6 @@ namespace gipbakery.mes.processapplication
             HandleTempCalcResultMsg(TempCalcResultMessage.ValueT);
 
             GetTemperaturesFromPWBakeryTempCalc();
-
         }
 
         public override void UnloadWFNode()
@@ -329,7 +328,7 @@ namespace gipbakery.mes.processapplication
             if (corrTemp.HasValue)
                 DoughCorrTemperature = corrTemp.Value;
 
-            ACValueList watersTempInCalc = BakeryTempCalculator?.ValueT?.ACUrlCommand("WaterTemperaturesUsedInCalc") as ACValueList;
+            ACValueList watersTempInCalc = BakeryTempCalculator?.ValueT?.ExecuteMethod("GetTemperaturesUsedInCalc") as ACValueList;
             if (watersTempInCalc != null)
             {
                 var cityWater = watersTempInCalc.GetACValue(WaterType.CityWater.ToString());
@@ -471,7 +470,6 @@ namespace gipbakery.mes.processapplication
                     var msg = DatabaseApp.ACSaveChanges();
 
                 }
-
             }
         }
 

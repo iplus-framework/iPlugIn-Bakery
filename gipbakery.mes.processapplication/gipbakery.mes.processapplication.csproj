@@ -57,6 +57,7 @@
     <Reference Include="WindowsBase" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="ACProcessWorkflow\PWNodeMethod\PWBakeryManualWeighing.cs" />
     <Compile Include="ACProcessWorkflow\PWNodeMethod\PWBakeryRecvPointReady.cs" />
     <Compile Include="ACProcessWorkflow\PWNodeMethod\PWBakeryWorkKneading.cs" />
     <Compile Include="ACProcessWorkflow\PWNodeMethod\PWBakeryWorkDecoring.cs" />
@@ -73,9 +74,12 @@
     <Compile Include="BSO\BakeryBSOPartslist.cs" />
     <Compile Include="BSO\BakeryBSOTemperature.cs" />
     <Compile Include="BSO\BakeryBSOWorkCenterSelector.cs" />
+    <Compile Include="Model\MaterialTempMeasureItem.cs" />
+    <Compile Include="Model\TempMeasurementModeEnum.cs" />
     <Compile Include="PAModules\PABakeryTempService.cs" />
     <Compile Include="PAModules\PAEBakeryThermometer.cs" />
     <Compile Include="PAProcessFunction\PAFBakeryManualWeighing.cs" />
+    <Compile Include="PAProcessFunction\PAFBakeryTempMeasuring.cs" />
     <Compile Include="PAProcessFunction\PAFBakeryWorkBaking.cs" />
     <Compile Include="PAProcessFunction\PAFBakeryWorkKneading.cs" />
     <Compile Include="PAProcessFunction\PAFBakeryWorkDecoring.cs" />
