@@ -71,8 +71,6 @@ namespace gipbakery.mes.processapplication
 
         private Type _BakeryTempMeasuringType = typeof(PAFBakeryTempMeasuring);
 
-        #region Properties => Cyclic measurement
-
         IACContainerTNet<MaterialTempMeasureList> _ChangedItemsProp;
 
         private MaterialTempMeasureItem _SelectedTempMeasureItem;
@@ -99,8 +97,17 @@ namespace gipbakery.mes.processapplication
             }
         }
 
-        #endregion
-
+        public double? _TemperatureMeasurementOverride;
+        [ACPropertyInfo(701, "", "en{'Sensor temp. override'}de{'Sensor Temp. übersteuern'}")]
+        public double? TemperatureMeasurementOverride
+        {
+            get => _TemperatureMeasurementOverride;
+            set
+            {
+                _TemperatureMeasurementOverride = value;
+                OnPropertyChanged("TemperatureMeasurementOverride");
+            }
+        }
 
         private ACRef<ACComponent> _ManualTempMeasurementSensor;
 
@@ -199,8 +206,11 @@ namespace gipbakery.mes.processapplication
 
         private void ChangedItemsProp_PropertyChanged(object sender, System.ComponentModel.PropertyChangedEventArgs e)
         {
-            var temp = _ChangedItemsProp.ValueT.ToArray();
-            Task.Run(() => RefreshChangedItems(temp));
+            if (e.PropertyName == Const.ValueT)
+            {
+                var temp = _ChangedItemsProp.ValueT.ToArray();
+                Task.Run(() => RefreshChangedItems(temp));
+            }
         }
 
         private void RefreshChangedItems(IEnumerable<MaterialTempMeasureItem> changedItems)
@@ -208,28 +218,35 @@ namespace gipbakery.mes.processapplication
             if (changedItems == null || !changedItems.Any())
                 return;
 
-            bool isAnyRemoved = false;
+            bool isAnyAddedOrRemoved = false;
 
-            foreach(MaterialTempMeasureItem item in changedItems)
+            foreach (MaterialTempMeasureItem item in changedItems)
             {
                 MaterialTempMeasureItem tempItem = TempMeasureItemsList.FirstOrDefault(c => c.MaterialConfigID == item.MaterialConfigID);
                 if (tempItem == null)
-                    continue;
-
-                if (item.IsMeasurementOff)
                 {
-                    TempMeasureItemsList.Remove(tempItem);
-                    isAnyRemoved = true;
-                    continue;
+                    item.AttachToDatabase(DatabaseApp);
+                    TempMeasureItemsList.Add(item);
+                    isAnyAddedOrRemoved = true;
                 }
+                else
+                {
+                    if (item.IsMeasurementOff)
+                    {
+                        TempMeasureItemsList.Remove(tempItem);
+                        isAnyAddedOrRemoved = true;
+                        continue;
+                    }
 
-                tempItem.IsTempMeasureNeeded = item.IsTempMeasureNeeded;
-                tempItem.NextMeasureTerm = item.NextMeasureTerm;
-                tempItem.Temperature = item.Temperature;
+                    tempItem.IsTempMeasureNeeded = item.IsTempMeasureNeeded;
+                    tempItem.NextMeasureTerm = item.NextMeasureTerm;
+                    tempItem.Temperature = item.Temperature;
+                }
             }
 
-            if (isAnyRemoved)
-                TempMeasureItemsList = TempMeasureItemsList.ToList();
+            if (isAnyAddedOrRemoved)
+                TempMeasureItemsList = TempMeasureItemsList.OrderBy(c => c.MaterialConfig.Material.MaterialNo).ToList();
+            
         }
 
         //TODO: try/catch
@@ -308,10 +325,10 @@ namespace gipbakery.mes.processapplication
             }
         }
 
-        [ACMethodInfo("", "en{'Measure component temperature'}de{'Komponententemperatur messen'}", 700)]
+        [ACMethodInfo("", "en{'Measure component temperature'}de{'Komponententemperatur messen'}", 701)]
         public void MeasureComponentTemp()
         {
-            TempMeasuringFunc.ACUrlCommand("!MeasureMaterialTemperature", SelectedTempMeasureItem.MaterialConfigID);
+            TempMeasuringFunc.ExecuteMethod(PAFBakeryTempMeasuring.MN_MeasureMaterialTemperature, SelectedTempMeasureItem.MaterialConfigID, TemperatureMeasurementOverride);
         }
 
         public bool IsEnabledMeasureComponentTemp()
@@ -319,10 +336,10 @@ namespace gipbakery.mes.processapplication
             return ParentBSOWCS != null && ParentBSOWCS.CurrentProcessModule != null && SelectedTempMeasureItem != null;
         }
 
-        [ACMethodInfo("", "en{'Delete temperature mesurement'}de{'Temperaturmessung löschen'}", 700)]
+        [ACMethodInfo("", "en{'Delete temperature mesurement'}de{'Temperaturmessung löschen'}", 702)]
         public void DeleteComponentTempMeasurement()
         {
-            TempMeasuringFunc.ACUrlCommand("!DeactivateMeasurement", SelectedTempMeasureItem.MaterialConfigID);
+            TempMeasuringFunc.ExecuteMethod(PAFBakeryTempMeasuring.MN_DeactivateMeasurement, SelectedTempMeasureItem.MaterialConfigID);
         }
 
         public bool IsEnabledDeleteComponentTempMeasurement()
@@ -330,7 +347,7 @@ namespace gipbakery.mes.processapplication
             return ParentBSOWCS != null && ParentBSOWCS.CurrentProcessModule != null && SelectedTempMeasureItem != null;
         }
 
-        [ACMethodInfo("", "en{'Copy temperature measurement'}de{'Temperaturmessung kopieren'}", 700)]
+        [ACMethodInfo("", "en{'Copy temperature measurement'}de{'Temperaturmessung kopieren'}", 703)]
         public void CopyComponentTempMeasurement()
         {
 
@@ -339,6 +356,42 @@ namespace gipbakery.mes.processapplication
         public bool IsEnabledCopyComponentTempMeasurement()
         {
             return SelectedTempMeasureItem != null;
+        }
+
+        [ACMethodInfo("", "en{'Reactivate measurement for deleted components'}de{'Messung für gelöschte Komponenten reaktivieren'}", 703)]
+        public void ReactivateDeletedMeasurement()
+        {
+            if (!IsEnabledReactivateDeletedMeasurement())
+                return;
+
+            TempMeasuringFunc.ExecuteMethod(PAFBakeryTempMeasuring.MN_ReactivateMeasurements, null);
+        }
+
+        public bool IsEnabledReactivateDeletedMeasurement()
+        {
+            return TempMeasuringFunc != null;
+        }
+
+        [ACMethodInfo("", "en{'Turn on measurement hint'}de{'Hinweis zur Messung einschalten'}", 703)]
+        public void TurnOnMeasurementHint()
+        {
+            TempMeasuringFunc.ExecuteMethod(PAFBakeryTempMeasuring.MN_ChangeHintSetting, false);
+        }
+
+        public bool IsEnabledTurnOnMeasurementHint()
+        {
+            return TempMeasuringFunc != null;
+        }
+
+        [ACMethodInfo("", "en{'Turn off measurement hint'}de{'Hinweis zur Messung ausschalten'}", 704)]
+        public void TurnOffMeasurementHint()
+        {
+            TempMeasuringFunc.ExecuteMethod(PAFBakeryTempMeasuring.MN_ChangeHintSetting, true);
+        }
+
+        public bool IsEnabledTurnOffMeasurementHint()
+        {
+            return TempMeasuringFunc != null;
         }
 
         #endregion

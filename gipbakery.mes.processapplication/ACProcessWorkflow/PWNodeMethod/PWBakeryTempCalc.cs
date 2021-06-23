@@ -13,10 +13,13 @@ using System.Runtime.Serialization;
 namespace gipbakery.mes.processapplication
 {
     //TODO pwdosingnode find pwbakerytempcalc and set water calc temp result to function param
+    // Server restart - check calculation
     [ACClassInfo(Const.PackName_VarioAutomation, "en{'Dough temperature calculation'}de{'Teigtemperaturberechnung'}", Global.ACKinds.TPWNodeStatic, Global.ACStorableTypes.Optional, false, PWMethodVBBase.PWClassName, true)]
     public class PWBakeryTempCalc : PWNodeUserAck
     {
         public new const string PWClassName = "PWBakeryTempCalc";
+
+        public const string KneedingRiseTemp = "KneedingRiseTemp";
 
         #region Constructors
 
@@ -578,7 +581,8 @@ namespace gipbakery.mes.processapplication
                 double suggestedWaterTemp = CalculateWaterTemperatureSuggestion(UseWaterTemp, isOnlyWaterCompsInPartslist, cityWaterComp.SourceProdOrderPartslistPos.Material, DoughTemp.Value,
                                                                                 doughTargetTempBeforeKneeding, componentsQ, waterTargetQuantity, out defaultWaterTemp);
 
-                CalculateWaterTypes(compTemps, suggestedWaterTemp, waterTargetQuantity.Value, defaultWaterTemp, componentsQ, isOnlyWaterCompsInPartslist, doughTargetTempBeforeKneeding);
+                CalculateWaterTypes(compTemps, suggestedWaterTemp, waterTargetQuantity.Value, defaultWaterTemp, componentsQ, isOnlyWaterCompsInPartslist, doughTargetTempBeforeKneeding,
+                                    kneedingRiseTemperature);
             }
         }
 
@@ -642,7 +646,7 @@ namespace gipbakery.mes.processapplication
                 double suggestedWaterTemp = CalculateWaterTemperatureSuggestion(UseWaterTemp, isOnlyWaterCompsInPartslist, cityWaterComp, WaterTemp.Value, 0,
                                                                                 0, waterTargetQuantity, out defaultWaterTemp);
 
-                CalculateWaterTypes(compTemps, suggestedWaterTemp, waterTargetQuantity.Value, defaultWaterTemp, 0, isOnlyWaterCompsInPartslist, 0);
+                CalculateWaterTypes(compTemps, suggestedWaterTemp, waterTargetQuantity.Value, defaultWaterTemp, 0, isOnlyWaterCompsInPartslist, 0, null);
             }
         }
 
@@ -792,7 +796,7 @@ namespace gipbakery.mes.processapplication
 
 
         private void CalculateWaterTypes(IEnumerable<MaterialTemperature> componentTemperatures, double targetWaterTemperature, double totalWaterQuantity, double defaultWaterTemp,
-                                         double componentsQ, bool isOnlyWaterCompInPartslist, double doughTempBeforeKneeding)
+                                         double componentsQ, bool isOnlyWaterCompInPartslist, double doughTempBeforeKneeding, double? kneedingRiseTemp)
         {
             MaterialTemperature coldWater = componentTemperatures.FirstOrDefault(c => c.Water == WaterType.ColdWater);
             MaterialTemperature cityWater = componentTemperatures.FirstOrDefault(c => c.Water == WaterType.CityWater);
@@ -821,7 +825,14 @@ namespace gipbakery.mes.processapplication
                 return;
             }
 
-            WaterTemperaturesUsedInCalc = new ACValueList(componentTemperatures.Where(c => c.Water != WaterType.NotWater).Select(x => new ACValue(x.Water.ToString(), x)).ToArray());
+            ACValueList temperaturesUsedInCalc = new ACValueList(componentTemperatures.Where(c => c.Water != WaterType.NotWater).Select(x => new ACValue(x.Water.ToString(), x.AverageTemperature)).ToArray());
+            if (kneedingRiseTemp.HasValue)
+            {
+                ACValue acValue = new ACValue(KneedingRiseTemp, kneedingRiseTemp.Value);
+                temperaturesUsedInCalc.Add(acValue);
+            }
+
+            WaterTemperaturesUsedInCalc = temperaturesUsedInCalc;
 
             //check warm water 
             if (targetWaterTemperature > warmWater.AverageTemperature)

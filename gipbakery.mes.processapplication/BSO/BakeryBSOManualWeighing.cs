@@ -142,6 +142,13 @@ namespace gipbakery.mes.processapplication
             set;
         }
 
+        [ACPropertyInfo(807)]
+        public double? KneedingRiseTemp
+        {
+            get;
+            set;
+        }
+
         #endregion
 
         #region Properties => SingleDosing dialog
@@ -334,25 +341,31 @@ namespace gipbakery.mes.processapplication
                 var cityWater = watersTempInCalc.GetACValue(WaterType.CityWater.ToString());
                 if (cityWater != null)
                 {
-                    CityWaterTemp = (cityWater.Value as MaterialTemperature)?.AverageTemperature;
+                    CityWaterTemp = cityWater.Value as double?;
                 }
 
                 var coldWater = watersTempInCalc.GetACValue(WaterType.ColdWater.ToString());
                 if (coldWater != null)
                 {
-                    ColdWaterTemp = (coldWater.Value as MaterialTemperature)?.AverageTemperature;
+                    ColdWaterTemp = coldWater.Value as double?;
                 }
 
                 var warmWater = watersTempInCalc.GetACValue(WaterType.WarmWater.ToString());
                 if (warmWater != null)
                 {
-                    WarmWaterTemp = (warmWater.Value as MaterialTemperature)?.AverageTemperature;
+                    WarmWaterTemp = warmWater.Value as double?;
                 }
 
                 var ice = watersTempInCalc.GetACValue(WaterType.DryIce.ToString());
                 if (ice != null)
                 {
-                    IceTemp = (ice.Value as MaterialTemperature)?.AverageTemperature;
+                    IceTemp = ice.Value as double?;
+                }
+
+                var kneedingRiseTemp = watersTempInCalc.GetACValue(PWBakeryTempCalc.KneedingRiseTemp);
+                if (kneedingRiseTemp != null)
+                {
+                    KneedingRiseTemp = kneedingRiseTemp.Value as double?;
                 }
             }
 
@@ -419,9 +432,9 @@ namespace gipbakery.mes.processapplication
 
         #region Methods => SingleDosing
 
-        public override void OnSetPickingRoutingRules(gip.mes.datamodel.Picking picking, ACClassWF rootWF, List<SingleDosingConfigItem> configItems)
+        public override void OnPreStartWorkflow(gip.mes.datamodel.Picking picking, List<SingleDosingConfigItem> configItems, Route validRoute, ACClassWF rootWF)
         {
-            base.OnSetPickingRoutingRules(picking, rootWF, configItems);
+            base.OnPreStartWorkflow(picking, configItems, validRoute, rootWF);
 
             if (SingleDosTargetTemperature.HasValue)
             {

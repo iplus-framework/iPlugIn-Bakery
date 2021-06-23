@@ -60,7 +60,7 @@ namespace gipbakery.mes.processapplication
         public const string PN_TemperatureServiceInfo = "TemperatureServiceInfo";
 
         public const string MaterialTempertureConfigKeyACUrl = "MaterialTempConfig";
-        public const string PN_CyclicMeasurement = "CyclicMeasurement";
+        
 
         #endregion
 

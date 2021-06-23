@@ -39,7 +39,7 @@ namespace gipbakery.mes.processapplication
                 PartslistPos pos = materialConfig.Material.PartslistPos_Material.FirstOrDefault(c => c.PartslistPosID == posID);
                 if (pos != null)
                 {
-                    var prop = pos.ACProperties.GetOrCreateACPropertyExtByName(PABakeryTempService.PN_CyclicMeasurement, false);
+                    var prop = pos.ACProperties.GetOrCreateACPropertyExtByName(PAFBakeryTempMeasuring.PN_CyclicMeasurement, false);
                     if (prop != null)
                     {
                         MeasurePeriod = prop.Value as TimeSpan?;
@@ -48,7 +48,7 @@ namespace gipbakery.mes.processapplication
             }
             else
             {
-                var prop = materialConfig.Material.ACProperties.GetOrCreateACPropertyExtByName(PABakeryTempService.PN_CyclicMeasurement, false);
+                var prop = materialConfig.Material.ACProperties.GetOrCreateACPropertyExtByName(PAFBakeryTempMeasuring.PN_CyclicMeasurement, false);
                 if (prop != null)
                 {
                     MeasurePeriod = prop.Value as TimeSpan?;
@@ -56,6 +56,14 @@ namespace gipbakery.mes.processapplication
             }
 
             SetLastMeasureTime(materialConfig.UpdateDate);
+
+            double? tempValue = materialConfig.Value as double?;
+
+            if (tempValue.HasValue && tempValue == 0)
+            {
+                NextMeasureTerm = DateTime.Now;
+                IsTempMeasureNeeded = true;
+            }
         }
 
         [DataMember(Name = "A")]
