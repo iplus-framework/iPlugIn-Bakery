@@ -57,8 +57,10 @@
     <Reference Include="WindowsBase" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="ACProcessWorkflow\PWNodeMethod\PWBakeryDosing.cs" />
     <Compile Include="ACProcessWorkflow\PWNodeMethod\PWBakeryManualWeighing.cs" />
     <Compile Include="ACProcessWorkflow\PWNodeMethod\PWBakeryRecvPointReady.cs" />
+    <Compile Include="ACProcessWorkflow\PWNodeMethod\PWBakeryWheatDischargingAck.cs" />
     <Compile Include="ACProcessWorkflow\PWNodeMethod\PWBakeryWorkKneading.cs" />
     <Compile Include="ACProcessWorkflow\PWNodeMethod\PWBakeryWorkDecoring.cs" />
     <Compile Include="ACProcessWorkflow\PWNodeMethod\PWBakeryWorkPacking.cs" />

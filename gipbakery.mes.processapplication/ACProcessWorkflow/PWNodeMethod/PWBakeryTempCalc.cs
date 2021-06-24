@@ -244,7 +244,7 @@ namespace gipbakery.mes.processapplication
             }
         }
 
-        protected bool UseWaterMixer
+        internal bool UseWaterMixer
         {
             get
             {
