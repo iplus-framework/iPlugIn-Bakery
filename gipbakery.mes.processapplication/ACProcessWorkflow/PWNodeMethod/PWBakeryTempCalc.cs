@@ -12,8 +12,6 @@ using System.Runtime.Serialization;
 
 namespace gipbakery.mes.processapplication
 {
-    //TODO pwdosingnode find pwbakerytempcalc and set water calc temp result to function param
-    // Server restart - check calculation
     [ACClassInfo(Const.PackName_VarioAutomation, "en{'Dough temperature calculation'}de{'Teigtemperaturberechnung'}", Global.ACKinds.TPWNodeStatic, Global.ACStorableTypes.Optional, false, PWMethodVBBase.PWClassName, true)]
     public class PWBakeryTempCalc : PWNodeUserAck
     {
@@ -340,22 +338,7 @@ namespace gipbakery.mes.processapplication
         [ACMethodState("en{'Executing'}de{'Ausführend'}", 20, true)]
         public override void SMStarting()
         {
-            RefreshNodeInfoOnModule();
-            if (CPasswordDlg)
-            {
-                string message = CMessageText;
-                if (string.IsNullOrEmpty(message))
-                    message = "Press acknowledge to authenitacate user..."; //TODO translation
-
-                AlarmsAsText.ValueT = message;
-            }
-
-            else if (string.IsNullOrEmpty(CMessageText))
-            {
-                CurrentACState = ACStateEnum.SMRunning;
-            }
-
-            //base.SMStarting();
+            base.SMStarting();
         }
 
         public override void SMRunning()
@@ -363,17 +346,26 @@ namespace gipbakery.mes.processapplication
             RefreshNodeInfoOnModule();
             if (Root.Initialized)
             {
-                TempCalcMode calcMode = TempCalcMode.Calcuate;
-                using (ACMonitor.Lock(_20015_LockValue))
-                    calcMode = _CalculatorMode;
-
-                if (calcMode == TempCalcMode.Calcuate)
-                    CalculateTargetTemperature();
-                else if (calcMode == TempCalcMode.AdjustOrder)
+                BakeryReceivingPoint recvPoint = ParentPWGroup?.AccessedProcessModule as BakeryReceivingPoint;
+                bool? isTempServiceInitialized = recvPoint?.ExecuteMethod("IsTemperatureServiceInitialized") as bool?;
+                if (isTempServiceInitialized.HasValue || isTempServiceInitialized.Value)
                 {
-                    //TODO: errors
-                    AdjustOrder();
-                    CurrentACState = ACStateEnum.SMCompleted;
+                    TempCalcMode calcMode = TempCalcMode.Calcuate;
+                    using (ACMonitor.Lock(_20015_LockValue))
+                        calcMode = _CalculatorMode;
+
+                    if (calcMode == TempCalcMode.Calcuate)
+                        CalculateTargetTemperature();
+                    else if (calcMode == TempCalcMode.AdjustOrder)
+                    {
+                        //TODO: errors
+                        AdjustOrder();
+                        CurrentACState = ACStateEnum.SMCompleted;
+                    }
+                }
+                else
+                {
+                    SubscribeToProjectWorkCycle();
                 }
             }
             else
@@ -428,18 +420,29 @@ namespace gipbakery.mes.processapplication
                 DryIceQuantity.ValueT = 0;
             }
 
-
-
             BakeryReceivingPoint recvPoint = ParentPWGroup.AccessedProcessModule as BakeryReceivingPoint;
             if (recvPoint == null)
             {
-                //TODO: Error msg: Accessed process module on PWGroup is null or is not BakeryReceivingPoint!
+                //Error50407: Accessed process module on the PWGroup is null or is not BakeryReceivingPoint!
+                Msg msg = new Msg(this, eMsgLevel.Error, PWClassName, "CalculateTargetTemperature(10)", 429, "Error50407");
+                if (IsAlarmActive(ProcessAlarm, msg.Message) == null)
+                {
+                    OnNewAlarmOccurred(ProcessAlarm, msg);
+                    Root.Messages.LogMessageMsg(msg);
+                }
                 return;
             }
 
             if (string.IsNullOrEmpty(DryIceMaterialNo))
             {
-                //TODO: error => configure dry ice material number
+                //Error50408 The ice MaterialNo is not configured.Please configure the ice material number.
+                Msg msg = new Msg(this, eMsgLevel.Error, PWClassName, "CalculateTargetTemperature(20)", 441, "Error50408");
+                if (IsAlarmActive(ProcessAlarm, msg.Message) == null)
+                {
+                    OnNewAlarmOccurred(ProcessAlarm, msg);
+                    Root.Messages.LogMessageMsg(msg);
+                }
+                return;
             }
 
             PWMethodProduction pwMethodProduction = ParentPWMethod<PWMethodProduction>();
@@ -455,7 +458,6 @@ namespace gipbakery.mes.processapplication
                 {
                     CalculateRelocationTargetTempreature(recvPoint, pwMethodRelocation);
                 }
-
             }
 
             using (ACMonitor.Lock(_20015_LockValue))
@@ -472,7 +474,13 @@ namespace gipbakery.mes.processapplication
             {
                 if (!UseWaterTemp && DoughTemp == null)
                 {
-                    //TODO: alarm
+                    //Error50409: The dough target temperature calculation is selected, but the dough temperature is not configured. Please configure the dough target temperature.
+                    Msg msg = new Msg(this, eMsgLevel.Error, PWClassName, "CalculateProdOrderTargetTemperature(10)", 478, "Error50409");
+                    if (IsAlarmActive(ProcessAlarm, msg.Message) == null)
+                    {
+                        OnNewAlarmOccurred(ProcessAlarm, msg);
+                        Root.Messages.LogMessageMsg(msg);
+                    }
                     return;
                 }
 
@@ -491,7 +499,7 @@ namespace gipbakery.mes.processapplication
                     doughTargetTempBeforeKneeding = DoughTemp.Value - kneedingRiseTemperature + recvPointCorrTemp;
                 }
 
-                ACValueList componentTemperaturesService = recvPoint.GetComponentTemperatures();
+                ACValueList componentTemperaturesService = recvPoint.GetWaterComponentsFromTempService();
                 if (componentTemperaturesService == null)
                     return;
 
@@ -502,9 +510,40 @@ namespace gipbakery.mes.processapplication
                 _WarmWaterMaterialNo = tempFromService.FirstOrDefault(c => c.Water == WaterType.WarmWater)?.MaterialNo;
                 string dryIce = DryIceMaterialNo;
 
-                if (string.IsNullOrEmpty(_ColdWaterMaterialNo) || string.IsNullOrEmpty(_CityWaterMaterialNo) || string.IsNullOrEmpty(_WarmWaterMaterialNo) || string.IsNullOrEmpty(dryIce))
+                if (string.IsNullOrEmpty(_ColdWaterMaterialNo))
                 {
-                    //TODO error
+                    //Error50410: Can not get the MaterialNo for {0} from the temperature service.
+                    Msg msg = new Msg(this, eMsgLevel.Error, PWClassName, "CalculateProdOrderTargetTemperature(20)", 515, "Error50410", "ColdWater");
+                    if (IsAlarmActive(ProcessAlarm, msg.Message) == null)
+                    {
+                        OnNewAlarmOccurred(ProcessAlarm, msg);
+                        Root.Messages.LogMessageMsg(msg);
+                    }
+                    return;
+                }
+
+                if (string.IsNullOrEmpty(_CityWaterMaterialNo))
+                {
+                    //Error50410: Can not get the MaterialNo for {0} from the temperature service.
+                    Msg msg = new Msg(this, eMsgLevel.Error, PWClassName, "CalculateProdOrderTargetTemperature(20)", 526, "Error50410", "ColdWater");
+                    if (IsAlarmActive(ProcessAlarm, msg.Message) == null)
+                    {
+                        OnNewAlarmOccurred(ProcessAlarm, msg);
+                        Root.Messages.LogMessageMsg(msg);
+                    }
+                    return;
+                }
+
+                if (string.IsNullOrEmpty(_WarmWaterMaterialNo))
+                {
+                    //Error50410: Can not get the MaterialNo for {0} from the temperature service.
+                    Msg msg = new Msg(this, eMsgLevel.Error, PWClassName, "CalculateProdOrderTargetTemperature(20)", 537, "Error50410", "ColdWater");
+                    if (IsAlarmActive(ProcessAlarm, msg.Message) == null)
+                    {
+                        OnNewAlarmOccurred(ProcessAlarm, msg);
+                        Root.Messages.LogMessageMsg(msg);
+                    }
+                    return;
                 }
 
                 ProdOrderPartslistPos endBatchPos = pwMethodProduction.CurrentProdOrderPartslistPos.FromAppContext<ProdOrderPartslistPos>(dbApp);
@@ -545,7 +584,7 @@ namespace gipbakery.mes.processapplication
                 ProdOrderPartslistPosRelation cityWaterComp = relations.FirstOrDefault(c => c.SourceProdOrderPartslistPos.Material.MaterialNo == _CityWaterMaterialNo);
                 if (cityWaterComp == null)
                 {
-                    //ask Damir: error or skip node
+                    CurrentACState = ACStateEnum.SMCompleted;
                     return;
                 }
 
@@ -614,7 +653,7 @@ namespace gipbakery.mes.processapplication
                 Material cityWaterComp = pickingPos.Material.MaterialNo == _CityWaterMaterialNo ? pickingPos.Material : null;
                 if (cityWaterComp == null)
                 {
-                    //ask Damir: error or skip node
+                    CurrentACState = ACStateEnum.SMCompleted;
                     return;
                 }
 
@@ -805,23 +844,49 @@ namespace gipbakery.mes.processapplication
 
             if (coldWater == null)
             {
-                //TODO: error
+                //The component/material {0} can not be found!
+                Msg msg = new Msg(this, eMsgLevel.Error, PWClassName, "CalculateWaterTypes(10)", 800, "Error50406", "ColdWater");
+                if (IsAlarmActive(ProcessAlarm, msg.Message) == null)
+                {
+                    OnNewAlarmOccurred(ProcessAlarm, msg);
+                    Root.Messages.LogMessageMsg(msg);
+                }
+                return;
             }
 
             if (cityWater == null)
             {
-                //TODO: error
+                //The component/material {0} can not be found!
+                Msg msg = new Msg(this, eMsgLevel.Error, PWClassName, "CalculateWaterTypes(20)", 800, "Error50406", "CityWater");
+                if (IsAlarmActive(ProcessAlarm, msg.Message) == null)
+                {
+                    OnNewAlarmOccurred(ProcessAlarm, msg);
+                    Root.Messages.LogMessageMsg(msg);
+                }
+                return;
             }
 
             if (warmWater == null)
             {
-                //TODO error
+                //The component/material {0} can not be found!
+                Msg msg = new Msg(this, eMsgLevel.Error, PWClassName, "CalculateWaterTypes(30)", 800, "Error50406", "WarmWater");
+                if (IsAlarmActive(ProcessAlarm, msg.Message) == null)
+                {
+                    OnNewAlarmOccurred(ProcessAlarm, msg);
+                    Root.Messages.LogMessageMsg(msg);
+                }
                 return;
             }
 
             if (dryIce == null)
             {
-                //TODO: error
+                //The component/material {0} can not be found!
+                Msg msg = new Msg(this, eMsgLevel.Error, PWClassName, "CalculateWaterTypes(40)", 800, "Error50406", "Ice");
+                if (IsAlarmActive(ProcessAlarm, msg.Message) == null)
+                {
+                    OnNewAlarmOccurred(ProcessAlarm, msg);
+                    Root.Messages.LogMessageMsg(msg);
+                }
                 return;
             }
 
@@ -837,40 +902,46 @@ namespace gipbakery.mes.processapplication
             //check warm water 
             if (targetWaterTemperature > warmWater.AverageTemperature)
             {
-                string message = string.Format("Calculated water temperature is {0} °C and the target quantity is {1} kg.", targetWaterTemperature.ToString("F2"), totalWaterQuantity);  //TODO unit
-                TemperatureCalculationResult.ValueT = message;
-                WaterCalcResult.ValueT = targetWaterTemperature;
+                using (ACMonitor.Lock(_20015_LockValue))
+                {
+                    WarmWaterQuantity.ValueT = totalWaterQuantity;
+                }
 
-                //TODO: Temperature Alarm, the calculated water temperature can not be reached
+                // The calculated water temperature of {0} °C can not be reached, the maximum water temperature is {1} °C and the target quantity is {2} {3}. 
+                TemperatureCalculationResult.ValueT = Root.Environment.TranslateText(this, "TempCalcResultMax", targetWaterTemperature.ToString("F2"), warmWater.AverageTemperature,
+                                                                                                                totalWaterQuantity, "kg");
+                WaterCalcResult.ValueT = targetWaterTemperature;
 
                 return;
             }
 
             if (CombineWarmCityWater(warmWater, cityWater, targetWaterTemperature, totalWaterQuantity))
             {
-                string message = string.Format("Calculated water temperature is {0} °C and the target quantity is {1} kg.", targetWaterTemperature.ToString("F2"), totalWaterQuantity);  //TODO unit
-                TemperatureCalculationResult.ValueT = message;
+                //The calculated water temperature is {0} °C and the target quantity is {1} {2}.
+                TemperatureCalculationResult.ValueT = Root.Environment.TranslateText(this, "TempCalcResult", targetWaterTemperature.ToString("F2"), totalWaterQuantity, "kg");
                 WaterCalcResult.ValueT = targetWaterTemperature;
-
                 return;
             }
 
             if (CombineColdCityWater(coldWater, cityWater, targetWaterTemperature, totalWaterQuantity))
             {
-                string message = string.Format("Calculated water temperature is {0} °C and the target quantity is {1} kg.", targetWaterTemperature.ToString("F2"), totalWaterQuantity);  //TODO unit
-                TemperatureCalculationResult.ValueT = message;
+                //The calculated water temperature is {0} °C and the target quantity is {1} {2}.
+                TemperatureCalculationResult.ValueT = Root.Environment.TranslateText(this, "TempCalcResult", targetWaterTemperature.ToString("F2"), totalWaterQuantity, "kg");
                 WaterCalcResult.ValueT = targetWaterTemperature;
-
                 return;
             }
 
             if (!CombineWatersWithDryIce(coldWater, dryIce, targetWaterTemperature, totalWaterQuantity, defaultWaterTemp, isOnlyWaterCompInPartslist, componentsQ, doughTempBeforeKneeding))
             {
-                //TODO: alarm
+                // The calculated water temperature of {0} °C can not be reached, the ice is {1} °C and the target quantity is {2} {3}. 
+                TemperatureCalculationResult.ValueT = Root.Environment.TranslateText(this, "TempCalcResultMin", targetWaterTemperature.ToString("F2"), dryIce.AverageTemperature,
+                                                                                                                totalWaterQuantity, "kg");
+                WaterCalcResult.ValueT = targetWaterTemperature;
+                return;
             }
 
-            string message1 = string.Format("Calculated water temperature is {0} °C and the target quantity is {1} kg.", targetWaterTemperature.ToString("F2"), totalWaterQuantity);  //TODO unit
-            TemperatureCalculationResult.ValueT = message1;
+            //The calculated water temperature is {0} °C and the target quantity is {1} {2}.
+            TemperatureCalculationResult.ValueT = Root.Environment.TranslateText(this, "TempCalcResult", targetWaterTemperature.ToString("F2"), totalWaterQuantity, "kg");
             WaterCalcResult.ValueT = targetWaterTemperature;
         }
 
@@ -1107,7 +1178,7 @@ namespace gipbakery.mes.processapplication
             }
             return true;
         }
-        //TODO: phases
+
         private bool CalculateWaterTypesWithComponentsQ(double defaultWaterTemp, bool isOnlyWaterCompInPartslist)
         {
             if (defaultWaterTemp < 0.00001 && !isOnlyWaterCompInPartslist)

@@ -13,7 +13,6 @@ using System.Threading.Tasks;
 
 namespace gipbakery.mes.processapplication
 {
-    //Todo: move config to material
     [ACClassInfo(Const.PackName_VarioAutomation, "en{'Bakery temperature service'}de{'Bäckerei-Temperaturservice'}", Global.ACKinds.TPAModule, IsRightmanagement = true)]
     public class PABakeryTempService : PAJobScheduler
     {
@@ -72,6 +71,15 @@ namespace gipbakery.mes.processapplication
         {
             get;
             set;
+        }
+
+        [ACPropertyInfo(700)]
+        public bool ServiceInitialized
+        {
+            get
+            {
+                return Temperatures != null && Temperatures.Any();
+            }
         }
 
         // 1 Refresh average temperatures
@@ -157,6 +165,16 @@ namespace gipbakery.mes.processapplication
                 return null;
 
             return new ACValueList(cacheItem.Value.Value.MaterialTempInfos.Where(t => !string.IsNullOrEmpty(t.MaterialNo)).Select(c => new ACValue(c.MaterialNo, c.AverageTemperature)).ToArray());
+        }
+
+        [ACMethodInfo("", "", 9999)]
+        public ACValueList GetWaterMaterialNo(Guid receivingPointID)
+        {
+            KeyValuePair<BakeryReceivingPoint, BakeryRecvPointTemperature>? cacheItem = Temperatures?.FirstOrDefault(c => c.Key.ComponentClass.ACClassID == receivingPointID);
+            if (cacheItem == null)
+                return null;
+
+            return new ACValueList(cacheItem.Value.Value.MaterialTempInfos.Where(t => !string.IsNullOrEmpty(t.MaterialNo) && t.Water > WaterType.NotWater).Select(c => new ACValue(c.MaterialNo, c)).ToArray());
         }
 
         public void GetDefaultWaterTemperatures(Guid receivingPointID)

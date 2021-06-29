@@ -46,8 +46,7 @@ namespace gipbakery.mes.processapplication
 
         public const string PN_CyclicMeasurement = "CyclicMeasurement";
         public const string MN_MeasureMaterialTemperature = "MeasureMaterialTemperature";
-        public const string MN_DeactivateMeasurement = "DeactivateMeasurement";
-        public const string MN_ReactivateMeasurements = "ReactivateMeasurements";
+        public const string MN_DeleteMeasurement = "DeleteMeasurement";
         public const string MN_ChangeHintSetting = "ChangeHintSetting";
 
         #endregion
@@ -184,12 +183,12 @@ namespace gipbakery.mes.processapplication
         }
 
         [ACMethodInfo("", "", 803)]
-        public void DeactivateMeasurement(Guid materialConfig)
+        public void DeleteMeasurement(Guid materialConfig)
         {
-            ApplicationManager?.ApplicationQueue.Add(() => DeactivateMatMeasurement(materialConfig));
+            ApplicationManager?.ApplicationQueue.Add(() => DeleteMatMeasurement(materialConfig));
         }
 
-        private void DeactivateMatMeasurement(Guid materialConfigID)
+        private void DeleteMatMeasurement(Guid materialConfigID)
         {
             MaterialTempMeasureItem measureItem = null;
             using (ACMonitor.Lock(_20015_LockValue))
@@ -204,10 +203,9 @@ namespace gipbakery.mes.processapplication
             {
                 MaterialConfig item = measureItem.MaterialConfig.FromAppContext<MaterialConfig>(dbApp);
                 if (item == null)
-                    return; //TODO:error
+                    return;
 
-                item.Expression = TempMeasurementModeEnum.Off.ToString();
-                item.Value = 0;
+                dbApp.DeleteObject(item);
                 Msg msg = dbApp.ACSaveChanges(); //TODO: error
 
                 measureItem.IsMeasurementOff = true;
@@ -229,48 +227,48 @@ namespace gipbakery.mes.processapplication
             return ManualTempMeasurementSensor?.ACUrl;
         }
 
-        [ACMethodInfo("", "", 805)]
-        public void ReactivateMeasurements()
-        {
-            ApplicationManager?.ApplicationQueue.Add(() => ReactivateMatMeasurement());
-        }
+        //[ACMethodInfo("", "", 805)]
+        //public void ReactivateMeasurements()
+        //{
+        //    ApplicationManager?.ApplicationQueue.Add(() => ReactivateMatMeasurement());
+        //}
 
-        private void ReactivateMatMeasurement()
-        {
-            if (ParentACComponent == null)
-                return;
+        //private void ReactivateMatMeasurement()
+        //{
+        //    if (ParentACComponent == null)
+        //        return;
 
-            using(DatabaseApp dbApp = new DatabaseApp())
-            {
-                string offMode = TempMeasurementModeEnum.Off.ToString();
-                IEnumerable<MaterialConfig> materialConfigs = dbApp.MaterialConfig.Where(c => c.VBiACClassID == ParentACComponent.ComponentClass.ACClassID 
-                                                                                           && c.KeyACUrl ==  PABakeryTempService.MaterialTempertureConfigKeyACUrl)
-                                                                                  .ToArray()
-                                                                                  .Where(x => x.Expression == offMode);
+        //    using(DatabaseApp dbApp = new DatabaseApp())
+        //    {
+        //        string offMode = TempMeasurementModeEnum.Off.ToString();
+        //        IEnumerable<MaterialConfig> materialConfigs = dbApp.MaterialConfig.Where(c => c.VBiACClassID == ParentACComponent.ComponentClass.ACClassID 
+        //                                                                                   && c.KeyACUrl ==  PABakeryTempService.MaterialTempertureConfigKeyACUrl)
+        //                                                                          .ToArray()
+        //                                                                          .Where(x => x.Expression == offMode);
 
-                if (!materialConfigs.Any())
-                    return;
+        //        if (!materialConfigs.Any())
+        //            return;
 
-                MaterialTempMeasureList changedItems = new MaterialTempMeasureList();
+        //        MaterialTempMeasureList changedItems = new MaterialTempMeasureList();
 
-                foreach(MaterialConfig matConf in materialConfigs)
-                {
-                    matConf.Expression = TempMeasurementModeEnum.On.ToString();
+        //        foreach(MaterialConfig matConf in materialConfigs)
+        //        {
+        //            matConf.Expression = TempMeasurementModeEnum.On.ToString();
 
-                    MaterialTempMeasureItem mItem = new MaterialTempMeasureItem(matConf);
-                    changedItems.Add(mItem);
-                }
+        //            MaterialTempMeasureItem mItem = new MaterialTempMeasureItem(matConf);
+        //            changedItems.Add(mItem);
+        //        }
 
-                //TODO:error
-                Msg msg = dbApp.ACSaveChanges();
+        //        //TODO:error
+        //        Msg msg = dbApp.ACSaveChanges();
 
-                using (ACMonitor.Lock(_20015_LockValue))
-                {
-                    MaterialTemperatureMeasureItems.AddRange(changedItems);
-                    ChangedTemperatureMeasureItems.ValueT = changedItems;
-                }
-            }
-        }
+        //        using (ACMonitor.Lock(_20015_LockValue))
+        //        {
+        //            MaterialTemperatureMeasureItems.AddRange(changedItems);
+        //            ChangedTemperatureMeasureItems.ValueT = changedItems;
+        //        }
+        //    }
+        //}
 
         [ACMethodInfo("", "", 806)]
         public void ChangeHintSetting(bool hintOff)

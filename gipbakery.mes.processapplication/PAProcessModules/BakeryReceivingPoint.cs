@@ -29,6 +29,8 @@ namespace gipbakery.mes.processapplication
             _PAPointMatIn3 = new PAPoint(this, "PAPointMatIn3");
             _PAPointMatIn4 = new PAPoint(this, "PAPointMatIn4");
             _PAPointMatIn5 = new PAPoint(this, "PAPointMatIn5");
+
+            _RecvPointReadyScaleACUrl = new ACPropertyConfigValue<string>(this, "RecvPointReadyScaleACUrl", "");
         }
 
         public override bool ACInit(Global.ACStartTypes startChildMode = Global.ACStartTypes.Automatic)
@@ -40,6 +42,7 @@ namespace gipbakery.mes.processapplication
 
         public override bool ACPostInit()
         {
+            var temp = RecvPointReadyScaleACUrl;
             return base.ACPostInit();
         }
 
@@ -50,6 +53,18 @@ namespace gipbakery.mes.processapplication
         #endregion
 
         #region Properties 
+
+        private ACPropertyConfigValue<string> _RecvPointReadyScaleACUrl;
+        [ACPropertyConfig("en{'Scale ACUrl for PWBakeryRecvPointReady'}de{'Waage ACUrl für PWBakeryRecvPointReady'}")]
+        public string RecvPointReadyScaleACUrl
+        {
+            get => _RecvPointReadyScaleACUrl.ValueT;
+            set
+            {
+                _RecvPointReadyScaleACUrl.ValueT = value;
+                OnPropertyChanged("ManualTempMeasurementSensorACUrl");
+            }
+        }
 
         [ACPropertyBindingSource(IsPersistable = true)]
         public IACContainerTNet<double> DoughCorrTemp
@@ -115,6 +130,51 @@ namespace gipbakery.mes.processapplication
                 return null;
 
             return TemperatureService.ExecuteMethod(PABakeryTempService.MN_GetTemperaturesInfo, ComponentClass.ACClassID) as ACValueList;
+        }
+
+        /// <summary>
+        /// Get component(material) temperatures from the temperature service.
+        /// </summary>
+        /// <returns>Returns the list of ACValue(ACIdentifier = MaterialNo; Value = MaterialTemperature)</returns>
+        [ACMethodInfo("", "", 800)]
+        public ACValueList GetWaterComponentsFromTempService()
+        {
+            if (TemperatureService == null)
+                return null;
+
+            return TemperatureService.ExecuteMethod("GetWaterMaterialNo", ComponentClass.ACClassID) as ACValueList;
+        }
+
+        public PAEScaleBase GetRecvPointReadyScale()
+        {
+            PAEScaleBase scale = null;
+
+            if (!string.IsNullOrEmpty(RecvPointReadyScaleACUrl))
+            {
+                scale = ACUrlCommand(RecvPointReadyScaleACUrl) as PAEScaleBase;
+            }
+            
+            if (scale == null)
+            {
+                IPAMContScale scaleCont = this as IPAMContScale;
+                if (scaleCont != null)
+                    scale = scaleCont.Scale;
+            }
+
+            return scale;
+        }
+
+        [ACMethodInfo("","",9999)]
+        public bool IsTemperatureServiceInitialized()
+        {
+            if (TemperatureService == null)
+                return false;
+
+            bool? isEnabled = TemperatureService.ACUrlCommand("ServiceInitialized") as bool?;
+            if (isEnabled.HasValue)
+                return isEnabled.Value;
+
+            return false;
         }
 
         #endregion

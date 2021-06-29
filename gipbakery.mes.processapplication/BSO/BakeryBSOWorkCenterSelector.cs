@@ -46,7 +46,7 @@ namespace gipbakery.mes.processapplication
                                            .MaterialConfig_Material.FirstOrDefault(c => c.VBiACClassID == CurrentProcessModule.ComponentClass.ACClassID
                                                                                      && c.KeyACUrl == PABakeryTempService.MaterialTempertureConfigKeyACUrl);
 
-            if (temp != null)
+            if (temp != null && temp.Value != null)
             {
                 item.AdditionalParam1 = temp.Value.ToString() + "°C";
             }

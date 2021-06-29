@@ -339,7 +339,7 @@ namespace gipbakery.mes.processapplication
         [ACMethodInfo("", "en{'Delete temperature mesurement'}de{'Temperaturmessung löschen'}", 702)]
         public void DeleteComponentTempMeasurement()
         {
-            TempMeasuringFunc.ExecuteMethod(PAFBakeryTempMeasuring.MN_DeactivateMeasurement, SelectedTempMeasureItem.MaterialConfigID);
+            TempMeasuringFunc.ExecuteMethod(PAFBakeryTempMeasuring.MN_DeleteMeasurement, SelectedTempMeasureItem.MaterialConfigID);
         }
 
         public bool IsEnabledDeleteComponentTempMeasurement()
@@ -356,20 +356,6 @@ namespace gipbakery.mes.processapplication
         public bool IsEnabledCopyComponentTempMeasurement()
         {
             return SelectedTempMeasureItem != null;
-        }
-
-        [ACMethodInfo("", "en{'Reactivate measurement for deleted components'}de{'Messung für gelöschte Komponenten reaktivieren'}", 703)]
-        public void ReactivateDeletedMeasurement()
-        {
-            if (!IsEnabledReactivateDeletedMeasurement())
-                return;
-
-            TempMeasuringFunc.ExecuteMethod(PAFBakeryTempMeasuring.MN_ReactivateMeasurements, null);
-        }
-
-        public bool IsEnabledReactivateDeletedMeasurement()
-        {
-            return TempMeasuringFunc != null;
         }
 
         [ACMethodInfo("", "en{'Turn on measurement hint'}de{'Hinweis zur Messung einschalten'}", 703)]
