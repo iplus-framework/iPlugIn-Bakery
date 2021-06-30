@@ -44,6 +44,7 @@ namespace gipbakery.mes.processapplication
             return base.ACDeInit(deleteACClassTask);
         }
 
+        public const string ClassName = "PAFBakeryTempMeasuring";
         public const string PN_CyclicMeasurement = "CyclicMeasurement";
         public const string MN_MeasureMaterialTemperature = "MeasureMaterialTemperature";
         public const string MN_DeleteMeasurement = "DeleteMeasurement";
@@ -52,6 +53,8 @@ namespace gipbakery.mes.processapplication
         #endregion
 
         #region Properties
+
+        private ACMonitorObject _30010_LockNotificationsOff = new ACMonitorObject(30010);
 
         private ACPropertyConfigValue<string> _ManualTempMeasurementSensorACUrl;
         [ACPropertyConfig("en{'Sensor ACUrl for the manual temperature measurement'}de{'Sensor ACUrl für die manuelle Temperaturmessung'}")]
@@ -118,7 +121,10 @@ namespace gipbakery.mes.processapplication
         [ACMethodInfo("", "", 801)]
         public MaterialTempMeasureList GetTempMeasureItems()
         {
-            return MaterialTemperatureMeasureItems;
+            using (ACMonitor.Lock(_20015_LockValue))
+            {
+                return MaterialTemperatureMeasureItems;
+            }
         }
 
         [ACMethodInfo("", "", 802)]
@@ -135,26 +141,40 @@ namespace gipbakery.mes.processapplication
                 measureItem = MaterialTemperatureMeasureItems.FirstOrDefault(c => c.MaterialConfigID == materialConfigID);
             }
 
-            if (measureItem == null)
+            if (measureItem == null || measureItem.MaterialConfig == null)
                 return;
 
             using (DatabaseApp dbApp = new DatabaseApp())
             {
                 MaterialConfig item = measureItem.MaterialConfig.FromAppContext<MaterialConfig>(dbApp);
                 if (item == null)
-                    return; //TODO:error
+                {
+                    //Error50427: The temperature measurement is failed, a material config can not be found with ID {0}
+                    Msg msg = new Msg(this, eMsgLevel.Error, ClassName, "MeasureMatTemp(10)", 153, "Error50427", measureItem.MaterialConfigID);
+                    if (IsAlarmActive(FunctionError, msg.Message) == null)
+                    {
+                        OnNewAlarmOccurred(FunctionError, msg);
+                        Root.Messages.LogMessageMsg(msg);
+                    }
+
+                    return;
+                }
 
                 double? temp = temperature.HasValue ? temperature.Value : ManualTempMeasurementSensor?.ActualValue.ValueT;
                 if (!temp.HasValue)
                 {
-                    //TODO error
-                    return;
+                    //Error50428: The temperature measurement is failed, the temperature or thermometer is not available.
+                    Msg msg = new Msg(this, eMsgLevel.Error, ClassName, "MeasureMatTemp(10)", 1916, "Error50428");
+                    if (IsAlarmActive(FunctionError, msg.Message) == null)
+                    {
+                        OnNewAlarmOccurred(FunctionError, msg);
+                        Root.Messages.LogMessageMsg(msg);
+                    }
                 }
 
                 item.Value = temp;
 
-                //TODO: error
-                dbApp.ACSaveChanges();
+                Msg result = dbApp.ACSaveChanges();
 
                 measureItem.IsTempMeasureNeeded = false;
                 measureItem.SetLastMeasureTime(item.UpdateDate);
@@ -168,18 +188,25 @@ namespace gipbakery.mes.processapplication
             using (ACMonitor.Lock(_20015_LockValue))
             {
                 ChangedTemperatureMeasureItems.ValueT = changedItems;
+            }
+
+            using (ACMonitor.Lock(_30010_LockNotificationsOff))
+            {
                 notificationsOff = NotificationsOff.ValueT;
             }
 
             if (!notificationsOff)
             {
-                bool isActive = MaterialTemperatureMeasureItems.Any(c => c.IsTempMeasureNeeded);
+                bool isActive = false;
+                using (ACMonitor.Lock(_20015_LockValue))
+                {
+                    isActive = MaterialTemperatureMeasureItems.Any(c => c.IsTempMeasureNeeded);
+                }
                 if (isActive)
                     CurrentACState = ACStateEnum.SMRunning;
                 else
                     CurrentACState = ACStateEnum.SMIdle;
             }
-            
         }
 
         [ACMethodInfo("", "", 803)]
@@ -206,7 +233,15 @@ namespace gipbakery.mes.processapplication
                     return;
 
                 dbApp.DeleteObject(item);
-                Msg msg = dbApp.ACSaveChanges(); //TODO: error
+                Msg msg = dbApp.ACSaveChanges();
+                if (msg != null)
+                {
+                    if (IsAlarmActive(FunctionError, msg.Message) == null)
+                    {
+                        OnNewAlarmOccurred(FunctionError, msg);
+                        Root.Messages.LogMessageMsg(msg);
+                    }
+                }
 
                 measureItem.IsMeasurementOff = true;
             }
@@ -227,53 +262,10 @@ namespace gipbakery.mes.processapplication
             return ManualTempMeasurementSensor?.ACUrl;
         }
 
-        //[ACMethodInfo("", "", 805)]
-        //public void ReactivateMeasurements()
-        //{
-        //    ApplicationManager?.ApplicationQueue.Add(() => ReactivateMatMeasurement());
-        //}
-
-        //private void ReactivateMatMeasurement()
-        //{
-        //    if (ParentACComponent == null)
-        //        return;
-
-        //    using(DatabaseApp dbApp = new DatabaseApp())
-        //    {
-        //        string offMode = TempMeasurementModeEnum.Off.ToString();
-        //        IEnumerable<MaterialConfig> materialConfigs = dbApp.MaterialConfig.Where(c => c.VBiACClassID == ParentACComponent.ComponentClass.ACClassID 
-        //                                                                                   && c.KeyACUrl ==  PABakeryTempService.MaterialTempertureConfigKeyACUrl)
-        //                                                                          .ToArray()
-        //                                                                          .Where(x => x.Expression == offMode);
-
-        //        if (!materialConfigs.Any())
-        //            return;
-
-        //        MaterialTempMeasureList changedItems = new MaterialTempMeasureList();
-
-        //        foreach(MaterialConfig matConf in materialConfigs)
-        //        {
-        //            matConf.Expression = TempMeasurementModeEnum.On.ToString();
-
-        //            MaterialTempMeasureItem mItem = new MaterialTempMeasureItem(matConf);
-        //            changedItems.Add(mItem);
-        //        }
-
-        //        //TODO:error
-        //        Msg msg = dbApp.ACSaveChanges();
-
-        //        using (ACMonitor.Lock(_20015_LockValue))
-        //        {
-        //            MaterialTemperatureMeasureItems.AddRange(changedItems);
-        //            ChangedTemperatureMeasureItems.ValueT = changedItems;
-        //        }
-        //    }
-        //}
-
         [ACMethodInfo("", "", 806)]
         public void ChangeHintSetting(bool hintOff)
         {
-            using (ACMonitor.Lock(_20015_LockValue)) //TODO use another lock
+            using (ACMonitor.Lock(_30010_LockNotificationsOff))
             {
                 NotificationsOff.ValueT = hintOff;
             }
@@ -282,7 +274,12 @@ namespace gipbakery.mes.processapplication
                 CurrentACState = ACStateEnum.SMIdle;
             else if (!hintOff && CurrentACState != ACStateEnum.SMRunning)
             {
-                bool isAnyCompTempMeasureNeeded = MaterialTemperatureMeasureItems.Any(c => c.IsTempMeasureNeeded);
+                bool isAnyCompTempMeasureNeeded = false;
+                using (ACMonitor.Lock(_20015_LockValue))
+                {
+                    isAnyCompTempMeasureNeeded = MaterialTemperatureMeasureItems.Any(c => c.IsTempMeasureNeeded);
+                }
+
                 if (isAnyCompTempMeasureNeeded)
                     CurrentACState = ACStateEnum.SMRunning;
             }
@@ -377,12 +374,21 @@ namespace gipbakery.mes.processapplication
                 {
                     MaterialTemperatureMeasureItems = new MaterialTempMeasureList(measurableItems);
                     ChangedTemperatureMeasureItems.ValueT = changedItems;
+                }
+
+                using (ACMonitor.Lock(_30010_LockNotificationsOff))
+                {
                     notificationsOff = NotificationsOff.ValueT;
                 }
 
                 if (!notificationsOff)
                 {
-                    bool isActive = MaterialTemperatureMeasureItems.Any(c => c.IsTempMeasureNeeded);
+                    bool isActive = false;
+
+                    using (ACMonitor.Lock(_20015_LockValue))
+                    {
+                        isActive = MaterialTemperatureMeasureItems.Any(c => c.IsTempMeasureNeeded);
+                    }
                     if (isActive)
                         CurrentACState = ACStateEnum.SMRunning;
                     else

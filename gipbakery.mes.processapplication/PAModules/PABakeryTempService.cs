@@ -54,18 +54,17 @@ namespace gipbakery.mes.processapplication
             return base.ACDeInit(deleteACClassTask);
         }
 
+        public const string ClassName = "PABakeryTempService";
         public const string MN_GetTemperaturesInfo = "GetTemperaturesInfo";
         public const string MN_GetAverageTemperatures = "GetAverageTemperatures";
         public const string PN_TemperatureServiceInfo = "TemperatureServiceInfo";
-
         public const string MaterialTempertureConfigKeyACUrl = "MaterialTempConfig";
-        
 
         #endregion
 
         #region Properties
 
-        private bool _RecalculationComplete = false;
+        private readonly ACMonitorObject _30010_LockTempServiceInfo = new ACMonitorObject(30010);
 
         public Dictionary<BakeryReceivingPoint, BakeryRecvPointTemperature> Temperatures
         {
@@ -78,7 +77,12 @@ namespace gipbakery.mes.processapplication
         {
             get
             {
-                return Temperatures != null && Temperatures.Any();
+                bool result = false;
+                using (ACMonitor.Lock(_20015_LockValue))
+                {
+                    result = Temperatures != null && Temperatures.Any();
+                }
+                return result;
             }
         }
 
@@ -91,34 +95,8 @@ namespace gipbakery.mes.processapplication
             set;
         }
 
-        [ACPropertyPointProperty(9999, "", typeof(BakeryTempConfig))]
-        public IEnumerable<BakeryTempConfig> BakeryServiceConfiguration
-        {
-            get
-            {
-                //TODO: Check is lock needed for Component class and properties
-                try
-                {
-                    var query = ComponentClass.Properties.Where(c => (c.ObjectType == typeof(BakeryTempConfig))
-                                                                    && (c.ACKind == Global.ACKinds.PSPropertyExt))
-                                                            .OrderByDescending(x => x.UpdateDate)
-                                                            .Select(c => c.ConfigValue as BakeryTempConfig)
-                                                            .ToArray();
-                    return query;
-                }
-                catch (Exception e)
-                {
-                    string msg = e.Message;
-                    if (e.InnerException != null && e.InnerException.Message != null)
-                        msg += " Inner:" + e.InnerException.Message;
-
-                    if (gip.core.datamodel.Database.Root != null && gip.core.datamodel.Database.Root.Messages != null && gip.core.datamodel.Database.Root.InitState == ACInitState.Initialized)
-                        gip.core.datamodel.Database.Root.Messages.LogException("BakeryTempService", "BakeryServiceConfiguration", msg);
-                }
-
-                return null;
-            }
-        }
+        [ACPropertyBindingSource(710, "Error", "en{'Service alarm'}de{'Service Alarm'}", "", false, false)]
+        public IACContainerTNet<PANotifyState> ServiceAlarm { get; set; }
 
         #endregion
 
@@ -144,10 +122,13 @@ namespace gipbakery.mes.processapplication
         [ACMethodInfo("","",9999)]
         public ACValueList GetTemperaturesInfo(Guid receivingPointID)
         {
-            if (Temperatures == null || !_RecalculationComplete)
-                return null;
+            KeyValuePair<BakeryReceivingPoint, BakeryRecvPointTemperature>? cacheItem = null;
 
-            KeyValuePair<BakeryReceivingPoint, BakeryRecvPointTemperature>? cacheItem = Temperatures.FirstOrDefault(c => c.Key.ComponentClass.ACClassID == receivingPointID);
+            using (ACMonitor.Lock(_20015_LockValue))
+            {
+                cacheItem = Temperatures?.FirstOrDefault(c => c.Key.ComponentClass.ACClassID == receivingPointID);
+            }
+
             if (cacheItem == null)
                 return null;
 
@@ -157,10 +138,13 @@ namespace gipbakery.mes.processapplication
         [ACMethodInfo("", "", 9999)]
         public ACValueList GetAverageTemperatures(Guid receivingPointID)
         {
-            if (Temperatures == null)
-                return null;
+            KeyValuePair<BakeryReceivingPoint, BakeryRecvPointTemperature>? cacheItem = null;
 
-            KeyValuePair<BakeryReceivingPoint, BakeryRecvPointTemperature>? cacheItem = Temperatures.FirstOrDefault(c => c.Key.ComponentClass.ACClassID == receivingPointID);
+            using (ACMonitor.Lock(_20015_LockValue))
+            {
+                cacheItem = Temperatures?.FirstOrDefault(c => c.Key.ComponentClass.ACClassID == receivingPointID);
+            }
+
             if (cacheItem == null)
                 return null;
 
@@ -170,19 +154,18 @@ namespace gipbakery.mes.processapplication
         [ACMethodInfo("", "", 9999)]
         public ACValueList GetWaterMaterialNo(Guid receivingPointID)
         {
-            KeyValuePair<BakeryReceivingPoint, BakeryRecvPointTemperature>? cacheItem = Temperatures?.FirstOrDefault(c => c.Key.ComponentClass.ACClassID == receivingPointID);
+            KeyValuePair<BakeryReceivingPoint, BakeryRecvPointTemperature>? cacheItem = null;
+            using (ACMonitor.Lock(_20015_LockValue))
+            {
+                cacheItem = Temperatures?.FirstOrDefault(c => c.Key.ComponentClass.ACClassID == receivingPointID);
+            }
+
             if (cacheItem == null)
                 return null;
 
             return new ACValueList(cacheItem.Value.Value.MaterialTempInfos.Where(t => !string.IsNullOrEmpty(t.MaterialNo) && t.Water > WaterType.NotWater).Select(c => new ACValue(c.MaterialNo, c)).ToArray());
         }
 
-        public void GetDefaultWaterTemperatures(Guid receivingPointID)
-        {
-
-        }
-
-        //TODO Deinit service (event handlers)
         private void InitializeService()
         {
             DeinitCache();
@@ -234,70 +217,6 @@ namespace gipbakery.mes.processapplication
                     Temperatures.Add(receivingPoint, tempInfo);
                 }
 
-
-                // Temperatures from configuration
-
-                var bakeryTempConfig = BakeryServiceConfiguration;
-                if (bakeryTempConfig != null)
-                {
-                    var bakeryTempConfigs = bakeryTempConfig.ToArray();
-
-                    foreach (BakeryTempConfig config in bakeryTempConfigs)
-                    {
-                        if (string.IsNullOrEmpty(config.BakeryThermometerACUrl) || string.IsNullOrEmpty(config.MaterialNo))
-                            continue;
-
-                        PAEBakeryThermometer bakeryThermometer = Root.ACUrlCommand(config.BakeryThermometerACUrl, null) as PAEBakeryThermometer;
-                        if (bakeryThermometer == null)
-                            continue;
-
-                        BakeryReceivingPoint configReceivingPoint = receivingPoints.FirstOrDefault(c => c.ACUrl == config.ReceivingPointACUrl);
-                        if (configReceivingPoint != null)
-                        {
-                            //specific for receiving point
-
-                            BakeryRecvPointTemperature tempInfo = null;
-                            if (!Temperatures.TryGetValue(configReceivingPoint, out tempInfo))
-                            {
-                                tempInfo = new BakeryRecvPointTemperature(this);
-                                Temperatures.Add(configReceivingPoint, tempInfo);
-                            }
-
-                            MaterialTemperature materialInfo = tempInfo.MaterialTempInfos.FirstOrDefault(c => c.MaterialNo == config.MaterialNo);
-                            if (materialInfo == null)
-                            {
-                                materialInfo = new MaterialTemperature();
-                                materialInfo.MaterialNo = config.MaterialNo;
-                                materialInfo.Material = dbApp.Material.FirstOrDefault(c => c.MaterialNo == config.MaterialNo);
-                                materialInfo.Water = WaterType.NotWater;
-                                tempInfo.MaterialTempInfos.Add(materialInfo);
-                            }
-
-                            materialInfo.AddThermometer(bakeryThermometer);
-
-                        }
-                        else if (string.IsNullOrEmpty(config.ReceivingPointACUrl))
-                        {
-                            //for all receiving points
-
-                            foreach (BakeryRecvPointTemperature tempInfo in Temperatures.Values)
-                            {
-                                MaterialTemperature materialInfo = tempInfo.MaterialTempInfos.FirstOrDefault(c => c.MaterialNo == config.MaterialNo);
-                                if (materialInfo == null)
-                                {
-                                    materialInfo = new MaterialTemperature();
-                                    materialInfo.MaterialNo = config.MaterialNo;
-                                    materialInfo.Material = dbApp.Material.FirstOrDefault(c => c.MaterialNo == config.MaterialNo);
-                                    materialInfo.Water = WaterType.NotWater;
-                                    tempInfo.MaterialTempInfos.Add(materialInfo);
-                                }
-
-                                materialInfo.AddThermometer(bakeryThermometer);
-                            }
-                        }
-                    }
-                }
-
                 // Temperatures for water/room
 
                 foreach (var cacheItem in Temperatures)
@@ -321,12 +240,12 @@ namespace gipbakery.mes.processapplication
         {
             if (e.PropertyName == Const.ValueT)
             {
-                TemperatureServiceInfo.ValueT = 0;
+                SetTempServiceInfo(0);
                 foreach (var bakeryTempItem in Temperatures.Values)
                 {
                     bakeryTempItem.SiloMaterialNoPropertyChanged(sender, e);
                 }
-                TemperatureServiceInfo.ValueT = 2;
+                SetTempServiceInfo(2);
             }
         }
 
@@ -341,7 +260,7 @@ namespace gipbakery.mes.processapplication
             }
         }
 
-        private void InitializeWaterSensor(KeyValuePair<BakeryReceivingPoint, BakeryRecvPointTemperature> cacheItem, PAPoint paPointMatIn, gip.mes.datamodel.DatabaseApp dbApp, WaterType wType)
+        private void InitializeWaterSensor(KeyValuePair<BakeryReceivingPoint, BakeryRecvPointTemperature> cacheItem, PAPoint paPointMatIn, DatabaseApp dbApp, WaterType wType)
         {
             RoutingResult rr = ACRoutingService.FindSuccessorsFromPoint(RoutingService, dbApp.ContextIPlus, false, cacheItem.Key.ComponentClass,
                                                             paPointMatIn.PropertyInfo, PAMTank.SelRuleID_Silo, RouteDirections.Backwards,
@@ -358,19 +277,37 @@ namespace gipbakery.mes.processapplication
                         string materialNo = silo.MaterialNo.ValueT;
                         if (string.IsNullOrEmpty(materialNo))
                         {
-                            //TODO: error
+                            // Error50423 : Can not initalize {0} because in the water tank/source Material No missing.
+                            Msg msg = new Msg(this, eMsgLevel.Error, ClassName, "InitializeWaterSensor(10)", 271, "Error50423", wType.ToString());
+                            if (IsAlarmActive(ServiceAlarm, msg.Message) == null)
+                            {
+                                OnNewAlarmOccurred(ServiceAlarm, msg);
+                                Root.Messages.LogMessageMsg(msg);
+                            }
                         }
 
                         PAFDosing dosing = paPointMatIn.ConnectionList.Where(c => c.TargetParentComponent is PAFDosing)
                                                                                      .FirstOrDefault()?.TargetParentComponent as PAFDosing;
                         if (dosing == null)
                         {
-                            //TODO: error
+                            //Error50424: The dosing function for {0} can not be found.
+                            Msg msg = new Msg(this, eMsgLevel.Error, ClassName, "InitializeWaterSensor(20)", 285, "Error50424", wType.ToString());
+                            if (IsAlarmActive(ServiceAlarm, msg.Message) == null)
+                            {
+                                OnNewAlarmOccurred(ServiceAlarm, msg);
+                                Root.Messages.LogMessageMsg(msg);
+                            }
                         }
 
                         if (dosing.CurrentScaleForWeighing == null)
                         {
-                            //TODO: error
+                            //Error50425: Can not found the CurrentScaleForWeighing at the dosing function for the {0}.
+                            Msg msg = new Msg(this, eMsgLevel.Error, ClassName, "InitializeWaterSensor(30)", 297, "Error50425", wType.ToString());
+                            if (IsAlarmActive(ServiceAlarm, msg.Message) == null)
+                            {
+                                OnNewAlarmOccurred(ServiceAlarm, msg);
+                                Root.Messages.LogMessageMsg(msg);
+                            }
                         }
 
                         PAEBakeryThermometer thermometer = dosing.CurrentScaleForWeighing.FindChildComponents<PAEBakeryThermometer>(c => c is PAEBakeryThermometer, null, 1)
@@ -378,7 +315,13 @@ namespace gipbakery.mes.processapplication
 
                         if (thermometer == null || thermometer.DisabledForTempCalculation)
                         {
-                            //TODO: error
+                            //Error50426: Can not found the PAEBakeryThermometer under CurrentScaleForWeighing for the {0}.
+                            Msg msg = new Msg(this, eMsgLevel.Error, ClassName, "InitializeWaterSensor(40)", 309, "Error50426", wType.ToString());
+                            if (IsAlarmActive(ServiceAlarm, msg.Message) == null)
+                            {
+                                OnNewAlarmOccurred(ServiceAlarm, msg);
+                                Root.Messages.LogMessageMsg(msg);
+                            }
                         }
 
                         var materialTempInfo = cacheItem.Value.MaterialTempInfos.FirstOrDefault(c => c.MaterialNo == materialNo);
@@ -405,29 +348,37 @@ namespace gipbakery.mes.processapplication
             if (Temperatures == null)
                 return;
 
-            _RecalculationComplete = false;
+            SetTempServiceInfo(0);
 
-            TemperatureServiceInfo.ValueT = 0;
+            KeyValuePair<BakeryReceivingPoint, BakeryRecvPointTemperature>[] recalcItems = null;
+            using (ACMonitor.Lock(_20015_LockValue))
+            {
+                recalcItems = Temperatures?.ToArray();
+            }
 
-            foreach (var recvPoint in Temperatures)
+            if (recalcItems == null)
+                return;
+
+            foreach (var recvPoint in recalcItems)
             {
                 recvPoint.Value.RecalculateAverageTemperature(recvPoint.Key);
             }
 
-            TemperatureServiceInfo.ValueT = 1;
+            SetTempServiceInfo(1);
 
-            _RecalculationComplete = true;
+            WriteAverageTemperatureToMaterialConfig(recalcItems);
 
-            WriteAverageTemperatureToMaterialConfig();
+            using (ACMonitor.Lock(_20015_LockValue))
+            {
+                Temperatures = recalcItems.ToDictionary(c => c.Key, x => x.Value);
+            }
         }
 
-        private void WriteAverageTemperatureToMaterialConfig()
+        private void WriteAverageTemperatureToMaterialConfig(KeyValuePair<BakeryReceivingPoint, BakeryRecvPointTemperature>[] recalcItems)
         {
-            var temperatures = Temperatures.ToArray();
-
-            using (gip.mes.datamodel.DatabaseApp dbApp = new gip.mes.datamodel.DatabaseApp())
+            using (DatabaseApp dbApp = new DatabaseApp())
             {
-                foreach (var temp in temperatures)
+                foreach (var temp in recalcItems)
                 {
                     Guid acClassID = temp.Key.ComponentClass.ACClassID;
 
@@ -437,7 +388,11 @@ namespace gipbakery.mes.processapplication
                             continue;
 
                         Material mt = material.Material.FromAppContext<Material>(dbApp);
-                        //TODO nullcheck
+                        if (mt == null)
+                        {
+                            continue;
+                        }
+
                         MaterialConfig materialConfig = mt.MaterialConfig_Material.FirstOrDefault(c => c.VBiACClassID == acClassID && c.KeyACUrl == MaterialTempertureConfigKeyACUrl);
                         if (materialConfig == null)
                         {
@@ -454,75 +409,25 @@ namespace gipbakery.mes.processapplication
                     }
                 }
 
-                var msg = dbApp.ACSaveChanges();
-
+                Msg msg = dbApp.ACSaveChanges();
+                if (msg != null)
+                {
+                    if (IsAlarmActive(ServiceAlarm, msg.Message) == null)
+                    {
+                        OnNewAlarmOccurred(ServiceAlarm, msg);
+                        Root.Messages.LogMessageMsg(msg);
+                    }
+                }
             }
         }
 
-        //private void BuildTempCyclicMeasurement(DatabaseApp dbApp)
-        //{
-        //    var materialConfisWithTempMeasurement = dbApp.MaterialConfig.Where(c => c.KeyACUrl == MaterialTempertureConfigKeyACUrl && c.Expression != null);
-
-        //    foreach (MaterialConfig matConfig in materialConfisWithTempMeasurement)
-        //    {
-        //        if (IsTempMeasurementConfigured(matConfig.Material))
-        //            continue;
-
-        //        matConfig.Expression = null;
-        //    }
-
-        //    Msg msg = dbApp.ACSaveChanges();
-
-        //    //TODO:improve this, include config
-        //    var materials = dbApp.Material.ToArray().Where(c => c.ACProperties != null && c.ACProperties.GetOrCreateACPropertyExtByName("CyclicMeasurement", false).Value != null);
-        //    //todo lock
-        //    var recvPoints = Temperatures.Select(c => c.Key).ToArray();
-
-        //    foreach (var recvPoint in recvPoints)
-        //    {
-        //        foreach (var material in materials)
-        //        {
-        //            if (!IsTempMeasurementConfigured(material))
-        //                continue;
-
-        //            MaterialConfig matTempConfig = material.MaterialConfig_Material.FirstOrDefault(c => c.KeyACUrl == MaterialTempertureConfigKeyACUrl 
-        //                                                                                             && c.VBiACClassID == recvPoint.ComponentClass.ACClassID );
-        //            if (matTempConfig == null)
-        //            {
-        //                matTempConfig = MaterialConfig.NewACObject(dbApp, material);
-        //                matTempConfig.VBiACClassID = recvPoint.ComponentClass.ACClassID;
-        //                matTempConfig.KeyACUrl = MaterialTempertureConfigKeyACUrl;
-        //                matTempConfig.SetValueTypeACClass(dbApp.ContextIPlus.GetACType("double"));
-
-        //                material.MaterialConfig_Material.Add(matTempConfig);
-        //                dbApp.MaterialConfig.AddObject(matTempConfig);
-        //            }
-
-        //            if (matTempConfig.Expression != null)
-        //                continue;
-
-        //            matTempConfig.Expression = TempMeasurementModeEnum.MatOn.ToString();
-        //        }
-        //    }
-
-        //    var msg1 = dbApp.ACSaveChanges(); 
-        //}
-
-        //public static bool IsTempMeasurementConfigured(Material material)
-        //{
-        //    var prop = material.ACProperties?.GetOrCreateACPropertyExtByName("CyclicMeasurement", false);
-        //    if (prop == null)
-        //        return false;
-
-        //    TimeSpan? ts = prop.Value as TimeSpan?;
-        //    if (!ts.HasValue)
-        //        return false;
-
-        //    if (ts.Value.TotalMinutes > 1)
-        //        return true;
-
-        //    return false;
-        //}
+        internal void SetTempServiceInfo(short info)
+        {
+            using (ACMonitor.Lock(_30010_LockTempServiceInfo))
+            {
+                TemperatureServiceInfo.ValueT = info;
+            }
+        }
 
         #endregion
     }
@@ -586,7 +491,7 @@ namespace gipbakery.mes.processapplication
                 ACPropertyNet<string> materialNoProp = sender as ACPropertyNet<string>;
                 if (materialNoProp != null)
                 {
-                    TemperatureService.TemperatureServiceInfo.ValueT = 0;
+                    TemperatureService.SetTempServiceInfo(0);
 
                     var silo = materialNoProp.ParentACComponent as BakerySilo;
                     if (silo != null)
@@ -610,7 +515,7 @@ namespace gipbakery.mes.processapplication
                             var mt = MaterialTempInfos.FirstOrDefault(c => c.MaterialNo == materialNo);
                             if (mt == null)
                             {
-                                using (gip.mes.datamodel.DatabaseApp dbApp = new gip.mes.datamodel.DatabaseApp())
+                                using (DatabaseApp dbApp = new DatabaseApp())
                                 {
                                     mt = new MaterialTemperature();
                                     mt.MaterialNo = materialNo;
@@ -671,6 +576,8 @@ namespace gipbakery.mes.processapplication
                 }
             }
         }
+
+
     }
 
     [DataContract]
@@ -887,87 +794,6 @@ namespace gipbakery.mes.processapplication
         CityWater = 20,
         WarmWater = 30,
         DryIce = 40
-    }
-
-    #endregion
-
-    #region Config
-
-    [DataContract]
-    [ACSerializeableInfo]
-    [ACClassInfo(Const.PackName_VarioSystem, "en{'Bakery temperature configuration'}de{'Bäckerei-Temperatur Konfiguration'}", Global.ACKinds.TACClass, Global.ACStorableTypes.NotStorable, true, false)]
-    public class BakeryTempConfig : INotifyPropertyChanged
-    {
-        private string _MaterialNo;
-
-        [DataMember(Name = "A")]
-        [ACPropertyInfo(9999)]
-        public string MaterialNo
-        {
-            get => _MaterialNo;
-            set
-            {
-                _MaterialNo = value;
-                OnPropertyChanged("MaterialNo");
-            }
-        }
-
-        private string _ReceivingPointACUrl;
-
-        [DataMember(Name = "B")]
-        [ACPropertyInfo(9999)]
-        public string ReceivingPointACUrl
-        {
-            get => _ReceivingPointACUrl;
-            set
-            {
-                _ReceivingPointACUrl = value;
-                OnPropertyChanged("ReceivingPointACUrl");
-            }
-        }
-
-        private string _BakeryThermometerACUrl;
-
-        [DataMember(Name = "C")]
-        [ACPropertyInfo(9999)]
-        public string BakeryThermometerACUrl
-        {
-            get => _BakeryThermometerACUrl;
-            set
-            {
-                _BakeryThermometerACUrl = value;
-                OnPropertyChanged("BakeryThermometerACUrl");
-            }
-        }
-
-        public bool _UseOnlyThisThermometer;
-
-        [DataMember(Name = "D")]
-        [ACPropertyInfo(9999)]
-        public bool UseOnlyThisThermometer
-        {
-            get => _UseOnlyThisThermometer;
-            set
-            {
-                _UseOnlyThisThermometer = value;
-                OnPropertyChanged("UseOnlyThisThermometer");
-            }
-        }
-
-        #region INotifyPropertyChanged Member
-
-        public event PropertyChangedEventHandler PropertyChanged;
-
-        private void OnPropertyChanged(string propertyName)
-        {
-            if (PropertyChanged != null)
-            {
-                PropertyChanged(this, new PropertyChangedEventArgs(propertyName));
-            }
-        }
-
-        #endregion
-
     }
 
     #endregion

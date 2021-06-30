@@ -96,7 +96,7 @@ namespace gipbakery.mes.processapplication
                     {
                         if ((scale.MaxScaleWeight.ValueT > 0.00001 && scale.MaxScaleWeight.ValueT < 0.00001) && scale.MaxScaleWeight.ValueT < AckScaleWeight)
                         {
-                            //TODO alarm
+                            //The maximum scale weight is too low. Acknowledge scale weight is {0} and maximum scale weight is {1}. 
                         }
                         else
                         {
