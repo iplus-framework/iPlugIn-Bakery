@@ -38,7 +38,7 @@ namespace gipbakery.mes.processapplication
                         continue;
                     }
                     
-                    if (IsTempMeasurementConfigured(partslistPos.Material))
+                    if (IsTempMeasurementConfigured(partslistPos?.Material))
                     {
                         InsertOrModifyConfig(partslistPos.Material.MaterialConfig_Material, dbApp, partslistPos.Material, null);
                         anyConfig = true;
@@ -52,7 +52,7 @@ namespace gipbakery.mes.processapplication
                         continue;
                     }
 
-                    if (IsTemperatureConfigured(partslistPos.Material))
+                    if (IsTemperatureConfigured(partslistPos?.Material))
                     {
                         InsertOrModifyConfig(partslistPos.Material.MaterialConfig_Material, dbApp, partslistPos.Material, null);
                         anyConfig = true;
@@ -71,6 +71,9 @@ namespace gipbakery.mes.processapplication
 
         private bool IsTempMeasurementConfigured(VBEntityObject entityObject)
         {
+            if (entityObject == null)
+                return false;
+
             var prop = entityObject.ACProperties?.GetOrCreateACPropertyExtByName("CyclicMeasurement", false);
             if (prop == null)
                 return false;
@@ -87,6 +90,9 @@ namespace gipbakery.mes.processapplication
 
         private bool IsTemperatureConfigured(VBEntityObject entityObject)
         {
+            if (entityObject == null)
+                return false;
+
             var prop = entityObject.ACProperties?.GetOrCreateACPropertyExtByName("Temperature", false);
             if (prop == null)
                 return false;

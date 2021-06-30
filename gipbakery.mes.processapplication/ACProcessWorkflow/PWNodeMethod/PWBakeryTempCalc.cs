@@ -358,7 +358,6 @@ namespace gipbakery.mes.processapplication
                         CalculateTargetTemperature();
                     else if (calcMode == TempCalcMode.AdjustOrder)
                     {
-                        //TODO: errors
                         AdjustOrder();
                         CurrentACState = ACStateEnum.SMCompleted;
                     }
@@ -550,13 +549,13 @@ namespace gipbakery.mes.processapplication
 
                 if (pwMethodProduction.CurrentProdOrderBatch == null)
                 {
-                    // Error50276: No batch assigned to last intermediate material of this workflow
-                    Msg msg = new Msg(this, eMsgLevel.Error, PWClassName, "StartManualWeighingProd(30)", 1010, "Error50276");
+                    // Error50411: No batch assigned to last intermediate material of this workflow
+                    Msg msg = new Msg(this, eMsgLevel.Error, PWClassName, "CalculateProdOrderTargetTemperature(30)", 554, "Error50411");
 
-                    //if (IsAlarmActive(ProcessAlarm, msg.Message) == null)
-                    //    Messages.LogError(this.GetACUrl(), msg.ACIdentifier, msg.InnerMessage);
-                    //OnNewAlarmOccurred(ProcessAlarm, msg, false);
-                    //return StartNextCompResult.CycleWait;
+                    if (IsAlarmActive(ProcessAlarm, msg.Message) == null)
+                        Messages.LogError(this.GetACUrl(), msg.ACIdentifier, msg.InnerMessage);
+                    OnNewAlarmOccurred(ProcessAlarm, msg, false);
+                    return;
                 }
 
                 var contentACClassWFVB = ContentACClassWF.FromAppContext<gip.mes.datamodel.ACClassWF>(dbApp);
@@ -566,7 +565,12 @@ namespace gipbakery.mes.processapplication
                 PartslistACClassMethod plMethod = endBatchPos.ProdOrderPartslist.Partslist.PartslistACClassMethod_Partslist.FirstOrDefault();
                 ProdOrderPartslist currentProdOrderPartslist = endBatchPos.ProdOrderPartslist.FromAppContext<ProdOrderPartslist>(dbApp);
 
-                //TODO: null check
+                if (currentProdOrderPartslist == null)
+                {
+                    //TODO Error
+                    return;
+                }
+
                 IEnumerable<ProdOrderPartslistPos> intermediates = currentProdOrderPartslist.ProdOrderPartslistPos_ProdOrderPartslist
                                                                                             .Where(c => c.MaterialID.HasValue
                                                                                                      && c.MaterialPosType == GlobalApp.MaterialPosTypes.InwardIntern
@@ -584,6 +588,7 @@ namespace gipbakery.mes.processapplication
                 ProdOrderPartslistPosRelation cityWaterComp = relations.FirstOrDefault(c => c.SourceProdOrderPartslistPos.Material.MaterialNo == _CityWaterMaterialNo);
                 if (cityWaterComp == null)
                 {
+                    // If partslist not contains city water, skip node
                     CurrentACState = ACStateEnum.SMCompleted;
                     return;
                 }
@@ -601,11 +606,7 @@ namespace gipbakery.mes.processapplication
                     componentsQ = CalculateComponents_Q_(recvPoint, kneedingRiseTemperature, relations, _ColdWaterMaterialNo, _CityWaterMaterialNo, _WarmWaterMaterialNo, dryIce, compTemps);
 
                 bool isOnlyWaterCompsInPartslist = relations.Count() == 1 && relations.FirstOrDefault(c => c.SourceProdOrderPartslistPos.Material.MaterialNo == _CityWaterMaterialNo) != null;
-                double? waterTargetQuantity = cityWaterComp?.TargetQuantity;
-                if (!waterTargetQuantity.HasValue)
-                {
-                    //todo error: in partslist missing water
-                }
+                double? waterTargetQuantity = cityWaterComp.TargetQuantity;
 
                 if (coldWaterComp != null && coldWaterComp.TargetQuantity > 0)
                     waterTargetQuantity += coldWaterComp.TargetQuantity;
@@ -667,10 +668,6 @@ namespace gipbakery.mes.processapplication
 
                 bool isOnlyWaterCompsInPartslist = true;
                 double? waterTargetQuantity = pickingPos.TargetQuantity;
-                if (!waterTargetQuantity.HasValue)
-                {
-                    //todo error: in partslist missing water
-                }
 
                 if (coldWaterComp != null && coldWaterComp.TargetQuantity > 0)
                     waterTargetQuantity += coldWaterComp.TargetQuantity;
@@ -1033,13 +1030,13 @@ namespace gipbakery.mes.processapplication
 
                     if (coldWaterQuantity < coldWater.WaterMinDosingQuantity)
                     {
-                        coldWaterQuantity = totalWaterQuantity;
-                        dryIceQuantity = 0;
+                        coldWaterQuantity = 0 ;
+                        dryIceQuantity = totalWaterQuantity;
                     }
                     else if (dryIceQuantity < coldWater.WaterMinDosingQuantity) // TODO: find manual scale on receiving point and get min weighing quantity
                     {
-                        coldWaterQuantity = 0;
-                        dryIceQuantity = totalWaterQuantity;
+                        coldWaterQuantity = totalWaterQuantity;
+                        dryIceQuantity = 0;
                     }
 
                     using (ACMonitor.Lock(_20015_LockValue))
@@ -1057,7 +1054,7 @@ namespace gipbakery.mes.processapplication
                         ColdWaterQuantity.ValueT = 0;
                         DryIceQuantity.ValueT = totalWaterQuantity;
                     }
-                    return false; //TODO: Error message
+                    return false;
                 }
             }
             else
@@ -1172,7 +1169,13 @@ namespace gipbakery.mes.processapplication
                     }
                     else
                     {
-                        //error
+                        // The water temperature calculation can not be performed.
+                        Msg msg = new Msg(this, eMsgLevel.Error, PWClassName, "CombineWatersWithDryIce(10)", 1173, "Error50422");
+                        if (IsAlarmActive(ProcessAlarm, msg.Message) == null)
+                        {
+                            OnNewAlarmOccurred(ProcessAlarm, msg);
+                            Root.Messages.LogMessageMsg(msg);
+                        }
                     }
                 }
             }
@@ -1219,13 +1222,25 @@ namespace gipbakery.mes.processapplication
 
             if (cityWaterQ < 0.0001 && coldWaterQ < 0.0001 && warmWaterQ < 0.0001 && dryIceQ < 0.0001)
             {
-                //TODO: alarm
+                // Error50412: The production order can not be adjusted by temperature calculator. Waters and/or ice do not have sufficient target quantity.
+                Msg msg = new Msg(this, eMsgLevel.Error, PWClassName, "AdjustWatersInProdOrderPartslist(10)", 1225, "Error50412");
+                if (IsAlarmActive(ProcessAlarm, msg.Message) == null)
+                {
+                    OnNewAlarmOccurred(ProcessAlarm, msg);
+                    Root.Messages.LogMessageMsg(msg);
+                }
                 return;
             }
 
             if (string.IsNullOrEmpty(_CityWaterMaterialNo) || string.IsNullOrEmpty(_ColdWaterMaterialNo) || string.IsNullOrEmpty(_WarmWaterMaterialNo) || string.IsNullOrEmpty(DryIceMaterialNo))
             {
-                //TODO: alarm
+                // Error50413: The production order can not be adjusted by temperature calculator. Waters and/or ice material numbers are missing.
+                Msg msg = new Msg(this, eMsgLevel.Error, PWClassName, "AdjustWatersInProdOrderPartslist(20)", 1237, "Error50413");
+                if (IsAlarmActive(ProcessAlarm, msg.Message) == null)
+                {
+                    OnNewAlarmOccurred(ProcessAlarm, msg);
+                    Root.Messages.LogMessageMsg(msg);
+                }
                 return;
             }
 
@@ -1241,12 +1256,13 @@ namespace gipbakery.mes.processapplication
 
                 if (pwMethodProduction.CurrentProdOrderBatch == null)
                 {
-                    // Error50276: No batch assigned to last intermediate material of this workflow
-                    Msg msg1 = new Msg(this, eMsgLevel.Error, PWClassName, "StartManualWeighingProd(30)", 1010, "Error50276");
+                    // Error50411: No batch assigned to last intermediate material of this workflow
+                    Msg msg = new Msg(this, eMsgLevel.Error, PWClassName, "AdjustWatersInProdOrderPartslist(30)", 1259, "Error50411");
 
-                    //if (IsAlarmActive(ProcessAlarm, msg.Message) == null)
-                    //    Messages.LogError(this.GetACUrl(), msg.ACIdentifier, msg.InnerMessage);
-                    //OnNewAlarmOccurred(ProcessAlarm, msg, false);
+                    if (IsAlarmActive(ProcessAlarm, msg.Message) == null)
+                        Messages.LogError(this.GetACUrl(), msg.ACIdentifier, msg.InnerMessage);
+                    OnNewAlarmOccurred(ProcessAlarm, msg, false);
+                    return;
                 }
 
                 var contentACClassWFVB = ContentACClassWF.FromAppContext<gip.mes.datamodel.ACClassWF>(dbApp);
@@ -1266,8 +1282,8 @@ namespace gipbakery.mes.processapplication
 
                 if (matWFConnections == null || !matWFConnections.Any())
                 {
-                    // Error50277: No relation defined between Workflownode and intermediate material in Materialworkflow //TODO
-                    Msg msg1 = new Msg(this, eMsgLevel.Error, PWClassName, "StartManualWeighingProd(40)", 761, "Error50277");
+                    // Error50415: No relation defined between Workflownode and intermediate material in Materialworkflow
+                    Msg msg1 = new Msg(this, eMsgLevel.Error, PWClassName, "AdjustWatersInProdOrderPartslist(40)", 1285, "Error50415");
 
                     if (IsAlarmActive(ProcessAlarm, msg1.Message) == null)
                         Messages.LogError(this.GetACUrl(), msg1.ACIdentifier, msg1.InnerMessage);
@@ -1283,9 +1299,15 @@ namespace gipbakery.mes.processapplication
                 Material intermediateManual = matWFConnections.FirstOrDefault(c => c.Material.MaterialWFConnection_Material
                                                                                        .FirstOrDefault(x => _PWManualWeighingType.IsAssignableFrom(x.ACClassWF.PWACClass.FromIPlusContext<gip.core.datamodel.ACClass>(db).ObjectType)) != null)?.Material; ;
 
-                if (intermediateAutomatic == null && intermediateManual == null)
+                if (intermediateManual == null)
                 {
-                    //TODO:error
+                    // Error50414: The material workflow is not properly connected with a process workflow or process workflow is not correcty designed. The process workflow at least must have the one
+                    // PWManualWeighing node and must be connected with a intermediate material.
+                    Msg msg = new Msg(this, eMsgLevel.Error, PWClassName, "AdjustWatersInProdOrderPartslist(50)", 1305, "Error50414");
+
+                    if (IsAlarmActive(ProcessAlarm, msg.Message) == null)
+                        Messages.LogError(this.GetACUrl(), msg.ACIdentifier, msg.InnerMessage);
+                    OnNewAlarmOccurred(ProcessAlarm, msg, false);
                     return;
                 }
 
@@ -1298,6 +1320,8 @@ namespace gipbakery.mes.processapplication
                 if (posCity == null)
                 {
                     posCity = AddProdOrderPartslistPos(dbApp, currentProdOrderPartslist, _CityWaterMaterialNo, components);
+                    if (posCity == null)
+                        return;
                 }
 
                 Material intermediateCity = intermediateAutomatic != null ? intermediateAutomatic : intermediateManual;
@@ -1313,6 +1337,8 @@ namespace gipbakery.mes.processapplication
                         if (pos == null)
                         {
                             pos = AddProdOrderPartslistPos(dbApp, currentProdOrderPartslist, _ColdWaterMaterialNo, components);
+                            if (pos == null)
+                                return;
                         }
 
                         Material intermediate = intermediateAutomatic != null ? intermediateAutomatic : intermediateManual;
@@ -1326,6 +1352,8 @@ namespace gipbakery.mes.processapplication
                         if (pos == null)
                         {
                             pos = AddProdOrderPartslistPos(dbApp, currentProdOrderPartslist, _WarmWaterMaterialNo, components);
+                            if (pos == null)
+                                return;
                         }
 
                         Material intermediate = intermediateAutomatic != null ? intermediateAutomatic : intermediateManual;
@@ -1340,6 +1368,8 @@ namespace gipbakery.mes.processapplication
                     if (pos == null)
                     {
                         pos = AddProdOrderPartslistPos(dbApp, currentProdOrderPartslist, DryIceMaterialNo, components);
+                        if (pos == null)
+                            return;
                     }
 
                     if (intermediateManual != null)
@@ -1349,6 +1379,12 @@ namespace gipbakery.mes.processapplication
                 }
 
                 Msg result = dbApp.ACSaveChanges();
+                if (result != null)
+                {
+                    if (IsAlarmActive(ProcessAlarm, result.Message) == null)
+                        Messages.LogError(this.GetACUrl(), result.ACIdentifier, result.InnerMessage);
+                    OnNewAlarmOccurred(ProcessAlarm, result, false);
+                }
             }
         }
 
@@ -1358,7 +1394,15 @@ namespace gipbakery.mes.processapplication
             Material water = dbApp.Material.FirstOrDefault(c => c.MaterialNo == waterMaterialNo);
             if (water == null)
             {
-                //TODO: Error
+                // Error50416: The production order can not be adjusted by temperature calculator. The material with material No {0} can not be found in the database.
+                Msg msg = new Msg(this, eMsgLevel.Error, PWClassName, "AddProdOrderPartslistPos(10)", 1397, "Error50416", waterMaterialNo);
+                if (IsAlarmActive(ProcessAlarm, msg.Message) == null)
+                {
+                    OnNewAlarmOccurred(ProcessAlarm, msg);
+                    Root.Messages.LogMessageMsg(msg);
+                }
+
+                return null;
             }
 
             ProdOrderPartslistPos pos = ProdOrderPartslistPos.NewACObject(dbApp, poPartslist);
@@ -1430,7 +1474,7 @@ namespace gipbakery.mes.processapplication
                 targetPos.ProdOrderPartslistPos_ParentProdOrderPartslistPos.Add(batchPos);
             }
 
-            targetPos.CalledUpQuantityUOM += waterQuantity; //TODO is this OK? and adjust targetQuantity
+            targetPos.CalledUpQuantityUOM += waterQuantity;
 
             if (batchRelation == null)
             {
@@ -1458,13 +1502,25 @@ namespace gipbakery.mes.processapplication
 
             if (cityWaterQ < 0.0001 && coldWaterQ < 0.0001 && warmWaterQ < 0.0001 && dryIceQ < 0.0001)
             {
-                //TODO: alarm
+                // Error50417: The picking order can not be adjusted by temperature calculator. Waters and/or ice does not have sufficient target quantity.
+                Msg msg = new Msg(this, eMsgLevel.Error, PWClassName, "AdjustWatersInPicking(10)", 1505, "Error50417");
+                if (IsAlarmActive(ProcessAlarm, msg.Message) == null)
+                {
+                    OnNewAlarmOccurred(ProcessAlarm, msg);
+                    Root.Messages.LogMessageMsg(msg);
+                }
                 return;
             }
 
             if (string.IsNullOrEmpty(_CityWaterMaterialNo) || string.IsNullOrEmpty(_ColdWaterMaterialNo) || string.IsNullOrEmpty(_WarmWaterMaterialNo) || string.IsNullOrEmpty(DryIceMaterialNo))
             {
-                //TODO: alarm
+                // Error50418: The picking order can not be adjusted by temperature calculator. Waters and/or ice material numbers are missing.
+                Msg msg = new Msg(this, eMsgLevel.Error, PWClassName, "AdjustWatersInPicking(20)", 1517, "Error50418");
+                if (IsAlarmActive(ProcessAlarm, msg.Message) == null)
+                {
+                    OnNewAlarmOccurred(ProcessAlarm, msg);
+                    Root.Messages.LogMessageMsg(msg);
+                }
                 return;
             }
 
@@ -1483,9 +1539,7 @@ namespace gipbakery.mes.processapplication
 
                     PickingPos cityWaterPos = picking.PickingPos_Picking.FirstOrDefault(c => c.Material.MaterialNo == _CityWaterMaterialNo);
                     if (cityWaterPos == null)
-                    {
-                        //Error
-                    }
+                        return;
 
                     Facility targetFacility = cityWaterPos.ToFacility;
 
@@ -1497,6 +1551,8 @@ namespace gipbakery.mes.processapplication
                         if (coldWaterPos == null)
                         {
                             coldWaterPos = AddPickingPos(dbApp, picking, _ColdWaterMaterialNo, targetFacility);
+                            if (coldWaterPos == null)
+                                return;
                         }
                         coldWaterPos.PickingQuantityUOM = coldWaterQ;
                     }
@@ -1507,13 +1563,21 @@ namespace gipbakery.mes.processapplication
                         if (warmWaterPos == null)
                         {
                             warmWaterPos = AddPickingPos(dbApp, picking, _WarmWaterMaterialNo, targetFacility);
+                            if (warmWaterPos == null)
+                                return;
                         }
                         warmWaterPos.PickingQuantityUOM = warmWaterQ;
                     }
 
-                    //TODO: ice
+                    //TODO: ice, picking in manual weighing 
 
-                    dbApp.ACSaveChanges();
+                    Msg result = dbApp.ACSaveChanges();
+                    if (result != null)
+                    {
+                        if (IsAlarmActive(ProcessAlarm, result.Message) == null)
+                            Messages.LogError(this.GetACUrl(), result.ACIdentifier, result.InnerMessage);
+                        OnNewAlarmOccurred(ProcessAlarm, result, false);
+                    }
                 }
             }
         }
@@ -1523,7 +1587,15 @@ namespace gipbakery.mes.processapplication
             Material material = dbApp.Material.FirstOrDefault(c => c.MaterialNo == materialNo);
             if (material == null)
             {
-                //TODO:error
+                // Error50419: The picking order can not be adjusted by temperature calculator. The material with material No {0} can not be found in the database.
+                Msg msg = new Msg(this, eMsgLevel.Error, PWClassName, "AddPickingPos(10)", 1590, "Error50419", materialNo);
+                if (IsAlarmActive(ProcessAlarm, msg.Message) == null)
+                {
+                    OnNewAlarmOccurred(ProcessAlarm, msg);
+                    Root.Messages.LogMessageMsg(msg);
+                }
+
+                return null;
             }
 
             Facility source = null;
@@ -1818,15 +1890,18 @@ namespace gipbakery.mes.processapplication
                 {
                     Guid? accessedProcessModuleID = configStore is Picking ? null : ParentPWGroup?.AccessedProcessModule?.ComponentClass?.ACClassID;
 
-                    //if (accessedProcessModuleID.HasValue)
-                    //{
+                    if (!accessedProcessModuleID.HasValue)
+                    {
+                        Root.Messages.LogMessage(eMsgLevel.Error, this.GetACUrl(), "SaveWorkplaceTemperatureSettings(10)", "AccessedProcessModuleID is null!");
+
+                        return;
+                    }
+
                     var configEntries = configStore.ConfigurationEntries.Where(c => c.PreConfigACUrl == PreValueACUrl && c.LocalConfigACUrl.StartsWith(ConfigACUrl)
                                                                                                                       && c.VBiACClassID == accessedProcessModuleID);
 
                     if (configEntries != null)
                     {
-                        //if (isOnlyForWaterTempCalculation)
-                        //{
                         string propertyACUrl = string.Format("{0}\\{1}\\WaterTemp", ConfigACUrl, ACStateEnum.SMStarting);
 
                         // Water temp 
@@ -1838,7 +1913,13 @@ namespace gipbakery.mes.processapplication
 
                         if (waterTempConfig == null)
                         {
-                            //TODO: alarm
+                            //Error50420: The calculation water temperature configuration can not be added.
+                            Msg msg = new Msg(this, eMsgLevel.Error, PWClassName, "SaveWorkplaceTemperatureSettings(10)", 1916, "Error50420");
+                            if (IsAlarmActive(ProcessAlarm, msg.Message) == null)
+                            {
+                                OnNewAlarmOccurred(ProcessAlarm, msg);
+                                Root.Messages.LogMessageMsg(msg);
+                            }
                         }
                         else
                             waterTempConfig.Value = waterTemperature;
@@ -1853,17 +1934,26 @@ namespace gipbakery.mes.processapplication
 
                         if (useOnlyForWaterTempCalculation == null)
                         {
-                            //TODO: alarm
+                            //Error50421: The calculation over water temperature configuration can not be added.
+                            Msg msg = new Msg(this, eMsgLevel.Error, PWClassName, "SaveWorkplaceTemperatureSettings(20)", 1916, "Error50421");
+                            if (IsAlarmActive(ProcessAlarm, msg.Message) == null)
+                            {
+                                OnNewAlarmOccurred(ProcessAlarm, msg);
+                                Root.Messages.LogMessageMsg(msg);
+                            }
                         }
                         else
                             useOnlyForWaterTempCalculation.Value = isOnlyForWaterTempCalculation;
-                        //}
                     }
-                    //}
                 }
 
-                //TODO: alarm
-                var msg = dbApp.ACSaveChanges();
+                Msg result = dbApp.ACSaveChanges();
+                if (result != null)
+                {
+                    if (IsAlarmActive(ProcessAlarm, result.Message) == null)
+                        Messages.LogError(this.GetACUrl(), result.ACIdentifier, result.InnerMessage);
+                    OnNewAlarmOccurred(ProcessAlarm, result, false);
+                }
 
                 RootPW.ReloadConfig();
 
