@@ -13,6 +13,8 @@ namespace gipbakery.mes.processapplication
     [ACClassInfo(Const.PackName_VarioAutomation, "en{'Receiving point ready'}de{'Abnahmestelle bereit'}", Global.ACKinds.TPWNodeStatic, Global.ACStorableTypes.Optional, false, PWMethodVBBase.PWClassName, true)]
     public class PWBakeryRecvPointReady : PWNodeUserAck
     {
+        #region c'tors
+
         static PWBakeryRecvPointReady()
         {
             RegisterExecuteHandler(typeof(PWBakeryRecvPointReady), HandleExecuteACMethod_PWBakeryRecvPointReady);
@@ -38,6 +40,12 @@ namespace gipbakery.mes.processapplication
             base(acType, content, parentACObject, parameter, acIdentifier)
         {
         }
+
+        public new const string PWClassName = "PWBakeryRecvPointReady";
+
+        #endregion
+
+        #region Properties
 
         protected bool AckOverScale
         {
@@ -73,6 +81,10 @@ namespace gipbakery.mes.processapplication
 
         private PAEScaleBase _AckScale;
 
+        #endregion
+
+        #region Methods
+
         public override void Start()
         {
             base.Start();
@@ -96,7 +108,13 @@ namespace gipbakery.mes.processapplication
                     {
                         if ((scale.MaxScaleWeight.ValueT > 0.00001 && scale.MaxScaleWeight.ValueT < 0.00001) && scale.MaxScaleWeight.ValueT < AckScaleWeight)
                         {
-                            //The maximum scale weight is too low. Acknowledge scale weight is {0} and maximum scale weight is {1}. 
+                            //Error50429: The maximum scale weight is too low. Acknowledge scale weight is {0} kg and maximum scale weight is {1} kg.
+                            Msg msg = new Msg(this, eMsgLevel.Error, PWClassName, "SMRunning(10)", 100, "Error50429");
+                            if (IsAlarmActive(ProcessAlarm, msg.Message) == null)
+                            {
+                                OnNewAlarmOccurred(ProcessAlarm, msg);
+                                Root.Messages.LogMessageMsg(msg);
+                            }
                         }
                         else
                         {
@@ -157,5 +175,7 @@ namespace gipbakery.mes.processapplication
             //}
             return HandleExecuteACMethod_PWNodeUserAck(out result, acComponent, acMethodName, acClassMethod, acParameter);
         }
+
+        #endregion
     }
 }

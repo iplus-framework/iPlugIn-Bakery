@@ -73,6 +73,12 @@ namespace gipbakery.mes.processapplication
             set;
         }
 
+        [ACPropertyBindingTarget(600, "", "en{'Receiving point cover down'}de{'Empfangsstellenabdeckung unten'}", "", true)]
+        public IACContainerTNet<bool> IsCoverDown
+        {
+            get;
+            set;
+        }
 
         /// <summary>
         /// Represents the room temperature. It can be fix defined or can be bounded to the sensor.
