@@ -24,6 +24,9 @@ namespace gipbakery.mes.processapplication
 
         #region Properties
 
+        private Type _BakeryTempCalcType = typeof(PWBakeryTempCalc);
+        private Type _BakeryRecvPointType = typeof(BakeryReceivingPoint);
+
         [ACPropertyInfo(9999)]
         public ACRef<IACComponentPWNode> BakeryTempCalculator
         {
@@ -52,7 +55,23 @@ namespace gipbakery.mes.processapplication
             set;
         }
 
+        private IACContainerTNet<bool> IsCoverUpDown;
+
+        private bool _IsCoverUpDownVisible;
+        [ACPropertyInfo(9999)]
+        public bool IsCoverUpDownVisible
+        {
+            get => _IsCoverUpDownVisible;
+            set
+            {
+                _IsCoverUpDownVisible = value;
+                OnPropertyChanged("IsCoverUpDownVisible");
+            }
+        }
+
         #region Properties => Temperature dialog
+
+        private bool _ParamChanged = false;
 
         private bool _IsOnlyWaterTemperatureCalculation;
         [ACPropertyInfo(804)]
@@ -74,6 +93,7 @@ namespace gipbakery.mes.processapplication
             set
             {
                 _IsDoughTemperatureCalculation = value;
+                _ParamChanged = true;
                 OnPropertyChanged("IsDoughTemperatureCalculation");
             }
         }
@@ -98,6 +118,7 @@ namespace gipbakery.mes.processapplication
             set
             {
                 _DoughCorrTemperature = value;
+                _ParamChanged = true;
                 OnPropertyChanged("DoughCorrTemperature");
             }
         }
@@ -110,6 +131,7 @@ namespace gipbakery.mes.processapplication
             set
             {
                 _WaterTargetTemperature = value;
+                _ParamChanged = true;
                 OnPropertyChanged("WaterTargetTemperature");
             }
         }
@@ -176,6 +198,22 @@ namespace gipbakery.mes.processapplication
             UnloadBakeryTempCalc();
             ResetTemperatureDialogParam();
             base.Activate(selectedProcessModule);
+
+            IsCoverUpDownVisible = false;
+
+            if (_BakeryRecvPointType.IsAssignableFrom(selectedProcessModule.ComponentClass.ObjectType))
+            {
+                var isCoverUpDown = selectedProcessModule.GetPropertyNet("IsCoverDown") as IACContainerTNet<bool>;
+                if (isCoverUpDown != null)
+                {
+                    bool? isBounded = selectedProcessModule.ExecuteMethod("IsCoverDownPropertyBounded") as bool?;
+                    if (isBounded.HasValue && isBounded.Value)
+                    {
+                        IsCoverUpDown = isCoverUpDown;
+                        IsCoverUpDownVisible = true;
+                    }
+                }
+            }
         }
 
         public override void OnGetPWGroup(IACComponentPWNode pwGroup)
@@ -326,6 +364,20 @@ namespace gipbakery.mes.processapplication
             WaterTargetTemperature = 0;
         }
 
+        [ACMethodInfo("", "en{'Cover up/down'}de{'Abdeckung oben/unten'}", 9999)]
+        public void RecvPointCoverUpDown()
+        {
+            if (IsEnabledRecvPointCoverUpDown())
+            {
+                IsCoverUpDown.ValueT = !IsCoverUpDown.ValueT;
+            }
+        }
+
+        public bool IsEnabledRecvPointCoverUpDown()
+        {
+            return IsCoverUpDown != null && IsCoverUpDownVisible;
+        }
+
         #region Methods => Temperature dialog
 
         [ACMethodInfo("", "", 800)]
@@ -369,6 +421,8 @@ namespace gipbakery.mes.processapplication
                 }
             }
 
+            _ParamChanged = false;
+
             ShowDialog(this, "TemperaturesDialog");
         }
 
@@ -404,10 +458,13 @@ namespace gipbakery.mes.processapplication
         [ACMethodInfo("", "en{'Apply'}de{'Anwenden'}", 800)]
         public void ApplyTemperatures()
         {
-            CurrentProcessModule.ACUrlCommand("DoughCorrTemp", DoughCorrTemperature); //Save dough correct temperature on bakery recieving point
-
-            BakeryTempCalculator.ValueT.ExecuteMethod("SaveWorkplaceTemperatureSettings", WaterTargetTemperature, IsOnlyWaterTemperatureCalculation);//TODO parameters
+            if (_ParamChanged)
+            {
+                CurrentProcessModule.ACUrlCommand("DoughCorrTemp", DoughCorrTemperature); //Save dough correct temperature on bakery recieving point
+                BakeryTempCalculator.ValueT.ExecuteMethod("SaveWorkplaceTemperatureSettings", WaterTargetTemperature, IsOnlyWaterTemperatureCalculation);//TODO parameters
+            }
             CloseTopDialog();
+            _ParamChanged = false;
         }
 
         public bool IsEnabledApplyTemperatures()
@@ -415,17 +472,17 @@ namespace gipbakery.mes.processapplication
             return BakeryTempCalculator != null && BakeryTempCalculator.ValueT != null && CurrentProcessModule != null;
         }
 
-        [ACMethodInfo("", "en{'Recalculate temperatures'}de{'Temperaturen neu berechnen'}", 801)]
+        [ACMethodInfo("", "en{'Recalculate'}de{'Neu berechnen'}", 801)]
         public void RecalcTemperatures()
         {
             CurrentProcessModule.ACUrlCommand("DoughCorrTemp", DoughCorrTemperature); //Save dough correct temperature on bakery recieving point
-
             BakeryTempCalculator.ValueT.ExecuteMethod("SaveWorkplaceTemperatureSettings", WaterTargetTemperature, IsOnlyWaterTemperatureCalculation);//TODO parameters
+            _ParamChanged = false;
         }
 
         public bool IsEnabledRecalcTemperatures()
         {
-            return BakeryTempCalculator != null && BakeryTempCalculator.ValueT != null && CurrentProcessModule != null;
+            return BakeryTempCalculator != null && BakeryTempCalculator.ValueT != null && CurrentProcessModule != null && _ParamChanged;
         }
 
         #endregion
@@ -439,11 +496,11 @@ namespace gipbakery.mes.processapplication
             if (SingleDosTargetTemperature.HasValue)
             {
                 SingleDosingConfigItem configItem = configItems.FirstOrDefault(c => c.PWGroup.ACClassWF_ParentACClassWF
-                                                                                             .Any(x => typeof(PWBakeryTempCalc).IsAssignableFrom(x.PWACClass.ObjectType)));
+                                                                                             .Any(x => _BakeryTempCalcType.IsAssignableFrom(x.PWACClass.ObjectType)));
 
                 if (configItem != null)
                 {
-                    ACClassWF tempCalc = configItem.PWGroup.ACClassWF_ParentACClassWF.FirstOrDefault(x => typeof(PWBakeryTempCalc).IsAssignableFrom(x.PWACClass.ObjectType));
+                    ACClassWF tempCalc = configItem.PWGroup.ACClassWF_ParentACClassWF.FirstOrDefault(x => _BakeryTempCalcType.IsAssignableFrom(x.PWACClass.ObjectType));
                     if (tempCalc == null)
                         return;
 
@@ -513,6 +570,11 @@ namespace gipbakery.mes.processapplication
         }
 
         #endregion
+
+        public override Global.ControlModes OnGetControlModes(IVBContent vbControl)
+        {
+            return base.OnGetControlModes(vbControl);
+        }
 
         //TODO: Handle execute ACMethods
 

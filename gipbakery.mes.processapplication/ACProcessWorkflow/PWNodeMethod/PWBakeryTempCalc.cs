@@ -120,6 +120,14 @@ namespace gipbakery.mes.processapplication
             set;
         }
 
+        [ACPropertyBindingSource(500, "", "en{'Result'}de{'Ergebnis'}")]
+        public IACContainerTNet<double> WaterTotalQuantity
+        {
+            get;
+            set;
+        }
+
+
         /// <summary>
         /// Represents the calculated water temperature
         /// </summary>
@@ -417,6 +425,7 @@ namespace gipbakery.mes.processapplication
                 CityWaterQuantity.ValueT = 0;
                 ColdWaterQuantity.ValueT = 0;
                 DryIceQuantity.ValueT = 0;
+                WaterTotalQuantity.ValueT = 0;
             }
 
             BakeryReceivingPoint recvPoint = ParentPWGroup.AccessedProcessModule as BakeryReceivingPoint;
@@ -487,9 +496,11 @@ namespace gipbakery.mes.processapplication
                 double recvPointCorrTemp = 0;
                 double doughTargetTempBeforeKneeding = 0;
 
+                ProdOrderPartslistPos endBatchPos = pwMethodProduction.CurrentProdOrderPartslistPos.FromAppContext<ProdOrderPartslistPos>(dbApp);
+
                 if (!UseWaterTemp)
                 {
-                    bool kneedingTempResult = GetKneedingRiseTemperature(dbApp, out kneedingRiseTemperature);
+                    bool kneedingTempResult = GetKneedingRiseTemperature(dbApp, endBatchPos.TargetQuantityUOM, out kneedingRiseTemperature);
                     if (!kneedingTempResult)
                         return;
 
@@ -545,7 +556,6 @@ namespace gipbakery.mes.processapplication
                     return;
                 }
 
-                ProdOrderPartslistPos endBatchPos = pwMethodProduction.CurrentProdOrderPartslistPos.FromAppContext<ProdOrderPartslistPos>(dbApp);
 
                 if (pwMethodProduction.CurrentProdOrderBatch == null)
                 {
@@ -687,7 +697,7 @@ namespace gipbakery.mes.processapplication
         }
 
         //TODO: half quantity
-        private bool GetKneedingRiseTemperature(DatabaseApp dbApp, out double kneedingTemperature)
+        private bool GetKneedingRiseTemperature(DatabaseApp dbApp, double batchSize, out double kneedingTemperature)
         {
             kneedingTemperature = 0;
 
@@ -714,6 +724,18 @@ namespace gipbakery.mes.processapplication
                 TimeSpan kneedingSlow = TimeSpan.Zero, kneedingFast = TimeSpan.Zero;
 
                 bool fullQuantity = true;
+                PWNodeProcessWorkflowVB planningNode = RootPW.InvokingWorkflow as PWNodeProcessWorkflowVB;
+                if (planningNode != null)
+                {
+                    ACMethod config = planningNode.MyConfiguration;
+                    ACValue standardBatchSize = config?.ParameterValueList.GetACValue("BatchSizeStandard");
+                    if (standardBatchSize != null)
+                    {
+                        double halfQuantity = standardBatchSize.ParamAsDouble / 2;
+                        if (batchSize <= halfQuantity)
+                            fullQuantity = false;
+                    }
+                }
 
                 // Full quantity
                 if (fullQuantity)
@@ -760,8 +782,6 @@ namespace gipbakery.mes.processapplication
             }
             return true;
         }
-
-
 
         private double CalculateComponents_Q_(BakeryReceivingPoint recvPoint, double kneedingTemperature, IEnumerable<ProdOrderPartslistPosRelation> relations,
                                               string coldWaterMatNo, string cityWaterMatNo, string warmWaterMatNo, string dryIceMatNo, List<MaterialTemperature> compTemps)
@@ -895,6 +915,7 @@ namespace gipbakery.mes.processapplication
             }
 
             WaterTemperaturesUsedInCalc = temperaturesUsedInCalc;
+            WaterTotalQuantity.ValueT = totalWaterQuantity;
 
             //check warm water 
             if (targetWaterTemperature > warmWater.AverageTemperature)
@@ -2038,6 +2059,7 @@ namespace gipbakery.mes.processapplication
                 CityWaterQuantity.ValueT = 0;
                 WarmWaterQuantity.ValueT = 0;
                 DryIceQuantity.ValueT = 0;
+                WaterTotalQuantity.ValueT = 0;
                 _CalculatorMode = TempCalcMode.Calcuate;
             }
         }

@@ -80,6 +80,8 @@ namespace gipbakery.mes.processapplication
             set;
         }
 
+
+
         /// <summary>
         /// Represents the room temperature. It can be fix defined or can be bounded to the sensor.
         /// </summary>
@@ -168,6 +170,15 @@ namespace gipbakery.mes.processapplication
             }
 
             return scale;
+        }
+
+        [ACMethodInfo("", "", 9999)]
+        public bool IsCoverDownPropertyBounded()
+        {
+            IACPropertyNetTarget targetProp = IsCoverDown as IACPropertyNetTarget;
+            if (targetProp != null)
+                return targetProp.Source != null;
+            return false;
         }
 
         [ACMethodInfo("","",9999)]
