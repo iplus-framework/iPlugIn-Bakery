@@ -159,13 +159,13 @@
   </ItemGroup>
   <ItemGroup />
   <ItemGroup>
-    <None Include="VBControlScripts\2021-05-07 13-10_ihrastinski.zip">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
     <None Include="VBControlScripts\2021-05-07 13-32_ihrastinski.zip">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
-    <None Include="VBControlScripts\2021-05-14 13-55_ihrastinski.zip">
+    <None Include="VBControlScripts\2021-07-02 23-01_ihrastinski.zip">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="VBControlScripts\2021-07-02 23-19_ihrastinski.zip">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
   </ItemGroup>

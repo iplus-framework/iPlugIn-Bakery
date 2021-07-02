@@ -516,7 +516,8 @@ namespace gipbakery.mes.processapplication
 
                     if (waterTempConfig == null)
                     {
-                        //TODO: alarm
+                        //The insert process of water temperature configuration for single dosing is failed.
+                        return;
                     }
                     else
                         waterTempConfig.Value = SingleDosTargetTemperature;
@@ -532,12 +533,14 @@ namespace gipbakery.mes.processapplication
 
                     if (useOnlyForWaterTempCalculation == null)
                     {
-                        //TODO: alarm
+                        //The insert process of use water temperature configuration for single dosing is failed.
                     }
                     else
                         useOnlyForWaterTempCalculation.Value = true;
 
                     var msg = DatabaseApp.ACSaveChanges();
+                    if (msg != null)
+                        Messages.Msg(msg);
 
                 }
             }
@@ -576,7 +579,58 @@ namespace gipbakery.mes.processapplication
             return base.OnGetControlModes(vbControl);
         }
 
-        //TODO: Handle execute ACMethods
+        protected override bool HandleExecuteACMethod(out object result, AsyncMethodInvocationMode invocationMode, string acMethodName, ACClassMethod acClassMethod, params object[] acParameter)
+        {
+            result = null;
+            switch(acMethodName)
+            {
+                case "RecvPointCoverUpDown":
+                    RecvPointCoverUpDown();
+                    return true;
+
+                case "IsEnabledRecvPointCoverUpDown":
+                    result = IsEnabledRecvPointCoverUpDown();
+                    return true;
+
+                case "ShowTemperaturesDialog":
+                    ShowTemperaturesDialog();
+                    return true;
+
+                case "IsEnabledShowTemperaturesDialog":
+                    result = IsEnabledShowTemperaturesDialog();
+                    return true;
+
+                case "DoughTempCorrPlus":
+                    DoughTempCorrPlus();
+                    return true;
+
+                case "DoughTempCorrMinus":
+                    DoughTempCorrMinus();
+                    return true;
+
+                case "WaterTempPlus":
+                    WaterTempPlus();
+                    return true;
+
+                case "WaterTempMinus":
+                    WaterTempMinus();
+                    return true;
+
+                case "IsEnabledApplyTemperatures":
+                    result = IsEnabledApplyTemperatures();
+                    return true;
+
+                case "RecalcTemperatures":
+                    RecalcTemperatures();
+                    return true;
+
+                case "IsEnabledRecalcTemperatures":
+                    result = IsEnabledRecalcTemperatures();
+                    return true;
+            }
+
+            return base.HandleExecuteACMethod(out result, invocationMode, acMethodName, acClassMethod, acParameter);
+        }
 
         #endregion
     }

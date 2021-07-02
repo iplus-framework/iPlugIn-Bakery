@@ -347,6 +347,7 @@ namespace gipbakery.mes.processapplication
             return ParentBSOWCS != null && ParentBSOWCS.CurrentProcessModule != null && SelectedTempMeasureItem != null;
         }
 
+        //TODO
         [ACMethodInfo("", "en{'Copy temperature measurement'}de{'Temperaturmessung kopieren'}", 703)]
         public void CopyComponentTempMeasurement()
         {
@@ -378,6 +379,19 @@ namespace gipbakery.mes.processapplication
         public bool IsEnabledTurnOffMeasurementHint()
         {
             return TempMeasuringFunc != null;
+        }
+
+
+        protected override bool HandleExecuteACMethod(out object result, AsyncMethodInvocationMode invocationMode, string acMethodName, ACClassMethod acClassMethod, params object[] acParameter)
+        {
+            result = null;
+
+            switch (acMethodName)
+            {
+
+            }
+
+            return base.HandleExecuteACMethod(out result, invocationMode, acMethodName, acClassMethod, acParameter);
         }
 
         #endregion
