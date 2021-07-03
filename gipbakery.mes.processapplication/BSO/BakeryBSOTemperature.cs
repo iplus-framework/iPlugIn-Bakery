@@ -249,7 +249,6 @@ namespace gipbakery.mes.processapplication
             
         }
 
-        //TODO: try/catch
         private void TempServiceInfo_PropertyChanged(object sender, System.ComponentModel.PropertyChangedEventArgs e)
         {
             if (e.PropertyName == Const.ValueT)
@@ -260,7 +259,7 @@ namespace gipbakery.mes.processapplication
                 {
                     Task.Run(() =>
                     {
-                        if (MaterialTemperatures == null)
+                        if (MaterialTemperatures == null || TemperatureServiceProxy == null || TemperatureServiceProxy.ValueT == null)
                             return;
 
                         ACValueList result = TemperatureServiceProxy.ValueT.ExecuteMethod(PABakeryTempService.MN_GetAverageTemperatures, ParentBSOWCS.CurrentProcessModule.ComponentClass.ACClassID) as ACValueList;
@@ -281,6 +280,9 @@ namespace gipbakery.mes.processapplication
                 {
                     Task.Run(() =>
                     {
+                        if (TemperatureServiceProxy == null || TemperatureServiceProxy.ValueT == null)
+                            return;
+
                         ACValueList result = TemperatureServiceProxy.ValueT.ExecuteMethod(PABakeryTempService.MN_GetTemperaturesInfo, ParentBSOWCS.CurrentProcessModule.ComponentClass.ACClassID) as ACValueList;
                         if (result != null && result.Any())
                         {
@@ -388,7 +390,45 @@ namespace gipbakery.mes.processapplication
 
             switch (acMethodName)
             {
+                case "MeasureComponentTemp":
+                    MeasureComponentTemp();
+                    return true;
 
+                case "IsEnabledMeasureComponentTemp":
+                    result = IsEnabledMeasureComponentTemp();
+                    return true;
+
+                case "DeleteComponentTempMeasurement":
+                    DeleteComponentTempMeasurement();
+                    return true;
+
+                case "IsEnabledDeleteComponentTempMeasurement":
+                    result = IsEnabledDeleteComponentTempMeasurement();
+                    return true;
+
+                case "CopyComponentTempMeasurement":
+                    CopyComponentTempMeasurement();
+                    return true;
+
+                case "IsEnabledCopyComponentTempMeasurement":
+                    result = IsEnabledCopyComponentTempMeasurement();
+                    return true;
+
+                case "TurnOnMeasurementHint":
+                    TurnOnMeasurementHint();
+                    return true;
+
+                case "IsEnabledTurnOnMeasurementHint":
+                    result = IsEnabledTurnOnMeasurementHint();
+                    return true;
+
+                case "TurnOffMeasurementHint":
+                    TurnOffMeasurementHint();
+                    return true;
+
+                case "IsEnabledTurnOffMeasurementHint":
+                    result = IsEnabledTurnOffMeasurementHint();
+                    return true;
             }
 
             return base.HandleExecuteACMethod(out result, invocationMode, acMethodName, acClassMethod, acParameter);

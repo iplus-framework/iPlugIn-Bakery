@@ -2068,29 +2068,25 @@ namespace gipbakery.mes.processapplication
 
         #region Execute-Helper-Handlers
 
-        //TODO: correct this
         protected override bool HandleExecuteACMethod(out object result, AsyncMethodInvocationMode invocationMode, string acMethodName, gip.core.datamodel.ACClassMethod acClassMethod, params object[] acParameter)
         {
-            //result = null;
-            //switch (acMethodName)
-            //{
-            //}
+            result = null;
+            switch (acMethodName)
+            {
+                case "SaveWorkplaceTemperatureSettings":
+                    SaveWorkplaceTemperatureSettings((double)acParameter[0], (bool)acParameter[1]);
+                    return true;
+
+                case "GetTemperaturesUsedInCalc":
+                    result = GetTemperaturesUsedInCalc();
+                    return true;
+            }
             return base.HandleExecuteACMethod(out result, invocationMode, acMethodName, acClassMethod, acParameter);
         }
 
         public static bool HandleExecuteACMethod_PWBakeryTempCalc(out object result, IACComponent acComponent, string acMethodName, gip.core.datamodel.ACClassMethod acClassMethod, params object[] acParameter)
         {
-            result = null;
-            //switch (acMethodName)
-            //{
-            //    case MN_AckStartClient:
-            //        AckStartClient(acComponent);
-            //        return true;
-            //    case Const.IsEnabledPrefix + MN_AckStartClient:
-            //        result = IsEnabledAckStartClient(acComponent);
-            //        return true;
-            //}
-            return HandleExecuteACMethod_PWBaseNodeProcess(out result, acComponent, acMethodName, acClassMethod, acParameter);
+            return HandleExecuteACMethod_PWNodeUserAck(out result, acComponent, acMethodName, acClassMethod, acParameter);
         }
 
         #endregion

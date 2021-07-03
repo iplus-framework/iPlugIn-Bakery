@@ -29,8 +29,6 @@ namespace gipbakery.mes.processapplication
             return result;
         }
 
-        //private Type _PAFManualWeighingType = typeof(PAFManualWeighing);
-
         [ACPropertyInfo(true, 800)]
         public string BakeryTemperatureServiceACUrl
         {
@@ -52,44 +50,5 @@ namespace gipbakery.mes.processapplication
             }
 
         }
-
-        //public override void OnWorkcenterItemSelected(WorkCenterItem item, ref string dynamicContent)
-        //{
-        //    //if (typeof(BakeryReceivingPoint).IsAssignableFrom(item.ProcessModule.ComponentClass.ObjectType))
-        //    //{
-        //    //    ACBSO acBSO = ACComponentChilds.FirstOrDefault(c => c.ACIdentifier.StartsWith(BakeryBSOTemperature.ClassName)) as ACBSO;
-        //    //    if (acBSO == null)
-        //    //    {
-        //    //        ACClass bsoBakeryTemp = DatabaseApp.ContextIPlus.ACClass.FirstOrDefault(c => c.ACIdentifier == BakeryBSOTemperature.ClassName);
-        //    //        if (bsoBakeryTemp != null)
-        //    //            acBSO = StartComponent(bsoBakeryTemp, null, null) as ACBSO;
-        //    //    }
-
-        //    //    BSOWorkCenterChild selectorChild = acBSO as BSOWorkCenterChild;
-        //    //    if (selectorChild == null)
-        //    //        return;
-
-        //    //    if (item.DefaultTabItemLayout != null)
-        //    //        dynamicContent += item.DefaultTabItemLayout.Replace("[childBSO]", acBSO.ACIdentifier).Replace("[tabItemHeader]", acBSO.ACCaption);
-
-        //    //    WorkCenterItemFunction helperFunction = new WorkCenterItemFunction(item.ProcessModule, "");
-        //    //    helperFunction.RelatedBSOs = new List<ACComposition>() { new ACComposition() { ValueT = acBSO } };
-
-        //    //    item.AddItemFunction(helperFunction);
-        //    //}
-        //}
-
-        //public override ACComposition[] OnAddFunctionBSOs(ACClass pafACClass, ACComposition[] bsos)
-        //{
-        //    //if (_PAFManualWeighingType.IsAssignableFrom(pafACClass.ObjectType))
-        //    //{
-        //    //    var manWeighBso = bsos.FirstOrDefault(c => (c.ValueT as ACClass).ObjectType == BSOManualWeighingType);
-        //    //    if(manWeighBso != null)
-        //    //    {
-        //    //        DatabaseApp.ContextIPlus.ACClass.FirstOrDefault(c => c.ACIdentifier == "BakeryBSOManualWeighing");
-        //    //    }
-        //    //}
-        //    return base.OnAddFunctionBSOs(pafACClass, bsos);
-        //}
     }
 }
