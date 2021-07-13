@@ -98,7 +98,9 @@ namespace gipbakery.mes.processapplication
 
         public override void SMRunning()
         {
-            if (AckOverScale && AckScaleWeight > 0.0000001 && _AckScale == null)
+            if (    AckOverScale 
+                && (AckScaleWeight > 0.0000001 || AckScaleWeight < -0.0000001) 
+                && _AckScale == null)
             {
                 BakeryReceivingPoint recvPoint = ParentPWGroup?.AccessedProcessModule as BakeryReceivingPoint;
                 if (recvPoint != null)
@@ -106,7 +108,8 @@ namespace gipbakery.mes.processapplication
                     PAEScaleBase scale = recvPoint.GetRecvPointReadyScale();
                     if (scale != null)
                     {
-                        if ((scale.MaxScaleWeight.ValueT > 0.00001 && scale.MaxScaleWeight.ValueT < 0.00001) && scale.MaxScaleWeight.ValueT < AckScaleWeight)
+                        double ackScaleWeight = Math.Abs(AckScaleWeight);
+                        if ((scale.MaxScaleWeight.ValueT > 0.00001 && scale.MaxScaleWeight.ValueT < 0.00001) && scale.MaxScaleWeight.ValueT < ackScaleWeight)
                         {
                             //Error50429: The maximum scale weight is too low. Acknowledge scale weight is {0} kg and maximum scale weight is {1} kg.
                             Msg msg = new Msg(this, eMsgLevel.Error, PWClassName, "SMRunning(10)", 100, "Error50429");
@@ -133,7 +136,9 @@ namespace gipbakery.mes.processapplication
         {
             if (e.PropertyName == Const.ValueT)
             {
-                if (_AckScale.ActualValue.ValueT >= AckScaleWeight)
+                if (   (AckScaleWeight > 0.0000001 && _AckScale.ActualValue.ValueT >= AckScaleWeight)
+                    || (AckScaleWeight < -0.0000001 && _AckScale.ActualValue.ValueT < Math.Abs(AckScaleWeight))
+                    )
                 {
                     AckStart(); //TODO:calming time
                 }

@@ -12,6 +12,23 @@ namespace gipbakery.mes.processapplication
     [ACClassInfo(Const.PackName_VarioAutomation, "en{'Flour discharging acknowledge'}de{'Mehlaustragsquittung'}", Global.ACKinds.TPWNodeStatic, Global.ACStorableTypes.Optional, false, PWMethodVBBase.PWClassName, true)]
     public class PWBakeryFlourDischargingAck : PWNodeUserAck
     {
+        static PWBakeryFlourDischargingAck()
+        {
+            RegisterExecuteHandler(typeof(PWBakeryFlourDischargingAck), HandleExecuteACMethod_PWBakeryFlourDischargingAck);
+
+            //ACMethod method;
+            //method = new ACMethod(ACStateConst.SMStarting);
+            //Dictionary<string, string> paramTranslation = new Dictionary<string, string>();
+
+            //method.ParameterValueList.Add(new ACValue("MessageText", typeof(string), "", Global.ParamOption.Required));
+            //paramTranslation.Add("MessageText", "en{'Question text'}de{'Abfragetext'}");
+
+            //var wrapper = new ACMethodWrapper(method, "en{'Receiving point ready'}de{'Abnahmestelle bereit'}", typeof(PWBakeryFlourDischargingAck), paramTranslation, null);
+            //ACMethod.RegisterVirtualMethod(typeof(PWBakeryFlourDischargingAck), ACStateConst.SMStarting, wrapper);
+        }
+
+        public new const string PWClassName = "PWBakeryFlourDischargingAck";
+
         public PWBakeryFlourDischargingAck(ACClass acType, IACObject content, IACObject parentACObject, ACValueList parameter, string acIdentifier = "") : 
             base(acType, content, parentACObject, parameter, acIdentifier)
         {
@@ -19,6 +36,7 @@ namespace gipbakery.mes.processapplication
 
         private IACContainerTNet<bool> _IsCoverDown;
 
+        [ACMethodState("en{'Executing'}de{'Ausführend'}", 20, true)]
         public override void SMStarting()
         {
             base.SMStarting();
@@ -50,6 +68,7 @@ namespace gipbakery.mes.processapplication
             }
 
             _IsCoverDown.PropertyChanged += _IsCoverDown_PropertyChanged;
+            base.SMRunning();
         }
 
         public override void SMIdle()
@@ -89,5 +108,21 @@ namespace gipbakery.mes.processapplication
                 _IsCoverDown = null;
             }
         }
+
+        public static bool HandleExecuteACMethod_PWBakeryFlourDischargingAck(out object result, IACComponent acComponent, string acMethodName, gip.core.datamodel.ACClassMethod acClassMethod, params object[] acParameter)
+        {
+            result = null;
+            //switch (acMethodName)
+            //{
+            //    case MN_AckStartClient:
+            //        AckStartClient(acComponent);
+            //        return true;
+            //    case Const.IsEnabledPrefix + MN_AckStartClient:
+            //        result = IsEnabledAckStartClient(acComponent);
+            //        return true;
+            //}
+            return HandleExecuteACMethod_PWNodeUserAck(out result, acComponent, acMethodName, acClassMethod, acParameter);
+        }
+
     }
 }
