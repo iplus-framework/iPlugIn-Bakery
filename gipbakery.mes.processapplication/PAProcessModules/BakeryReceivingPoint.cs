@@ -29,6 +29,7 @@ namespace gipbakery.mes.processapplication
             _PAPointMatIn3 = new PAPoint(this, "PAPointMatIn3");
             _PAPointMatIn4 = new PAPoint(this, "PAPointMatIn4");
             _PAPointMatIn5 = new PAPoint(this, "PAPointMatIn5");
+            _PAPointMatIn6 = new PAPoint(this, "PAPointMatIn6");
 
             _RecvPointReadyScaleACUrl = new ACPropertyConfigValue<string>(this, "RecvPointReadyScaleACUrl", "");
         }
@@ -247,10 +248,10 @@ namespace gipbakery.mes.processapplication
 
         PAPoint _PAPointMatIn5;
         /// <summary>
-        /// Other liquids
+        /// Manual Weighing
         /// </summary>
         /// <value>
-        /// Other liquids
+        /// Manual Weighing
         /// </value>
         [ACPropertyConnectionPoint(9999, "PointMaterial")]
         public PAPoint PAPointMatIn5
@@ -258,6 +259,22 @@ namespace gipbakery.mes.processapplication
             get
             {
                 return _PAPointMatIn5;
+            }
+        }
+
+        PAPoint _PAPointMatIn6;
+        /// <summary>
+        /// Other liquids
+        /// </summary>
+        /// <value>
+        /// Other liquids
+        /// </value>
+        [ACPropertyConnectionPoint(9999, "PointMaterial")]
+        public PAPoint PAPointMatIn6
+        {
+            get
+            {
+                return _PAPointMatIn6;
             }
         }
 

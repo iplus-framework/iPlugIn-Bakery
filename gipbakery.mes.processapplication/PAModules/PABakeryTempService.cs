@@ -298,46 +298,48 @@ namespace gipbakery.mes.processapplication
                                 Root.Messages.LogMessageMsg(msg);
                             }
                         }
-
-                        if (dosing.CurrentScaleForWeighing == null)
+                        else
                         {
-                            //Error50425: Can not found the CurrentScaleForWeighing at the dosing function for the {0}.
-                            Msg msg = new Msg(this, eMsgLevel.Error, ClassName, "InitializeWaterSensor(30)", 297, "Error50425", wType.ToString());
-                            if (IsAlarmActive(ServiceAlarm, msg.Message) == null)
+                            if (dosing.CurrentScaleForWeighing == null)
                             {
-                                OnNewAlarmOccurred(ServiceAlarm, msg);
-                                Root.Messages.LogMessageMsg(msg);
+                                //Error50425: Can not found the CurrentScaleForWeighing at the dosing function for the {0}.
+                                Msg msg = new Msg(this, eMsgLevel.Error, ClassName, "InitializeWaterSensor(30)", 297, "Error50425", wType.ToString());
+                                if (IsAlarmActive(ServiceAlarm, msg.Message) == null)
+                                {
+                                    OnNewAlarmOccurred(ServiceAlarm, msg);
+                                    Root.Messages.LogMessageMsg(msg);
+                                }
                             }
-                        }
 
-                        PAEBakeryThermometer thermometer = dosing.CurrentScaleForWeighing.FindChildComponents<PAEBakeryThermometer>(c => c is PAEBakeryThermometer, null, 1)
-                                                                                         .FirstOrDefault();
+                            PAEBakeryThermometer thermometer = dosing.CurrentScaleForWeighing.FindChildComponents<PAEBakeryThermometer>(c => c is PAEBakeryThermometer, null, 1)
+                                                                                             .FirstOrDefault();
 
-                        if (thermometer == null || thermometer.DisabledForTempCalculation)
-                        {
-                            //Error50426: Can not found the PAEBakeryThermometer under CurrentScaleForWeighing for the {0}.
-                            Msg msg = new Msg(this, eMsgLevel.Error, ClassName, "InitializeWaterSensor(40)", 309, "Error50426", wType.ToString());
-                            if (IsAlarmActive(ServiceAlarm, msg.Message) == null)
+                            if (thermometer == null || thermometer.DisabledForTempCalculation)
                             {
-                                OnNewAlarmOccurred(ServiceAlarm, msg);
-                                Root.Messages.LogMessageMsg(msg);
+                                //Error50426: Can not found the PAEBakeryThermometer under CurrentScaleForWeighing for the {0}.
+                                Msg msg = new Msg(this, eMsgLevel.Error, ClassName, "InitializeWaterSensor(40)", 309, "Error50426", wType.ToString());
+                                if (IsAlarmActive(ServiceAlarm, msg.Message) == null)
+                                {
+                                    OnNewAlarmOccurred(ServiceAlarm, msg);
+                                    Root.Messages.LogMessageMsg(msg);
+                                }
                             }
-                        }
 
-                        var materialTempInfo = cacheItem.Value.MaterialTempInfos.FirstOrDefault(c => c.MaterialNo == materialNo);
-                        if (materialTempInfo == null)
-                        {
-                            materialTempInfo = new MaterialTemperature();
-                            materialTempInfo.MaterialNo = materialNo;
-                            materialTempInfo.Material = dbApp.Material.FirstOrDefault(c => c.MaterialNo == materialNo);
-                            materialTempInfo.WaterMinDosingQuantity = dosing.CurrentScaleForWeighing.MinDosingWeight.ValueT;
-                            materialTempInfo.WaterDefaultTemperature = thermometer.TemperatureDefault;
-                            materialTempInfo.Water = wType;
-                            cacheItem.Value.MaterialTempInfos.Add(materialTempInfo);
-                        }
+                            var materialTempInfo = cacheItem.Value.MaterialTempInfos.FirstOrDefault(c => c.MaterialNo == materialNo);
+                            if (materialTempInfo == null)
+                            {
+                                materialTempInfo = new MaterialTemperature();
+                                materialTempInfo.MaterialNo = materialNo;
+                                materialTempInfo.Material = dbApp.Material.FirstOrDefault(c => c.MaterialNo == materialNo);
+                                materialTempInfo.WaterMinDosingQuantity = dosing.CurrentScaleForWeighing.MinDosingWeight.ValueT;
+                                materialTempInfo.WaterDefaultTemperature = thermometer.TemperatureDefault;
+                                materialTempInfo.Water = wType;
+                                cacheItem.Value.MaterialTempInfos.Add(materialTempInfo);
+                            }
 
-                        if (thermometer != null)
-                            materialTempInfo.AddThermometer(thermometer);
+                            if (thermometer != null)
+                                materialTempInfo.AddThermometer(thermometer);
+                        }
                     }
                 }
             }
