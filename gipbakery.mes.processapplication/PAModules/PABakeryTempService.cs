@@ -262,6 +262,8 @@ namespace gipbakery.mes.processapplication
 
         private void InitializeWaterSensor(KeyValuePair<BakeryReceivingPoint, BakeryRecvPointTemperature> cacheItem, PAPoint paPointMatIn, DatabaseApp dbApp, WaterType wType)
         {
+            OnInitializeWaterSensor(cacheItem, paPointMatIn, dbApp, wType);
+
             RoutingResult rr = ACRoutingService.FindSuccessorsFromPoint(RoutingService, dbApp.ContextIPlus, false, cacheItem.Key.ComponentClass,
                                                             paPointMatIn.PropertyInfo, PAMTank.SelRuleID_Silo, RouteDirections.Backwards,
                                                             null, null, null, 1, true, true);
@@ -341,6 +343,11 @@ namespace gipbakery.mes.processapplication
                     }
                 }
             }
+        }
+
+        public virtual void OnInitializeWaterSensor(KeyValuePair<BakeryReceivingPoint, BakeryRecvPointTemperature> cacheItem, PAPoint paPointMatIn, DatabaseApp dbApp, WaterType wType)
+        {
+
         }
 
         private void RecalculateAverageTemperature()
@@ -488,6 +495,8 @@ namespace gipbakery.mes.processapplication
         {
             if (e.PropertyName == Const.ValueT)
             {
+                OnSiloMaterialNoChanged(sender, e);
+
                 ACPropertyNet<string> materialNoProp = sender as ACPropertyNet<string>;
                 if (materialNoProp != null)
                 {
@@ -532,6 +541,11 @@ namespace gipbakery.mes.processapplication
             }
         }
 
+        public virtual void OnSiloMaterialNoChanged(object sender, System.ComponentModel.PropertyChangedEventArgs e)
+        {
+
+        }
+
         public List<MaterialTemperature> MaterialTempInfos
         {
             get;
@@ -558,12 +572,19 @@ namespace gipbakery.mes.processapplication
 
         public void AddRoomTemperature(BakeryReceivingPoint recvPoint)
         {
+            OnAddRoomTemperature(recvPoint);
+
             MaterialTemperature mt = new MaterialTemperature();
             mt.IsRoomTemperature = true;
             mt.Water = WaterType.NotWater;
             mt.MaterialNo = TemperatureService.Root.Environment.TranslateText(TemperatureService, "RoomTemp");
             mt.AverageTemperature = recvPoint.RoomTemperature.ValueT;
             MaterialTempInfos.Add(mt);
+        }
+
+        public virtual void OnAddRoomTemperature(BakeryReceivingPoint recvPoint)
+        {
+
         }
 
         public void DeInit()
