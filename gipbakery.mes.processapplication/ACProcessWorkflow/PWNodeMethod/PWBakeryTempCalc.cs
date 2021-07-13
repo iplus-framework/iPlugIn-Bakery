@@ -27,12 +27,6 @@ namespace gipbakery.mes.processapplication
             method = new ACMethod(ACStateConst.SMStarting);
             Dictionary<string, string> paramTranslation = new Dictionary<string, string>();
 
-            method.ParameterValueList.Add(new ACValue("MessageText", typeof(string), "", Global.ParamOption.Required));
-            paramTranslation.Add("MessageText", "en{'Question text'}de{'Abfragetext'}");
-
-            method.ParameterValueList.Add(new ACValue("PasswordDlg", typeof(bool), false, Global.ParamOption.Required));
-            paramTranslation.Add("PasswordDlg", "en{'With password dialogue'}de{'Mit Passwort-Dialog'}");
-
             method.ParameterValueList.Add(new ACValue("DoughTemp", typeof(double?), false, Global.ParamOption.Required));
             paramTranslation.Add("DoughTemp", "en{'Doughtemperature °C'}de{'Teigtemperatur °C'}");
 
@@ -59,7 +53,6 @@ namespace gipbakery.mes.processapplication
 
             var wrapper = new ACMethodWrapper(method, "en{'User Acknowledge'}de{'Benutzerbestätigung'}", typeof(PWBakeryTempCalc), paramTranslation, null);
             ACMethod.RegisterVirtualMethod(typeof(PWBakeryTempCalc), ACStateConst.SMStarting, wrapper);
-
 
             RegisterExecuteHandler(typeof(PWBakeryTempCalc), HandleExecuteACMethod_PWBakeryTempCalc);
         }
@@ -696,7 +689,6 @@ namespace gipbakery.mes.processapplication
             }
         }
 
-        //TODO: half quantity
         private bool GetKneedingRiseTemperature(DatabaseApp dbApp, double batchSize, out double kneedingTemperature)
         {
             kneedingTemperature = 0;

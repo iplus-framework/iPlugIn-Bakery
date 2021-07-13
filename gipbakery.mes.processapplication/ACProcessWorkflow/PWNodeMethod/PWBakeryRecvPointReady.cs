@@ -122,6 +122,13 @@ namespace gipbakery.mes.processapplication
                         else
                         {
                             _AckScale = scale;
+
+                            if (AckStartOverWeight())
+                            {
+                                CurrentACState = ACStateEnum.SMCompleted;
+                                return;
+                            }
+
                             _AckScale.ActualValue.PropertyChanged += ActualValue_PropertyChanged;
                         }
                     }
@@ -136,13 +143,23 @@ namespace gipbakery.mes.processapplication
         {
             if (e.PropertyName == Const.ValueT)
             {
-                if (   (AckScaleWeight > 0.0000001 && _AckScale.ActualValue.ValueT >= AckScaleWeight)
-                    || (AckScaleWeight < -0.0000001 && _AckScale.ActualValue.ValueT < Math.Abs(AckScaleWeight))
-                    )
-                {
-                    AckStart(); //TODO:calming time
-                }
+                AckStartOverWeight();
             }
+        }
+
+        private bool AckStartOverWeight()
+        {
+            if (_AckScale == null)
+                return false;
+
+            if ((AckScaleWeight > 0.0000001 && _AckScale.ActualValue.ValueT >= AckScaleWeight)
+             || (AckScaleWeight < -0.0000001 && _AckScale.ActualValue.ValueT < Math.Abs(AckScaleWeight))
+                )
+            {
+                AckStart(); //TODO:calming time
+                return true;
+            }
+            return false;
         }
 
         public override void SMIdle()

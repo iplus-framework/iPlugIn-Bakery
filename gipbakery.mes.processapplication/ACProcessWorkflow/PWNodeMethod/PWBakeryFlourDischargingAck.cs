@@ -16,15 +16,15 @@ namespace gipbakery.mes.processapplication
         {
             RegisterExecuteHandler(typeof(PWBakeryFlourDischargingAck), HandleExecuteACMethod_PWBakeryFlourDischargingAck);
 
-            //ACMethod method;
-            //method = new ACMethod(ACStateConst.SMStarting);
-            //Dictionary<string, string> paramTranslation = new Dictionary<string, string>();
+            ACMethod method;
+            method = new ACMethod(ACStateConst.SMStarting);
+            Dictionary<string, string> paramTranslation = new Dictionary<string, string>();
 
-            //method.ParameterValueList.Add(new ACValue("MessageText", typeof(string), "", Global.ParamOption.Required));
-            //paramTranslation.Add("MessageText", "en{'Question text'}de{'Abfragetext'}");
+            method.ParameterValueList.Add(new ACValue("MessageText", typeof(string), "", Global.ParamOption.Required));
+            paramTranslation.Add("MessageText", "en{'Question text'}de{'Abfragetext'}");
 
-            //var wrapper = new ACMethodWrapper(method, "en{'Receiving point ready'}de{'Abnahmestelle bereit'}", typeof(PWBakeryFlourDischargingAck), paramTranslation, null);
-            //ACMethod.RegisterVirtualMethod(typeof(PWBakeryFlourDischargingAck), ACStateConst.SMStarting, wrapper);
+            var wrapper = new ACMethodWrapper(method, "en{'Flour discharging acknowledge'}de{'Mehlaustragsquittung'}", typeof(PWBakeryFlourDischargingAck), paramTranslation, null);
+            ACMethod.RegisterVirtualMethod(typeof(PWBakeryFlourDischargingAck), ACStateConst.SMStarting, wrapper);
         }
 
         public new const string PWClassName = "PWBakeryFlourDischargingAck";
