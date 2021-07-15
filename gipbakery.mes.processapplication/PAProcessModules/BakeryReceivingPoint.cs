@@ -63,7 +63,7 @@ namespace gipbakery.mes.processapplication
             set
             {
                 _RecvPointReadyScaleACUrl.ValueT = value;
-                OnPropertyChanged("ManualTempMeasurementSensorACUrl");
+                OnPropertyChanged("RecvPointReadyScaleACUrl");
             }
         }
 

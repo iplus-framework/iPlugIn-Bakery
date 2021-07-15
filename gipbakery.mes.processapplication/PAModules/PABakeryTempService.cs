@@ -292,8 +292,8 @@ namespace gipbakery.mes.processapplication
                                                                                      .FirstOrDefault()?.TargetParentComponent as PAFDosing;
                         if (dosing == null)
                         {
-                            //Error50424: The dosing function for {0} can not be found.
-                            Msg msg = new Msg(this, eMsgLevel.Error, ClassName, "InitializeWaterSensor(20)", 285, "Error50424", wType.ToString());
+                            //Error50424: The dosing function for {0} can not be found at {1}.
+                            Msg msg = new Msg(this, eMsgLevel.Error, ClassName, "InitializeWaterSensor(20)", 285, "Error50424", wType.ToString(), cacheItem.Key.ComponentClass.ACUrlComponent);
                             if (IsAlarmActive(ServiceAlarm, msg.Message) == null)
                             {
                                 OnNewAlarmOccurred(ServiceAlarm, msg);

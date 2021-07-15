@@ -58,6 +58,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="ACProcessWorkflow\PWNodeMethod\PWBakeryDosing.cs" />
+    <Compile Include="ACProcessWorkflow\PWNodeMethod\PWBakeryFermentationStarter.cs" />
     <Compile Include="ACProcessWorkflow\PWNodeMethod\PWBakeryManualWeighing.cs" />
     <Compile Include="ACProcessWorkflow\PWNodeMethod\PWBakeryRecvPointReady.cs" />
     <Compile Include="ACProcessWorkflow\PWNodeMethod\PWBakeryFlourDischargingAck.cs" />
@@ -74,13 +75,16 @@
     <Compile Include="BSO\BakeryBSOManualWeighing.cs" />
     <Compile Include="BSO\BakeryBSOMaterial.cs" />
     <Compile Include="BSO\BakeryBSOPartslist.cs" />
+    <Compile Include="BSO\BakeryBSOSourDoughProducing.cs" />
     <Compile Include="BSO\BakeryBSOTemperature.cs" />
     <Compile Include="BSO\BakeryBSOWorkCenterSelector.cs" />
+    <Compile Include="BSO\BakeryBSOYeastProducing.cs" />
     <Compile Include="Model\MaterialTempMeasureItem.cs" />
     <Compile Include="Model\TempMeasurementModeEnum.cs" />
     <Compile Include="PAModules\PABakeryTempService.cs" />
     <Compile Include="PAModules\PAEBakeryThermometer.cs" />
     <Compile Include="PAProcessFunction\PAFBakeryManualWeighing.cs" />
+    <Compile Include="PAProcessFunction\PAFBakerySourDoughProducing.cs" />
     <Compile Include="PAProcessFunction\PAFBakeryTempMeasuring.cs" />
     <Compile Include="PAProcessFunction\PAFBakeryWorkBaking.cs" />
     <Compile Include="PAProcessFunction\PAFBakeryWorkKneading.cs" />
@@ -90,6 +94,7 @@
     <Compile Include="PAProcessFunction\PAFBakeryWorkFreezing.cs" />
     <Compile Include="PAProcessFunction\PAFBakeryWorkForming.cs" />
     <Compile Include="PAProcessFunction\PAFBakeryKneading.cs" />
+    <Compile Include="PAProcessFunction\PAFBakeryYeastProducing.cs" />
     <Compile Include="PAProcessModules\BakeryFreezer.cs" />
     <Compile Include="PAProcessModules\BakeryDecorStation.cs" />
     <Compile Include="PAProcessModules\BakeryPacker.cs" />
