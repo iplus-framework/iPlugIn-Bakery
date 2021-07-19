@@ -21,6 +21,9 @@ namespace gipbakery.mes.processapplication
 
         public const string PWClassName = "PWBakeryFermentationStarter";
 
+        public const string PN_FSTargetQuantity = "FSTargetQuantity";
+        public const string MN_AckFermentationStarter = "AckFermentationStarter";
+
         [ACPropertyBindingSource]
         public IACContainerTNet<double?> FSTargetQuantity
         {

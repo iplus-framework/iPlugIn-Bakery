@@ -277,7 +277,7 @@ namespace gipbakery.mes.processapplication
             {
                 var prop = sender as IACContainerTNet<string>;
                 if (prop != null)
-                    HandleTempCalcResultMsg(prop.ValueT);
+                    ParentBSOWCS?.ApplicationQueue.Add(() => HandleTempCalcResultMsg(prop.ValueT));
             }
         }
 

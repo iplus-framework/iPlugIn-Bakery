@@ -28,6 +28,8 @@ namespace gipbakery.mes.processapplication
             return result;
         }
 
+        public const string MN_GetFermentationStarterScaleACUrl = "GetFermentationStarterScaleACUrl";
+
         private ACPropertyConfigValue<string> _FermentationStarterScaleACUrl;
         [ACPropertyConfig("en{'Scale ACUrl for fermentation starter'}de{'Waage ACUrl für Anstellgut'}")]
         public string FermentationStarterScaleACUrl
@@ -55,6 +57,13 @@ namespace gipbakery.mes.processapplication
             }
 
             return scale;
+        }
+
+        [ACMethodInfo("","", 800)]
+        public string GetFermentationStarterScaleACUrl()
+        {
+            PAEScaleBase scale = GetFermentationStarterScale();
+            return scale?.ACUrl;
         }
     }
 }

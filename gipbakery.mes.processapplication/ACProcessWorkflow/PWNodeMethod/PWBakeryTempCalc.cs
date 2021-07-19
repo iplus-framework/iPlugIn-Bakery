@@ -928,7 +928,8 @@ namespace gipbakery.mes.processapplication
             if (CombineWarmCityWater(warmWater, cityWater, targetWaterTemperature, totalWaterQuantity))
             {
                 //The calculated water temperature is {0} °C and the target quantity is {1} {2}.
-                TemperatureCalculationResult.ValueT = Root.Environment.TranslateText(this, "TempCalcResult", targetWaterTemperature.ToString("F2"), totalWaterQuantity, "kg");
+                TemperatureCalculationResult.ValueT = Root.Environment.TranslateText(this, "TempCalcResult", targetWaterTemperature.ToString("F2"), 
+                                                                                                             totalWaterQuantity.ToString("F2"), "kg");
                 WaterCalcResult.ValueT = targetWaterTemperature;
                 return;
             }
@@ -936,7 +937,8 @@ namespace gipbakery.mes.processapplication
             if (CombineColdCityWater(coldWater, cityWater, targetWaterTemperature, totalWaterQuantity))
             {
                 //The calculated water temperature is {0} °C and the target quantity is {1} {2}.
-                TemperatureCalculationResult.ValueT = Root.Environment.TranslateText(this, "TempCalcResult", targetWaterTemperature.ToString("F2"), totalWaterQuantity, "kg");
+                TemperatureCalculationResult.ValueT = Root.Environment.TranslateText(this, "TempCalcResult", targetWaterTemperature.ToString("F2"), 
+                                                                                                             totalWaterQuantity.ToString("F2"), "kg");
                 WaterCalcResult.ValueT = targetWaterTemperature;
                 return;
             }
@@ -945,13 +947,14 @@ namespace gipbakery.mes.processapplication
             {
                 // The calculated water temperature of {0} °C can not be reached, the ice is {1} °C and the target quantity is {2} {3}. 
                 TemperatureCalculationResult.ValueT = Root.Environment.TranslateText(this, "TempCalcResultMin", targetWaterTemperature.ToString("F2"), dryIce.AverageTemperature,
-                                                                                                                totalWaterQuantity, "kg");
+                                                                                                                totalWaterQuantity.ToString("F2"), "kg");
                 WaterCalcResult.ValueT = targetWaterTemperature;
                 return;
             }
 
             //The calculated water temperature is {0} °C and the target quantity is {1} {2}.
-            TemperatureCalculationResult.ValueT = Root.Environment.TranslateText(this, "TempCalcResult", targetWaterTemperature.ToString("F2"), totalWaterQuantity, "kg");
+            TemperatureCalculationResult.ValueT = Root.Environment.TranslateText(this, "TempCalcResult", targetWaterTemperature.ToString("F2"), 
+                                                                                                         totalWaterQuantity.ToString("F2"), "kg");
             WaterCalcResult.ValueT = targetWaterTemperature;
         }
 
@@ -1127,6 +1130,27 @@ namespace gipbakery.mes.processapplication
                 {
                     double waterSHC = coldWater.Material.SpecHeatCapacity;
                     double iceSCH = dryIce.Material.SpecHeatCapacity;
+
+                    if (Math.Abs(waterSHC) <= Double.Epsilon)
+                    {
+                        Msg msg = new Msg("Please configure specific heat capacity for {0}.", this, eMsgLevel.Error, PWClassName, "CombineWatersWithDryIce()", 1133);
+                        if (IsAlarmActive(ProcessAlarm, msg.Message) == null)
+                        {
+                            Messages.LogMessageMsg(msg);
+                        }
+                        OnNewAlarmOccurred(ProcessAlarm, msg, true);
+                    }
+
+                    if (Math.Abs(iceSCH) <= Double.Epsilon)
+                    {
+                        Msg msg = new Msg("Please configure specific heat capacity for {0}.", this, eMsgLevel.Error, PWClassName, "CombineWatersWithDryIce()", 1143);
+                        if (IsAlarmActive(ProcessAlarm, msg.Message) == null)
+                        {
+                            Messages.LogMessageMsg(msg);
+                        }
+                        OnNewAlarmOccurred(ProcessAlarm, msg, true);
+                    }
+
 
                     if (targetWaterTemperature <= coldWater.AverageTemperature && targetWaterTemperature > dryIce.AverageTemperature)
                     {
