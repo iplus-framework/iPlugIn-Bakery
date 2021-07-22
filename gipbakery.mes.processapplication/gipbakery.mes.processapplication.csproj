@@ -57,6 +57,8 @@
     <Reference Include="WindowsBase" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="ACProcessWorkflow\PWBakeryEndOnTime.cs" />
+    <Compile Include="ACProcessWorkflow\PWBakeryGroupFermentation.cs" />
     <Compile Include="ACProcessWorkflow\PWNodeMethod\PWBakeryDosing.cs" />
     <Compile Include="ACProcessWorkflow\PWNodeMethod\PWBakeryFermentationStarter.cs" />
     <Compile Include="ACProcessWorkflow\PWNodeMethod\PWBakeryManualWeighing.cs" />
@@ -83,6 +85,8 @@
     <Compile Include="Model\TempMeasurementModeEnum.cs" />
     <Compile Include="PAModules\PABakeryTempService.cs" />
     <Compile Include="PAModules\PAEBakeryThermometer.cs" />
+    <Compile Include="PAProcessFunction\PAFBakeryDosingFlour.cs" />
+    <Compile Include="PAProcessFunction\PAFBakeryDosingWater.cs" />
     <Compile Include="PAProcessFunction\PAFBakeryManualWeighing.cs" />
     <Compile Include="PAProcessFunction\PAFBakerySourDoughProducing.cs" />
     <Compile Include="PAProcessFunction\PAFBakeryTempMeasuring.cs" />

@@ -159,6 +159,12 @@ namespace gipbakery.mes.processapplication
 
         public IACContainerTNet<string> ProcessModuleOrderInfo;
 
+        private ACRef<IACComponentPWGroup> PWGroupFermentation
+        {
+            get;
+            set;
+        }
+
         private ACRef<IACComponentPWNode> FermentationStarterRef
         {
             get;
@@ -166,6 +172,24 @@ namespace gipbakery.mes.processapplication
         }
 
         private IACContainerTNet<double?> FermentationQuantityProp
+        {
+            get;
+            set;
+        }
+
+        private IACContainerTNet<short> NextFermentationStageProp
+        {
+            get;
+            set;
+        }
+
+        private IACContainerTNet<DateTime> StartTimeProp
+        {
+            get;
+            set;
+        }
+
+        private IACContainerTNet<DateTime> ReadyForDosingProp
         {
             get;
             set;
@@ -214,7 +238,29 @@ namespace gipbakery.mes.processapplication
                 FermentationQuantityProp = null;
             }
 
+            if (PWGroupFermentation != null)
+            {
+                PWGroupFermentation.Detach();
+                PWGroupFermentation = null;
+            }
 
+            if (NextFermentationStageProp != null)
+            {
+                NextFermentationStageProp.PropertyChanged -= NextFermentationStageProp_PropertyChanged;
+                NextFermentationStageProp = null;
+            }
+
+            if (StartTimeProp != null)
+            {
+                StartTimeProp.PropertyChanged -= StartTimeProp_PropertyChanged;
+                StartTimeProp = null;
+            }
+
+            if (ReadyForDosingProp != null)
+            {
+                ReadyForDosingProp.PropertyChanged -= ReadyForDosingProp_PropertyChanged;
+                ReadyForDosingProp = null;
+            }
 
             if (MessagesList.Any())
             {
@@ -255,7 +301,7 @@ namespace gipbakery.mes.processapplication
 
             ProcessModuleOrderInfo.PropertyChanged += ProcessModuleOrderInfo_PropertyChanged;
             string orderInfo = ProcessModuleOrderInfo.ValueT;
-            HandleOrderInfoPropChanged(orderInfo);
+            ParentBSOWCS.ApplicationQueue.Add(() =>  HandleOrderInfoPropChanged(orderInfo));
         }
 
         private void ProcessModuleOrderInfo_PropertyChanged(object sender, PropertyChangedEventArgs e)
@@ -263,7 +309,7 @@ namespace gipbakery.mes.processapplication
             if (e.PropertyName == Const.ValueT)
             {
                 string orderInfo = ProcessModuleOrderInfo.ValueT;
-                Task.Run(() => HandleOrderInfoPropChanged(orderInfo));
+                ParentBSOWCS.ApplicationQueue.Add(() => HandleOrderInfoPropChanged(orderInfo));
             }
         }
 
@@ -283,13 +329,15 @@ namespace gipbakery.mes.processapplication
                 }
 
                 string pwGroupACUrl = accessArr[0];
-                ACComponent pwGroup = Root.ACUrlCommand(pwGroupACUrl) as ACComponent;
+                IACComponentPWGroup pwGroup = Root.ACUrlCommand(pwGroupACUrl) as IACComponentPWGroup;
 
                 if (pwGroup == null)
                 {
                     //todo: error
                     return;
                 }
+
+                PWGroupFermentation = new ACRef<IACComponentPWGroup>(pwGroup, this);
 
                 IEnumerable<ACChildInstanceInfo> pwNodes = pwGroup.GetChildInstanceInfo(1, new ChildInstanceInfoSearchParam() { OnlyWorkflows = true });
 
@@ -316,9 +364,68 @@ namespace gipbakery.mes.processapplication
                     return;
                 }
 
+                NextFermentationStageProp = PWGroupFermentation.ValueT.GetPropertyNet(PWBakeryGroupFermentation.PN_NextFermentationStage) as IACContainerTNet<short>;
+                if (NextFermentationStageProp == null)
+                {
+                    //TODO:
+                    return;
+                }
+
+                StartTimeProp = PWGroupFermentation.ValueT.GetPropertyNet(PWBakeryGroupFermentation.PN_StartNextFermentationStageTime) as IACContainerTNet<DateTime>;
+                if (StartTimeProp == null)
+                {
+                    //TODO:
+                    return;
+                }
+
+                ReadyForDosingProp = PWGroupFermentation.ValueT.GetPropertyNet(PWBakeryGroupFermentation.PN_ReadyForDosingTime) as IACContainerTNet<DateTime>;
+                if (ReadyForDosingProp == null)
+                {
+                    //TODO:
+                    return;
+                }
+
                 FermentationQuantityProp.PropertyChanged += FermentationQuantityProp_PropertyChanged;
                 HandleFermentationQunatity();
 
+                NextFermentationStageProp.PropertyChanged += NextFermentationStageProp_PropertyChanged;
+
+                StartTimeProp.PropertyChanged += StartTimeProp_PropertyChanged;
+
+                ReadyForDosingProp.PropertyChanged += ReadyForDosingProp_PropertyChanged;
+
+                SetInfoProperties();
+            }
+        }
+
+        private void SetInfoProperties()
+        {
+            ReadyForDosing = ReadyForDosingProp.ValueT;
+            StartDateTime = StartTimeProp.ValueT;
+            ReadyForDosing = ReadyForDosingProp.ValueT;
+        }
+
+        private void ReadyForDosingProp_PropertyChanged(object sender, PropertyChangedEventArgs e)
+        {
+            if (e.PropertyName == Const.ValueT)
+            {
+                ReadyForDosing = ReadyForDosingProp.ValueT;
+            }
+        }
+
+        private void StartTimeProp_PropertyChanged(object sender, PropertyChangedEventArgs e)
+        {
+            if (e.PropertyName == Const.ValueT)
+            {
+                StartDateTime = StartTimeProp.ValueT;
+            }
+        }
+
+        private void NextFermentationStageProp_PropertyChanged(object sender, PropertyChangedEventArgs e)
+        {
+            if (e.PropertyName == Const.ValueT)
+            {
+                NextStage = NextFermentationStageProp.ValueT;
             }
         }
 
@@ -326,7 +433,7 @@ namespace gipbakery.mes.processapplication
         {
             if (e.PropertyName == Const.ValueT)
             {
-                Task.Run(() => HandleFermentationQunatity());
+                ParentBSOWCS.ApplicationQueue.Add(() => HandleFermentationQunatity());
             }
         }
 
