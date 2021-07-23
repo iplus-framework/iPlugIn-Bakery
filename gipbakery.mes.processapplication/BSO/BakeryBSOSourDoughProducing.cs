@@ -1,6 +1,7 @@
 ﻿using gip.bso.manufacturing;
 using gip.core.autocomponent;
 using gip.core.datamodel;
+using gip.mes.processapplication;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -45,6 +46,12 @@ namespace gipbakery.mes.processapplication
                 ProcessModuleOrderInfo = null;
             }
 
+            _PWFermentationStarterType = null;
+            _PAFBakerySourDoughProdType = null;
+            _PAFBakeryDosingWaterType = null;
+            _PAFBakeryDosingFlourType = null;
+            _PAFDischargingType = null;
+
             return base.ACDeInit(deleteACClassTask);
         }
 
@@ -55,18 +62,11 @@ namespace gipbakery.mes.processapplication
         #region Properties
 
         private Type _PWFermentationStarterType = typeof(PWBakeryFermentationStarter);
+        private Type _PAFBakerySourDoughProdType = typeof(PAFBakerySourDoughProducing);
+        private Type _PAFBakeryDosingFlourType = typeof(PAFBakeryDosingFlour);
+        private Type _PAFBakeryDosingWaterType = typeof(PAFBakeryDosingWater);
+        private Type _PAFDischargingType = typeof(PAFDischarging);
 
-        private double _FlourActualQuantity;
-        [ACPropertyInfo(800, "", "en{'Flour actual q.'}de{'Mehl Ist'}")]
-        public double FlourActualQuantity
-        {
-            get => _FlourActualQuantity;
-            set
-            {
-                _FlourActualQuantity = value;
-                OnPropertyChanged("FlourActualQuantity");
-            }
-        }
 
         private double _FlourDiffQuantity;
         [ACPropertyInfo(801, "", "en{'Flour difference q.'}de{'Mehl Rest'}")]
@@ -77,18 +77,6 @@ namespace gipbakery.mes.processapplication
             {
                 _FlourDiffQuantity = value;
                 OnPropertyChanged("FlourDiffQuantity");
-            }
-        }
-
-        private double _WaterActualQuantity;
-        [ACPropertyInfo(802, "", "en{'Water actual q.'}de{'Wasser Ist'}")]
-        public double WaterActualQuantity
-        {
-            get => _WaterActualQuantity;
-            set
-            {
-                _WaterActualQuantity = value;
-                OnPropertyChanged("WaterActualQuantity");
             }
         }
 
@@ -116,9 +104,9 @@ namespace gipbakery.mes.processapplication
             }
         }
 
-        private DateTime _StartDateTime;
+        private string _StartDateTime;
         [ACPropertyInfo(805, "", "en{'Start time'}de{'Start zeit'}")]
-        public DateTime StartDateTime
+        public string StartDateTime
         {
             get => _StartDateTime;
             set
@@ -157,6 +145,40 @@ namespace gipbakery.mes.processapplication
             }
         }
 
+        private ACRef<ACComponent> _FlourScale
+        {
+            get;
+            set;
+        }
+
+        [ACPropertyInfo(807)]
+        public ACComponent FlourScale
+        {
+            get => _FlourScale?.ValueT;
+            set
+            {
+                _FlourScale = new ACRef<ACComponent>(value, this);
+                OnPropertyChanged("FlourScale");
+            }
+        }
+
+        private ACRef<ACComponent> _WaterScale
+        {
+            get;
+            set;
+        }
+
+        [ACPropertyInfo(807)]
+        public ACComponent WaterScale
+        {
+            get => _WaterScale?.ValueT;
+            set
+            {
+                _WaterScale = new ACRef<ACComponent>(value, this);
+                OnPropertyChanged("WaterScale");
+            }
+        }
+
         public IACContainerTNet<string> ProcessModuleOrderInfo;
 
         private ACRef<IACComponentPWGroup> PWGroupFermentation
@@ -183,6 +205,12 @@ namespace gipbakery.mes.processapplication
             set;
         }
 
+        private IACContainerTNet<ACStateEnum> DischargingACStateProp
+        {
+            get;
+            set;
+        }
+
         private IACContainerTNet<DateTime> StartTimeProp
         {
             get;
@@ -193,6 +221,29 @@ namespace gipbakery.mes.processapplication
         {
             get;
             set;
+        }
+
+        private IACContainerTNet<double> FlourDiffQuantityProp
+        {
+            get;
+            set;
+        }
+
+        private IACContainerTNet<double> WaterDiffQuantityProp
+        {
+            get;
+            set;
+        }
+
+        private bool _IsDischargingActive;
+        public bool IsDischargingActive
+        {
+            get => _IsDischargingActive;
+            set
+            {
+                _IsDischargingActive = value;
+                OnPropertyChanged("IsDischargingActive");
+            }
         }
 
         #endregion
@@ -213,6 +264,36 @@ namespace gipbakery.mes.processapplication
             {
                 _SourDoughScale.Detach();
                 _SourDoughScale = null;
+            }
+
+            if (_FlourScale != null)
+            {
+                _FlourScale.Detach();
+                _FlourScale = null;
+            }
+
+            if (_WaterScale != null)
+            {
+                _WaterScale.Detach();
+                _WaterScale = null;
+            }
+
+            if (FlourDiffQuantityProp != null)
+            {
+                FlourDiffQuantityProp.PropertyChanged -= FlourTargetQuantityProp_PropertyChanged;
+                FlourDiffQuantityProp = null;
+            }
+
+            if (WaterDiffQuantityProp != null)
+            {
+                WaterDiffQuantityProp.PropertyChanged -= WaterTargetQuantityProp_PropertyChanged;
+                WaterDiffQuantityProp = null;
+            }
+
+            if (DischargingACStateProp != null)
+            {
+                DischargingACStateProp.PropertyChanged -= DischargingACStateProp_PropertyChanged;
+                DischargingACStateProp = null;
             }
 
             if (ProcessModuleOrderInfo != null)
@@ -277,19 +358,111 @@ namespace gipbakery.mes.processapplication
             ProcessModuleOrderInfo = null;
 
             var childInstances = processModule.GetChildInstanceInfo(1, false);
-            ACChildInstanceInfo func = childInstances.FirstOrDefault(c => typeof(PAFBakerySourDoughProducing).IsAssignableFrom(c.ACType.ValueT.ObjectType));
+
+            ACChildInstanceInfo func = childInstances.FirstOrDefault(c => _PAFBakerySourDoughProdType.IsAssignableFrom(c.ACType.ValueT.ObjectType));
             if (func != null)
             {
                 ACComponent funcComp = processModule.ACUrlCommand(func.ACIdentifier) as ACComponent;
                 string scaleACUrl = funcComp?.ExecuteMethod(PAFBakerySourDoughProducing.MN_GetFermentationStarterScaleACUrl) as string;
 
-                ACComponent scale = funcComp.ACUrlCommand(scaleACUrl) as ACComponent;
+                ACComponent scale = funcComp?.ACUrlCommand(scaleACUrl) as ACComponent;
                 if (scale == null)
                 {
                     //TODO: error
                     return;
                 }
                 SourDoughScale = scale;
+            }
+
+            ACChildInstanceInfo flourFunc = childInstances.FirstOrDefault(c => _PAFBakeryDosingFlourType.IsAssignableFrom(c.ACType.ValueT.ObjectFullType));
+            if (flourFunc != null)
+            {
+                ACComponent funcComp = processModule.ACUrlCommand(flourFunc.ACIdentifier) as ACComponent;
+                if (funcComp == null)
+                    return;
+
+                ACRef<ACComponent> tempRef = new ACRef<ACComponent>(funcComp, this);
+
+                string scaleACUrl = tempRef.ValueT.ExecuteMethod("GetFlourDosingScale") as string;
+                ACComponent scale = tempRef.ValueT.ACUrlCommand(scaleACUrl) as ACComponent;
+
+                if (scale != null)
+                {
+                    FlourScale = scale;
+                }
+                else
+                {
+                    //Error
+                }
+
+                FlourDiffQuantityProp = tempRef.ValueT.GetPropertyNet("FlourDiffQuantity") as IACContainerTNet<double>;
+
+                if (FlourDiffQuantityProp != null)
+                {
+                    FlourDiffQuantityProp.PropertyChanged += FlourTargetQuantityProp_PropertyChanged;
+                }
+                else
+                {
+                    //TODO: error
+                }    
+
+                tempRef.Detach();
+                tempRef = null;
+            }
+
+            ACChildInstanceInfo waterFunc = childInstances.FirstOrDefault(c => _PAFBakeryDosingWaterType.IsAssignableFrom(c.ACType.ValueT.ObjectType));
+            if (func != null)
+            {
+                ACComponent funcComp = processModule.ACUrlCommand(waterFunc.ACIdentifier) as ACComponent;
+                if (funcComp == null)
+                    return;
+
+                ACRef<ACComponent> tempRef = new ACRef<ACComponent>(funcComp, this);
+
+                string scaleACUrl = tempRef.ValueT.ExecuteMethod("GetWaterDosingScale") as string;
+                ACComponent scale = tempRef.ValueT.ACUrlCommand(scaleACUrl) as ACComponent;
+
+                if (scale != null)
+                {
+                    WaterScale = scale;
+                }
+                else
+                {
+                    //Error
+                }
+
+                WaterDiffQuantityProp = tempRef.ValueT.GetPropertyNet("WaterDiffQuantity") as IACContainerTNet<double>;
+
+                if (WaterDiffQuantityProp != null)
+                {
+                    WaterDiffQuantityProp.PropertyChanged += WaterTargetQuantityProp_PropertyChanged;
+                }
+                else
+                {
+                    //TODO: error
+                }
+
+                tempRef.Detach();
+                tempRef = null;
+            }
+
+            ACChildInstanceInfo dischFunc = childInstances.FirstOrDefault(c => _PAFDischargingType.IsAssignableFrom(c.ACType.ValueT.ObjectType));
+            if (dischFunc != null)
+            {
+                ACComponent funcComp = processModule.ACUrlCommand(dischFunc.ACIdentifier) as ACComponent;
+                if (funcComp == null)
+                    return;
+
+                DischargingACStateProp = funcComp?.GetPropertyNet("ACState") as IACContainerTNet<ACStateEnum>;
+                if (DischargingACStateProp != null)
+                {
+                    DischargingACStateProp.PropertyChanged += DischargingACStateProp_PropertyChanged;
+                    HandleDischargingACState();
+                }
+                else
+                {
+                    //error
+                }
             }
 
             ProcessModuleOrderInfo = processModule.GetPropertyNet("OrderInfo") as IACContainerTNet<string>;
@@ -302,6 +475,36 @@ namespace gipbakery.mes.processapplication
             ProcessModuleOrderInfo.PropertyChanged += ProcessModuleOrderInfo_PropertyChanged;
             string orderInfo = ProcessModuleOrderInfo.ValueT;
             ParentBSOWCS.ApplicationQueue.Add(() =>  HandleOrderInfoPropChanged(orderInfo));
+        }
+
+        private void DischargingACStateProp_PropertyChanged(object sender, PropertyChangedEventArgs e)
+        {
+            if (e.PropertyName == Const.ValueT)
+            {
+                HandleDischargingACState();
+            }
+        }
+
+        private void HandleDischargingACState()
+        {
+            string text = Root.Environment.TranslateText(this, "tbDosingReady");
+
+            if (DischargingACStateProp.ValueT == ACStateEnum.SMRunning)
+            {
+                IsDischargingActive = true;
+                StartDateTime = text;
+            }
+            else
+            {
+                IsDischargingActive = false;
+                if (StartDateTime == text)
+                    StartDateTime = null;
+            }
+        }
+
+        private void FlourActualQuantityProp_PropertyChanged(object sender, PropertyChangedEventArgs e)
+        {
+            throw new NotImplementedException();
         }
 
         private void ProcessModuleOrderInfo_PropertyChanged(object sender, PropertyChangedEventArgs e)
@@ -401,8 +604,8 @@ namespace gipbakery.mes.processapplication
         private void SetInfoProperties()
         {
             ReadyForDosing = ReadyForDosingProp.ValueT;
-            StartDateTime = StartTimeProp.ValueT;
-            ReadyForDosing = ReadyForDosingProp.ValueT;
+            StartDateTime = StartTimeProp.ValueT.ToString();
+            NextStage = NextFermentationStageProp.ValueT;
         }
 
         private void ReadyForDosingProp_PropertyChanged(object sender, PropertyChangedEventArgs e)
@@ -417,7 +620,7 @@ namespace gipbakery.mes.processapplication
         {
             if (e.PropertyName == Const.ValueT)
             {
-                StartDateTime = StartTimeProp.ValueT;
+                StartDateTime = StartTimeProp.ValueT.ToString();
             }
         }
 
@@ -426,6 +629,22 @@ namespace gipbakery.mes.processapplication
             if (e.PropertyName == Const.ValueT)
             {
                 NextStage = NextFermentationStageProp.ValueT;
+            }
+        }
+
+        private void WaterTargetQuantityProp_PropertyChanged(object sender, PropertyChangedEventArgs e)
+        {
+            if (e.PropertyName == Const.ValueT)
+            {
+                WaterDiffQuantity = WaterDiffQuantityProp.ValueT;
+            }
+        }
+
+        private void FlourTargetQuantityProp_PropertyChanged(object sender, PropertyChangedEventArgs e)
+        {
+            if (e.PropertyName == Const.ValueT)
+            {
+                FlourDiffQuantity = FlourDiffQuantityProp.ValueT;
             }
         }
 
@@ -504,6 +723,22 @@ namespace gipbakery.mes.processapplication
         public bool IsEnabledSwitchAvailability()
         {
             return true;
+        }
+
+        [ACMethodInfo("", "en{'Pump over'}de{'Umpumpen'}", 802, true)]
+        public void PumpOver()
+        {
+
+        }
+
+        public bool IsEnabledPumpOver()
+        {
+            return true;
+        }
+
+        public override Global.ControlModes OnGetControlModes(IVBContent vbControl)
+        {
+            return base.OnGetControlModes(vbControl);
         }
 
         #endregion

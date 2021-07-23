@@ -25,6 +25,12 @@ namespace gipbakery.mes.processapplication
 
             DosTimeWater.PropertyChanged += DosTimeWater_PropertyChanged;
 
+            if (CurrentScaleForWeighing != null)
+            {
+                ActualWeightProp = CurrentScaleForWeighing.ActualWeight;
+                ActualWeightProp.PropertyChanged += ActualWeight_PropertyChanged;
+            }
+
             return result;
         }
 
@@ -33,6 +39,54 @@ namespace gipbakery.mes.processapplication
             DosTimeWater.PropertyChanged -= DosTimeWater_PropertyChanged;
 
             return base.ACDeInit(deleteACClassTask);
+        }
+
+        private IACContainerTNet<double> ActualWeightProp
+        {
+            get;
+            set;
+        }
+
+        private double? TargetQuantity
+        {
+            get;
+            set;
+        }
+
+        public override void SMStarting()
+        {
+            base.SMStarting();
+            double? targetQuantity = CurrentACMethod.ValueT["TargetQuantity"] as double?;
+            if (targetQuantity.HasValue)
+            {
+                using (ACMonitor.Lock(_20015_LockValue))
+                {
+                    TargetQuantity = targetQuantity.Value;
+                }
+            }
+        }
+
+        public override void SMIdle()
+        {
+            base.SMIdle();
+            using (ACMonitor.Lock(_20015_LockValue))
+            {
+                TargetQuantity = null;
+            }
+        }
+
+        private void ActualWeight_PropertyChanged(object sender, System.ComponentModel.PropertyChangedEventArgs e)
+        {
+            if (e.PropertyName == Const.ValueT)
+            {
+                using (ACMonitor.Lock(_20015_LockValue))
+                {
+                    if (TargetQuantity == null || ActualWeightProp == null)
+                        return;
+
+                    WaterDiffQuantity.ValueT = ActualWeightProp.ValueT - TargetQuantity.Value;
+                }
+            }
         }
 
         private void DosTimeWater_PropertyChanged(object sender, System.ComponentModel.PropertyChangedEventArgs e)
@@ -58,6 +112,13 @@ namespace gipbakery.mes.processapplication
 
         [ACPropertyBindingTarget(801, "", "en{'Dosing time water control [sec]'}de{'Dosierzeit Wasser Regelung [sec]'}", "", true, true)]
         public IACContainerTNet<double> DosTimeWaterControl
+        {
+            get;
+            set;
+        }
+
+        [ACPropertyBindingTarget]
+        public IACContainerTNet<double> WaterDiffQuantity
         {
             get;
             set;
@@ -101,6 +162,11 @@ namespace gipbakery.mes.processapplication
             return DosTimeWaterCorrected;
         }
 
+        [ACMethodInfo("","",9999)]
+        public string GetWaterDosingScale()
+        {
+            return CurrentScaleForWeighing?.ACUrl;
+        }
 
     }
 }

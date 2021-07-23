@@ -25,14 +25,73 @@ namespace gipbakery.mes.processapplication
 
             DosTimeFlour.PropertyChanged += DosTimeFlour_PropertyChanged;
 
+            if (CurrentScaleForWeighing != null)
+            {
+                ActualWeightProp = CurrentScaleForWeighing.ActualWeight;
+                ActualWeightProp.PropertyChanged += ActualWeight_PropertyChanged;
+            }
+
             return result;
         }
 
         public override bool ACDeInit(bool deleteACClassTask = false)
         {
             DosTimeFlour.PropertyChanged -= DosTimeFlour_PropertyChanged;
+            if(ActualWeightProp != null)
+            {
+                ActualWeightProp.PropertyChanged -= ActualWeight_PropertyChanged;
+                ActualWeightProp = null;
+            }
 
             return base.ACDeInit(deleteACClassTask);
+        }
+
+        private IACContainerTNet<double> ActualWeightProp
+        {
+            get;
+            set;
+        }
+
+        private double? TargetQuantity
+        {
+            get;
+            set;
+        }
+
+        public override void SMStarting()
+        {
+            base.SMStarting();
+            double? targetQuantity = CurrentACMethod.ValueT["TargetQuantity"] as double?;
+            if (targetQuantity.HasValue)
+            {
+                using (ACMonitor.Lock(_20015_LockValue))
+                {
+                    TargetQuantity = targetQuantity.Value;
+                }
+            }
+        }
+
+        public override void SMIdle()
+        {
+            base.SMIdle();
+            using (ACMonitor.Lock(_20015_LockValue))
+            {
+                TargetQuantity = null;
+            }
+        }
+
+        private void ActualWeight_PropertyChanged(object sender, System.ComponentModel.PropertyChangedEventArgs e)
+        {
+            if (e.PropertyName == Const.ValueT)
+            {
+                using (ACMonitor.Lock(_20015_LockValue))
+                {
+                    if (TargetQuantity == null || ActualWeightProp == null)
+                        return;
+
+                    FlourDiffQuantity.ValueT = ActualWeightProp.ValueT - TargetQuantity.Value;
+                }
+            }
         }
 
         private void DosTimeFlour_PropertyChanged(object sender, System.ComponentModel.PropertyChangedEventArgs e)
@@ -51,6 +110,13 @@ namespace gipbakery.mes.processapplication
 
         [ACPropertyBindingTarget(800, "", "en{'Dosing time flour [s/kg]'}de{'Dosierzeit Mehl [s/kg]'}", "", true, true)]
         public IACContainerTNet<double> DosTimeFlour
+        {
+            get;
+            set;
+        }
+
+        [ACPropertyBindingTarget]
+        public IACContainerTNet<double> FlourDiffQuantity
         {
             get;
             set;
@@ -92,6 +158,12 @@ namespace gipbakery.mes.processapplication
                 return DosTimeFlourMin;
 
             return DosTimeFlourCorrected;
+        }
+
+        [ACMethodInfo("","",9999)]
+        public string  GetFlourDosingScale()
+        {
+            return CurrentScaleForWeighing?.ACUrl;
         }
 
     }

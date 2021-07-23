@@ -59,6 +59,7 @@
   <ItemGroup>
     <Compile Include="ACProcessWorkflow\PWBakeryEndOnTime.cs" />
     <Compile Include="ACProcessWorkflow\PWBakeryGroupFermentation.cs" />
+    <Compile Include="ACProcessWorkflow\PWNodeMethod\PWBakeryDischargingSour.cs" />
     <Compile Include="ACProcessWorkflow\PWNodeMethod\PWBakeryDosing.cs" />
     <Compile Include="ACProcessWorkflow\PWNodeMethod\PWBakeryFermentationStarter.cs" />
     <Compile Include="ACProcessWorkflow\PWNodeMethod\PWBakeryManualWeighing.cs" />
