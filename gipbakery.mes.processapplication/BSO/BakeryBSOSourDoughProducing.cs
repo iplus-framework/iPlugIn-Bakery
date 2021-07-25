@@ -1,6 +1,7 @@
 ﻿using gip.bso.manufacturing;
 using gip.core.autocomponent;
 using gip.core.datamodel;
+using gip.mes.datamodel;
 using gip.mes.processapplication;
 using System;
 using System.Collections.Generic;
@@ -16,7 +17,7 @@ namespace gipbakery.mes.processapplication
     {
         #region c'tors
 
-        public BakeryBSOSourDoughProducing(ACClass acType, IACObject content, IACObject parentACObject, ACValueList parameter, string acIdentifier = "") : 
+        public BakeryBSOSourDoughProducing(gip.core.datamodel.ACClass acType, IACObject content, IACObject parentACObject, ACValueList parameter, string acIdentifier = "") : 
             base(acType, content, parentACObject, parameter, acIdentifier)
         {
         }
@@ -128,6 +129,8 @@ namespace gipbakery.mes.processapplication
             }
         }
 
+        private ACRef<ACComponent> _PAFSourDoughProducing;
+
         private ACRef<ACComponent> _SourDoughScale
         {
             get;
@@ -142,6 +145,23 @@ namespace gipbakery.mes.processapplication
             {
                 _SourDoughScale = new ACRef<ACComponent>(value, this);
                 OnPropertyChanged("SourDoughScale");
+            }
+        }
+
+        private ACRef<ACComponent> _SourDoughStore
+        {
+            get;
+            set;
+        }
+
+        [ACPropertyInfo(807)]
+        public ACComponent SourDoughStore
+        {
+            get => _SourDoughStore?.ValueT;
+            set
+            {
+                _SourDoughStore = new ACRef<ACComponent>(value, this);
+                OnPropertyChanged("SourDoughStore");
             }
         }
 
@@ -266,6 +286,18 @@ namespace gipbakery.mes.processapplication
                 _SourDoughScale = null;
             }
 
+            if (_SourDoughStore != null)
+            {
+                _SourDoughStore.Detach();
+                _SourDoughStore = null;
+            }
+
+            if (_PAFSourDoughProducing != null)
+            {
+                _PAFSourDoughProducing.Detach();
+                _PAFSourDoughProducing = null;
+            }
+
             if (_FlourScale != null)
             {
                 _FlourScale.Detach();
@@ -363,15 +395,33 @@ namespace gipbakery.mes.processapplication
             if (func != null)
             {
                 ACComponent funcComp = processModule.ACUrlCommand(func.ACIdentifier) as ACComponent;
-                string scaleACUrl = funcComp?.ExecuteMethod(PAFBakerySourDoughProducing.MN_GetFermentationStarterScaleACUrl) as string;
-
-                ACComponent scale = funcComp?.ACUrlCommand(scaleACUrl) as ACComponent;
-                if (scale == null)
-                {
-                    //TODO: error
+                if (funcComp == null)
                     return;
+
+                _PAFSourDoughProducing = new ACRef<ACComponent>(funcComp, this);
+
+                string scaleACUrl = _PAFSourDoughProducing.ValueT.ExecuteMethod(PAFBakerySourDoughProducing.MN_GetFermentationStarterScaleACUrl) as string;
+
+                ACComponent scale = _PAFSourDoughProducing.ValueT?.ACUrlCommand(scaleACUrl) as ACComponent;
+                if (scale != null)
+                {
+                    SourDoughScale = scale;
                 }
-                SourDoughScale = scale;
+                else
+                {
+                    //error
+                }
+
+                string storeACUrl = _PAFSourDoughProducing.ValueT.ExecuteMethod("GetSourDoughStoreACUrl") as string;
+                ACComponent store = _PAFSourDoughProducing.ValueT?.ACUrlCommand(storeACUrl) as ACComponent;
+                if (store != null)
+                {
+                    SourDoughStore = store;
+                }
+                else
+                {
+                    //error
+                }
             }
 
             ACChildInstanceInfo flourFunc = childInstances.FirstOrDefault(c => _PAFBakeryDosingFlourType.IsAssignableFrom(c.ACType.ValueT.ObjectFullType));
@@ -604,7 +654,8 @@ namespace gipbakery.mes.processapplication
         private void SetInfoProperties()
         {
             ReadyForDosing = ReadyForDosingProp.ValueT;
-            StartDateTime = StartTimeProp.ValueT.ToString();
+            if (!IsDischargingActive)
+                StartDateTime = StartTimeProp.ValueT.ToString();
             NextStage = NextFermentationStageProp.ValueT;
         }
 
@@ -706,23 +757,60 @@ namespace gipbakery.mes.processapplication
         [ACMethodInfo("", "en{'Clean'}de{'Reinigen'}", 801, true)]
         public void Clean()
         {
-
+            Msg resultMsg = _PAFSourDoughProducing.ValueT.ExecuteMethod("Clean", (short)11) as Msg;
+            if (resultMsg != null)
+            {
+                Messages.Msg(resultMsg);
+            }
         }
 
         public bool IsEnabledClean()
         {
-            return true;
+            return ProcessModuleOrderInfo?.ValueT == null && _PAFSourDoughProducing != null && _PAFSourDoughProducing.ValueT != null;
         }
 
-        [ACMethodInfo("", "en{'Switch availability'}de{'Schalterverfügbarkeit'}", 802, true)]
-        public void SwitchAvailability()
+        [ACMethodInfo("", "", 802, true)]
+        public void StoreOutwardEnabledOn()
         {
-
+            if (IsEnabledStoreOutwardEnabledOn())
+            {
+                _PAFSourDoughProducing.ValueT.ExecuteMethod("SwitchSourDoughStoreOutwardEnabled");
+            }
         }
 
-        public bool IsEnabledSwitchAvailability()
+        public bool IsEnabledStoreOutwardEnabledOn()
         {
-            return true;
+            return _PAFSourDoughProducing != null && _PAFSourDoughProducing.ValueT != null;
+        }
+
+        [ACMethodInfo("", "", 802, true)]
+        public void StoreOutwardEnabledOff()
+        {
+            if (IsEnabledStoreOutwardEnabledOff())
+            {
+                if (IsDischargingActive)
+                {
+                    //The sourdough is ready for dosing. Do you want to finish the sourdough order? 
+                    //Pressing the "No" key only removes the dosing availability and locks the storage container.
+
+                    var questionResult = Messages.Question(this, "Question50064");
+                    if (questionResult == Global.MsgResult.Yes && DischargingACStateProp != null)
+                    {
+                        DischargingACStateProp.ValueT = ACStateEnum.SMCompleted;
+                    }
+                    else if (questionResult == Global.MsgResult.Cancel)
+                    {
+                        return;
+                    }
+                }
+
+                _PAFSourDoughProducing.ValueT.ExecuteMethod("SwitchSourDoughStoreOutwardEnabled");
+            }
+        }
+
+        public bool IsEnabledStoreOutwardEnabledOff()
+        {
+            return _PAFSourDoughProducing != null && _PAFSourDoughProducing.ValueT != null;
         }
 
         [ACMethodInfo("", "en{'Pump over'}de{'Umpumpen'}", 802, true)]
@@ -738,6 +826,7 @@ namespace gipbakery.mes.processapplication
 
         public override Global.ControlModes OnGetControlModes(IVBContent vbControl)
         {
+
             return base.OnGetControlModes(vbControl);
         }
 

@@ -31,6 +31,8 @@ namespace gipbakery.mes.processapplication
             set;
         }
 
+        private double _ScaleActualValue;
+
         PAEScaleBase _FermentationStarterScale = null;
 
         public T ParentPWMethod<T>() where T : PWMethodVBBase
@@ -58,6 +60,7 @@ namespace gipbakery.mes.processapplication
             using (ACMonitor.Lock(_20015_LockValue))
             {
                 FSTargetQuantity.ValueT = null;
+                _ScaleActualValue = 0;
             }
             base.SMIdle();
         }
@@ -94,7 +97,9 @@ namespace gipbakery.mes.processapplication
             using (ACMonitor.Lock(_20015_LockValue))
             {
                 _FermentationStarterScale = scale;
+                _ScaleActualValue = scale.ActualValue.ValueT;
             }
+
 
             using (var dbIPlus = new Database())
             {
@@ -203,12 +208,20 @@ namespace gipbakery.mes.processapplication
         public bool AckFermentationStarter(bool force)
         {
             PAEScaleBase scale = null;
+            double actValue = 0;
             using (ACMonitor.Lock(_20015_LockValue))
             {
                 scale = _FermentationStarterScale;
+                actValue = _ScaleActualValue;
             }
 
-            if ((scale != null && scale.ActualValue.ValueT >= FSTargetQuantity.ValueT) || force)
+            double diff = 0;
+            if (scale != null)
+            {
+                diff = scale.ActualValue.ValueT - actValue;
+            }
+
+            if ((diff >= FSTargetQuantity.ValueT) || force)
             {
                 CurrentACState = ACStateEnum.SMCompleted;
                 using (ACMonitor.Lock(_20015_LockValue))
