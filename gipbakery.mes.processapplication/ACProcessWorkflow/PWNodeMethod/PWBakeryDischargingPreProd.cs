@@ -14,12 +14,87 @@ namespace gipbakery.mes.processapplication
     [ACClassInfo(Const.PackName_VarioAutomation, "en{'PWDischargingPreProd'}de{'PWDischargingPreProd'}", Global.ACKinds.TPWNodeMethod, Global.ACStorableTypes.Optional, false, PWMethodVBBase.PWClassName, true)]
     public class PWBakeryDischargingPreProd : PWDischarging
     {
+        static PWBakeryDischargingPreProd()
+        {
+            ACMethod method;
+            method = new ACMethod(ACStateConst.SMStarting);
+            Dictionary<string, string> paramTranslation = new Dictionary<string, string>();
+
+            method.ParameterValueList.Add(new ACValue("SkipIfNoComp", typeof(bool), false, Global.ParamOption.Required));
+            paramTranslation.Add("SkipIfNoComp", "en{'Skip if no components dosed'}de{'Überspringe wenn keine Komponente dosiert'}");
+            method.ParameterValueList.Add(new ACValue("LimitToMaxCapOfDest", typeof(bool), false, Global.ParamOption.Optional));
+            paramTranslation.Add("LimitToMaxCapOfDest", "en{'Limit filling of destination to available space'}de{'Limitiere Zielbefüllung auf rechnerischen Restinhalt'}");
+            method.ParameterValueList.Add(new ACValue("PrePostQOnDest", typeof(double), 0.0, Global.ParamOption.Optional));
+            paramTranslation.Add("PrePostQOnDest", "en{'Pre posting quantity to destination at start'}de{'Vorbuchungsmenge auf Ziel bei Start'}");
+            method.ParameterValueList.Add(new ACValue("NoPostingOnRelocation", typeof(bool), false, Global.ParamOption.Optional));
+            paramTranslation.Add("NoPostingOnRelocation", "en{'No posting at relocation'}de{'Keine Buchung bei Umlagerung'}");
+            method.ParameterValueList.Add(new ACValue("NoPostingOnProd", typeof(bool), false, Global.ParamOption.Optional));
+            paramTranslation.Add("NoPostingOnProd", "en{'No posting at production'}de{'Keine Buchung bei Producion'}");
+
+            var wrapper = new ACMethodWrapper(method, "en{'Configuration'}de{'Konfiguration'}", typeof(PWBakeryDischargingPreProd), paramTranslation, null);
+            ACMethod.RegisterVirtualMethod(typeof(PWBakeryDischargingPreProd), ACStateConst.SMStarting, wrapper);
+            RegisterExecuteHandler(typeof(PWBakeryDischargingPreProd), HandleExecuteACMethod_PWBakeryDischargingPreProd);
+        }
+
+        
+
         public PWBakeryDischargingPreProd(gip.core.datamodel.ACClass acType, IACObject content, IACObject parentACObject, ACValueList parameter, string acIdentifier = "") : 
             base(acType, content, parentACObject, parameter, acIdentifier)
         {
         }
 
         private bool _BookingProcessed = false;
+
+        protected bool NoPostingOnProd
+        {
+            get
+            {
+                var method = MyConfiguration;
+                if (method != null)
+                {
+                    var acValue = method.ParameterValueList.GetACValue("NoPostingOnProd");
+                    if (acValue != null)
+                    {
+                        return acValue.ParamAsBoolean;
+                    }
+                }
+                return false;
+            }
+        }
+
+        public override Msg DoInwardBooking(double actualQuantity, DatabaseApp dbApp, RouteItem dischargingDest, Facility inwardFacility, ProdOrderPartslistPos currentBatchPos, ACEventArgs e, bool isDischargingEnd, bool blockQuant = false)
+        {
+            if (!NoPostingOnProd)
+                return base.DoInwardBooking(actualQuantity, dbApp, dischargingDest, inwardFacility, currentBatchPos, e, isDischargingEnd, blockQuant);
+            return null;
+        }
+
+        public override StartDisResult CheckCachedModuleDestinations(ref ACComponent dischargeToModule, ref Msg msg)
+        {
+            if (!NoPostingOnProd)
+            {
+                return base.CheckCachedModuleDestinations(ref dischargeToModule, ref msg);
+            }
+            else
+            {
+                using (Database db = new gip.core.datamodel.Database())
+                {
+                    RoutingResult rResult = ACRoutingService.FindSuccessors(RoutingService, db, RoutingService != null && RoutingService.IsProxy,
+                                        ParentPWGroup.AccessedProcessModule, PAProcessModule.SelRuleID_ProcessModule, RouteDirections.Forwards, new object[] { },
+                                        (c, p, r) => c.ACKind == Global.ACKinds.TPAProcessModule,
+                                        null,
+                                        0, true, true, false, false);
+
+                    if (rResult != null && rResult.Routes.Any())
+                    {
+                        dischargeToModule = rResult.Routes.FirstOrDefault()?.GetRouteTarget()?.TargetACComponent as ACComponent;
+                    }
+
+                }
+                
+                return StartDisResult.WaitForCallback;
+            }
+        }
 
         public override void SMIdle()
         {
@@ -28,6 +103,17 @@ namespace gipbakery.mes.processapplication
                 _BookingProcessed = false;
             }
             base.SMIdle();
+        }
+
+        [ACMethodState("en{'Executing'}de{'Ausführend'}", 20, true)]
+        public override void SMStarting()
+        {
+            base.SMStarting();
+        }
+
+        private static bool HandleExecuteACMethod_PWBakeryDischargingPreProd(out object result, IACComponent acComponent, string acMethodName, gip.core.datamodel.ACClassMethod acClassMethod, object[] acParameter)
+        {
+            return HandleExecuteACMethod_PWDischarging(out result, acComponent, acMethodName, acClassMethod, acParameter);
         }
 
         public override void TaskCallback(IACPointNetBase sender, ACEventArgs e, IACObject wrapObject)
@@ -237,7 +323,7 @@ namespace gipbakery.mes.processapplication
                                 }
                             }
                         }
-                        
+
                     }
                     if (PWPointRunning != null && eM != null && eM.ResultState == Global.ACMethodResultState.InProcess && taskEntry.State == PointProcessingState.Accepted)
                     {

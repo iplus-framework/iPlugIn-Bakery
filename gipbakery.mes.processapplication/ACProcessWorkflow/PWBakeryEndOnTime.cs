@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace gipbakery.mes.processapplication
 {
-    [ACClassInfo(Const.PackName_VarioSystem, "en{'End on time'}de{'Pünktlich enden'}", Global.ACKinds.TPWNodeStatic, Global.ACStorableTypes.Optional, false, PWProcessFunction.PWClassName, true)]
+    [ACClassInfo(Const.PackName_VarioSystem, "en{'End on time'}de{'Beenden bei Uhrzeit'}", Global.ACKinds.TPWNodeStatic, Global.ACStorableTypes.Optional, false, PWProcessFunction.PWClassName, true)]
     public class PWBakeryEndOnTime : PWNodeWait
     {
         #region c'tors
@@ -25,7 +25,7 @@ namespace gipbakery.mes.processapplication
             method.ParameterValueList.Add(new ACValue("DurationMustExpire", typeof(bool), false, Global.ParamOption.Optional));
             paramTranslation.Add("DurationMustExpire", "en{'Waiting time must elapse'}de{'Wartezeit muss verstreichen'}");
 
-            var wrapper = new ACMethodWrapper(method, "en{'End on time'}de{'Pünktlich enden'}", typeof(PWNodeWait), paramTranslation, null);
+            var wrapper = new ACMethodWrapper(method, "en{'End on time'}de{'Beenden bei Uhrzeit'}", typeof(PWNodeWait), paramTranslation, null);
             ACMethod.RegisterVirtualMethod(typeof(PWBakeryEndOnTime), ACStateConst.SMStarting, wrapper);
 
             RegisterExecuteHandler(typeof(PWBakeryEndOnTime), HandleExecuteACMethod_PWNodeStartAtTimet);
@@ -40,7 +40,7 @@ namespace gipbakery.mes.processapplication
 
         #region Properties
 
-        [ACPropertyBindingSource(800, "ACConfig", "en{'End on time'}de{'Pünktlich enden'}", "", false, true)]
+        [ACPropertyBindingSource(800, "ACConfig", "en{'End on time'}de{'Beenden bei Uhrzeit'}", "", false, true)]
         public IACContainerTNet<DateTime> EndOnTime { get; set; }
 
         protected bool DurationMustExpire

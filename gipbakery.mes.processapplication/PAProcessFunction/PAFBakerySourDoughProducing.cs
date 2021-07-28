@@ -15,11 +15,16 @@ namespace gipbakery.mes.processapplication
     [ACClassInfo(Const.PackName_VarioAutomation, "en{'Sour dough'}de{'Sauerteig'}", Global.ACKinds.TPAProcessFunction, Global.ACStorableTypes.Required, false, true, "", BSOConfig = BakeryBSOSourDoughProducing.ClassName, SortIndex = 50)]
     public class PAFBakerySourDoughProducing : PAProcessFunction
     {
+        #region c'tors
+
         public PAFBakerySourDoughProducing(gip.core.datamodel.ACClass acType, IACObject content, IACObject parentACObject, ACValueList parameter, string acIdentifier = "") : 
             base(acType, content, parentACObject, parameter, acIdentifier)
         {
             _FermentationStarterScaleACUrl = new ACPropertyConfigValue<string>(this, "FermentationStarterScaleACUrl", "");
+            _TemperatureSensorACUrl = new ACPropertyConfigValue<string>(this, "TemperatureSensorACUrl", "");
             _CleaningMode = new ACPropertyConfigValue<BakeryPreProdCleaningMode>(this, "CleaningMode", BakeryPreProdCleaningMode.OverBits);
+            _SourDoughContinueProdACClassWF = new ACPropertyConfigValue<string>(this, "SourDoughContinueProdACClassWF", "");
+            _PumpOverACClassWF = new ACPropertyConfigValue<string>(this, "PumpOverACClassWF", "");
         }
 
         public override bool ACPostInit()
@@ -27,6 +32,9 @@ namespace gipbakery.mes.processapplication
             bool result = base.ACPostInit();
 
             string temp = FermentationStarterScaleACUrl;
+            temp = TemperatureSensorACUrl;
+            temp = SourDoughContinueProdACClassWF;
+            temp = PumpOverACClassWF;
             BakeryPreProdCleaningMode mode = CleaningMode;
 
             FindSourDoughStore();
@@ -42,6 +50,12 @@ namespace gipbakery.mes.processapplication
 
         public const string MN_GetFermentationStarterScaleACUrl = "GetFermentationStarterScaleACUrl";
 
+        #endregion
+
+        #region Properties
+
+        #region Properties => Configuration
+
         private ACPropertyConfigValue<string> _FermentationStarterScaleACUrl;
         [ACPropertyConfig("en{'Scale ACUrl for fermentation starter'}de{'Waage ACUrl für Anstellgut'}")]
         public string FermentationStarterScaleACUrl
@@ -53,6 +67,75 @@ namespace gipbakery.mes.processapplication
                 OnPropertyChanged("FermentationStarterScaleACUrl");
             }
         }
+
+        private ACPropertyConfigValue<string> _TemperatureSensorACUrl;
+        [ACPropertyConfig("en{'Temperature sensor ACUrl for display in BSO'}de{'Temperatursensor ACUrl zur Anzeige in BSO '}")]
+        public string TemperatureSensorACUrl
+        {
+            get => _TemperatureSensorACUrl.ValueT;
+            set
+            {
+                _TemperatureSensorACUrl.ValueT = value;
+                OnPropertyChanged("TemperatureSensorACUrl");
+            }
+        }
+
+        private ACPropertyConfigValue<BakeryPreProdCleaningMode> _CleaningMode;
+        [ACPropertyConfig("en{'Cleaning mode for pre production (sour, yeast...)'}de{'Reinigungsmodus für die Vorproduktion (sauer, Hefe...)'}")]
+        public BakeryPreProdCleaningMode CleaningMode
+        {
+            get => _CleaningMode.ValueT;
+            set
+            {
+                _CleaningMode.ValueT = value;
+                OnPropertyChanged("CleaningMode");
+            }
+        }
+
+        private ACPropertyConfigValue<string> _PumpOverACClassWF;
+        [ACPropertyConfig("en{'Pump over planning ACClassWF'}de{'Umpumpen Planung ACClassWF'}")]
+        public string PumpOverACClassWF
+        {
+            get => _PumpOverACClassWF.ValueT;
+            set
+            {
+                _PumpOverACClassWF.ValueT = value;
+                OnPropertyChanged("PumpOverACClassWF");
+            }
+        }
+
+        private ACPropertyConfigValue<string> _SourDoughContinueProdACClassWF;
+        [ACPropertyConfig("en{'Continue production planning ACClassWF'}de{'Produktion weiterführen Planung ACClassWF'}")]
+        public string SourDoughContinueProdACClassWF
+        {
+            get => _SourDoughContinueProdACClassWF.ValueT;
+            set
+            {
+                _SourDoughContinueProdACClassWF.ValueT = value;
+                OnPropertyChanged("SourDoughContinueProdACClassWF");
+            }
+        }
+
+
+        #endregion
+
+
+        public PAMSilo SourDoughStore
+        {
+            get;
+            set;
+        }
+
+        [ACPropertyBindingTarget(820, "", "en{'Pre production cleaning program'}de{'Reinigungsprogramm für die Vorproduktion'}")]
+        public IACContainerTNet<short> CleaningProgram
+        {
+            get;
+            set;
+        }
+
+        #endregion
+
+        #region Methods
 
         public PAEScaleBase GetFermentationStarterScale()
         {
@@ -71,7 +154,7 @@ namespace gipbakery.mes.processapplication
             return scale;
         }
 
-        [ACMethodInfo("","", 800)]
+        [ACMethodInfo("", "", 800)]
         public string GetFermentationStarterScaleACUrl()
         {
             PAEScaleBase scale = GetFermentationStarterScale();
@@ -114,11 +197,7 @@ namespace gipbakery.mes.processapplication
             }
         }
 
-        public PAMSilo SourDoughStore
-        {
-            get;
-            set;
-        }
+
 
         [ACMethodInfo("", "", 800)]
         public string GetSourDoughStoreACUrl()
@@ -148,28 +227,12 @@ namespace gipbakery.mes.processapplication
                     //TODO alarm 
                 }
             }
-
         }
 
 
-        private ACPropertyConfigValue<BakeryPreProdCleaningMode> _CleaningMode;
-        [ACPropertyConfig("en{'Cleaning mode for pre production (sour, yeast...)'}de{'Reinigungsmodus für die Vorproduktion (sauer, Hefe...)'}")]
-        public BakeryPreProdCleaningMode CleaningMode
-        {
-            get => _CleaningMode.ValueT;
-            set
-            {
-                _CleaningMode.ValueT = value;
-                OnPropertyChanged("CleaningMode");
-            }
-        }
 
-        [ACPropertyBindingTarget(820, "", "en{'Pre production cleaning program'}de{'Reinigungsprogramm für die Vorproduktion'}")]
-        public IACContainerTNet<short> CleaningProgram
-        {
-            get;
-            set;
-        }
+
+
 
         [ACMethodInfo("", "en{'Clean pre prod container'}de{'Reinigen Vorproduktionsbehälter'}", 821)]
         public Msg Clean(short program)
@@ -185,7 +248,7 @@ namespace gipbakery.mes.processapplication
 
             //TODO: clean over workflow
             return null;
-            
+
         }
 
         private Msg CleanOverBits(short program)
@@ -227,6 +290,80 @@ namespace gipbakery.mes.processapplication
 
             return null;
         }
+
+        [ACMethodInfo("", "", 9999)]
+        public virtual ACValueList GetPumpOverTargets()
+        {
+            using (Database db = new gip.core.datamodel.Database())
+            {
+                gip.core.datamodel.ACClass compClass = null;
+
+                using (ACMonitor.Lock(gip.core.datamodel.Database.GlobalDatabase.QueryLock_1X000))
+                {
+                    compClass = ParentACComponent?.ComponentClass.FromIPlusContext<gip.core.datamodel.ACClass>(db);
+                }
+
+                if (compClass == null)
+                    return null;
+
+                RoutingResult rResult = ACRoutingService.FindSuccessors(RoutingService, db, false, compClass, PAMIntermediatebin.SelRuleID_Intermediatebin, RouteDirections.Forwards,
+                                                                        null, null, null, 0, true, true);
+
+                if (rResult == null)
+                {
+                    return null;
+                }
+
+                if (rResult.Message != null && rResult.Message.MessageLevel == eMsgLevel.Error)
+                {
+                    return null;
+                }
+
+                ACComponent pumpModule = rResult.Routes?.FirstOrDefault().GetRouteTarget()?.TargetACComponent as ACComponent;
+
+                if (pumpModule == null)
+                {
+                    return null;
+                }
+
+                rResult = ACRoutingService.FindSuccessors(RoutingService, db, false, pumpModule.ComponentClass, PAMParkingspace.SelRuleID_ParkingSpace, RouteDirections.Forwards,
+                                                                        null, null, null, 0, true, true);
+
+                if (rResult == null || rResult.Routes == null)
+                {
+                    return null;
+                }
+
+
+                ACValueList result = new ACValueList();
+
+                using (DatabaseApp dbApp = new DatabaseApp())
+                {
+                    foreach (Route route in rResult.Routes)
+                    {
+                        RouteItem rItem = route.GetRouteTarget();
+                        if (rItem == null)
+                            continue;
+
+                        PAMParkingspace ps = rItem.TargetACComponent as PAMParkingspace;
+                        if (ps == null)
+                            continue;
+
+                        Facility facility = dbApp.Facility.FirstOrDefault(c => c.VBiFacilityACClassID == ps.ComponentClass.ACClassID);
+                        if (facility == null)
+                            continue;
+
+                        ACValue acValue = new ACValue(ps.ACCaption, facility.FacilityID);
+
+                        result.Add(acValue);
+                    }
+                }
+
+                return result;
+            }
+        }
+
+        #endregion
 
     }
 

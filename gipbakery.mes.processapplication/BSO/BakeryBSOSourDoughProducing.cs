@@ -2,6 +2,7 @@
 using gip.core.autocomponent;
 using gip.core.datamodel;
 using gip.mes.datamodel;
+using gip.mes.facility;
 using gip.mes.processapplication;
 using System;
 using System.Collections.Generic;
@@ -117,15 +118,51 @@ namespace gipbakery.mes.processapplication
             }
         }
 
-        private DateTime _ReadyForDosing;
+        private string _ReadyForDosing;
         [ACPropertyInfo(806, "", "en{'Ready for dosing'}de{'Dosierbereitschaft'}")]
-        public DateTime ReadyForDosing
+        public string ReadyForDosing
         {
             get => _ReadyForDosing;
             set
             {
                 _ReadyForDosing = value;
                 OnPropertyChanged("ReadyForDosing");
+            }
+        }
+
+        public ACValue _SelectedPumpTarget;
+        [ACPropertySelected(850, "PumpTargets")]
+        public ACValue SelectedPumpTarget
+        {
+            get => _SelectedPumpTarget;
+            set
+            {
+                _SelectedPumpTarget = value;
+                OnPropertyChanged("SelectedPumpTarget");
+            }
+        }
+
+        private ACValueList _PumpTargets;
+        [ACPropertyList(850, "PumpTargets")]
+        public ACValueList PumpTargets
+        {
+            get => _PumpTargets;
+            set
+            {
+                _PumpTargets = value;
+                OnPropertyChanged("PumpTargets");
+            }
+        }
+
+        private double _PumpOverTargetQuantity;
+        [ACPropertyInfo(852, "", "en{'Target quantity'}de{'Sollmenge'}")]
+        public double PumpOverTargetQuantity
+        {
+            get => _PumpOverTargetQuantity;
+            set
+            {
+                _PumpOverTargetQuantity = value;
+                OnPropertyChanged("PumpOverTargetQuantity");
             }
         }
 
@@ -332,6 +369,24 @@ namespace gipbakery.mes.processapplication
             {
                 ProcessModuleOrderInfo.PropertyChanged -= ProcessModuleOrderInfo_PropertyChanged;
                 ProcessModuleOrderInfo = null;
+            }
+
+            if (_RoutingService != null)
+            {
+                _RoutingService.Detach();
+                _RoutingService = null;
+            }
+
+            if (_ACFacilityManager != null)
+            {
+                _ACFacilityManager.Detach();
+                _ACFacilityManager = null;
+            }
+
+            if (_ACPickingManager != null)
+            {
+                _ACPickingManager.Detach();
+                _ACPickingManager = null;
             }
 
             base.DeActivate();
@@ -599,22 +654,25 @@ namespace gipbakery.mes.processapplication
 
                 ACChildInstanceInfo fermentationStarter = pwNodes.FirstOrDefault(c => _PWFermentationStarterType.IsAssignableFrom(c.ACType.ValueT.ObjectType));
 
-                IACComponentPWNode pwNode = pwGroup.ACUrlCommand(fermentationStarter.ACUrlParent + "\\" + fermentationStarter.ACIdentifier) as IACComponentPWNode;
-                if (pwNode == null)
+                if (fermentationStarter != null)
                 {
-                    //Error50290: The user does not have access rights for class PWManualWeighing ({0}).
-                    // Der Benutzer hat keine Zugriffsrechte auf Klasse PWManualWeighing ({0}).
-                    Messages.Error(this, "Error50290", false, fermentationStarter.ACUrlParent + "\\" + fermentationStarter.ACIdentifier);
-                    return;
-                }
+                    IACComponentPWNode pwNode = pwGroup.ACUrlCommand(fermentationStarter.ACUrlParent + "\\" + fermentationStarter.ACIdentifier) as IACComponentPWNode;
+                    if (pwNode == null)
+                    {
+                        //Error50290: The user does not have access rights for class PWManualWeighing ({0}).
+                        // Der Benutzer hat keine Zugriffsrechte auf Klasse PWManualWeighing ({0}).
+                        Messages.Error(this, "Error50290", false, fermentationStarter.ACUrlParent + "\\" + fermentationStarter.ACIdentifier);
+                        return;
+                    }
 
-                FermentationStarterRef = new ACRef<IACComponentPWNode>(pwNode, this);
-                FermentationQuantityProp = FermentationStarterRef.ValueT.GetPropertyNet(PWBakeryFermentationStarter.PN_FSTargetQuantity) as IACContainerTNet<double?>;
+                    FermentationStarterRef = new ACRef<IACComponentPWNode>(pwNode, this);
+                    FermentationQuantityProp = FermentationStarterRef.ValueT.GetPropertyNet(PWBakeryFermentationStarter.PN_FSTargetQuantity) as IACContainerTNet<double?>;
 
-                if (FermentationQuantityProp == null)
-                {
-                    //TODO
-                    return;
+                    if (FermentationQuantityProp == null)
+                    {
+                        //TODO
+                        return;
+                    }
                 }
 
                 NextFermentationStageProp = PWGroupFermentation.ValueT.GetPropertyNet(PWBakeryGroupFermentation.PN_NextFermentationStage) as IACContainerTNet<short>;
@@ -653,7 +711,7 @@ namespace gipbakery.mes.processapplication
 
         private void SetInfoProperties()
         {
-            ReadyForDosing = ReadyForDosingProp.ValueT;
+            ReadyForDosing = ReadyForDosingProp.ValueT.ToString();
             if (!IsDischargingActive)
                 StartDateTime = StartTimeProp.ValueT.ToString();
             NextStage = NextFermentationStageProp.ValueT;
@@ -663,7 +721,7 @@ namespace gipbakery.mes.processapplication
         {
             if (e.PropertyName == Const.ValueT)
             {
-                ReadyForDosing = ReadyForDosingProp.ValueT;
+                ReadyForDosing = ReadyForDosingProp.ValueT.ToString();
             }
         }
 
@@ -775,6 +833,73 @@ namespace gipbakery.mes.processapplication
             if (IsEnabledStoreOutwardEnabledOn())
             {
                 _PAFSourDoughProducing.ValueT.ExecuteMethod("SwitchSourDoughStoreOutwardEnabled");
+
+                if (!IsDischargingActive)
+                {
+                    if (Messages.Question(this, "Question50065") == Global.MsgResult.Yes)
+                    {
+                        if (_ACFacilityManager == null)
+                        {
+                            _ACFacilityManager = FacilityManager.ACRefToServiceInstance(this);
+                            if (_ACFacilityManager == null)
+                            {
+                                //Error50432: The facility manager is null.
+                                Messages.Error(this, "Error50432");
+                                return;
+                            }
+                        }
+
+                        if (_ACPickingManager == null)
+                        {
+                            _ACPickingManager = ACRefToPickingManager();
+                        }
+
+                        ClearBookingData();
+
+                        if (_SourDoughStore == null || _SourDoughStore.ValueT == null)
+                            return;
+
+                        var outwardFacilityRef = _SourDoughStore.ValueT.GetPropertyNet("Facility") as IACContainerTNet<ACRef<Facility>>;
+
+                        if (outwardFacilityRef == null)
+                        {
+                            //TODO: error
+                        }
+
+                        Facility outFacility = outwardFacilityRef.ValueT?.ValueT;
+
+                        if (outFacility == null)
+                        {
+                            //TODO: error
+                            return;
+                        }
+
+                        Facility outwardFacility = outFacility.FromAppContext<Facility>(DatabaseApp);
+
+                        outwardFacility.OutwardEnabled = outFacility.OutwardEnabled;
+
+                        CurrentBookParamRelocation.InwardFacility = outwardFacility;
+                        CurrentBookParamRelocation.OutwardFacility = outwardFacility;
+                        CurrentBookParamRelocation.InwardQuantity = 0.001;
+                        CurrentBookParamRelocation.OutwardQuantity = 0.001;
+
+                        //todo: lock or from another context
+                        var config = _PAFSourDoughProducing?.ValueT?.ComponentClass.ACClassConfig_ACClass.FirstOrDefault(c => c.ConfigACUrl == "SourDoughContinueProdACClassWF");
+                        if (config == null)
+                            return;
+
+                        string configValue = config.Value as string;
+
+                        var parts = configValue.Split(';');
+                        string wfIdentifier = parts.FirstOrDefault().Trim();
+                        string acUrl = parts.LastOrDefault().Trim();
+
+                        var wfClass = DatabaseApp.ContextIPlus.ACClassWF.Where(c => c.ACClassMethod != null && c.ACClassMethod.ACIdentifier == wfIdentifier).ToArray().FirstOrDefault(c => c.ConfigACUrl == acUrl);
+                        var wfMethod = wfClass?.ACClassMethod;
+
+                        RunWorkflow(wfClass, wfMethod);
+                    }
+                }
             }
         }
 
@@ -816,12 +941,108 @@ namespace gipbakery.mes.processapplication
         [ACMethodInfo("", "en{'Pump over'}de{'Umpumpen'}", 802, true)]
         public void PumpOver()
         {
+            ACValueList targets = _PAFSourDoughProducing.ValueT.ExecuteMethod("GetPumpOverTargets") as ACValueList;
+            PumpTargets = targets;
 
+            if (PumpTargets == null || !PumpTargets.Any())
+            {
+                //TODO: error
+                return;
+            }
+
+            if (_ACFacilityManager == null)
+            {
+                _ACFacilityManager = FacilityManager.ACRefToServiceInstance(this);
+                if (_ACFacilityManager == null)
+                {
+                    //Error50432: The facility manager is null.
+                    Messages.Error(this, "Error50432");
+                    return;
+                }
+            }
+
+            if (_ACPickingManager == null)
+            {
+                _ACPickingManager = ACRefToPickingManager();
+            }
+
+            ClearBookingData();
+            ShowDialog(this, "PumpOverDialog");
         }
 
         public bool IsEnabledPumpOver()
         {
-            return true;
+            return _PAFSourDoughProducing != null && _PAFSourDoughProducing.ValueT != null;
+        }
+
+        [ACMethodInfo("", "en{'Pump over'}de{'Umpumpen'}", 803, true)]
+        public void PumpOverStart()
+        {
+            if (_SourDoughStore == null || _SourDoughStore.ValueT == null)
+                return;
+
+            var outwardFacilityRef = _SourDoughStore.ValueT.GetPropertyNet("Facility") as IACContainerTNet<ACRef<Facility>>;
+
+            if (outwardFacilityRef == null)
+            {
+                //TODO: error
+            }
+
+            Facility outFacility = outwardFacilityRef.ValueT?.ValueT;
+
+            if ( outFacility == null)
+            {
+                //TODO: error
+                return;
+            }
+
+            Facility outwardFacility = outFacility.FromAppContext<Facility>(DatabaseApp);
+
+            Guid? inwardFacilityID = SelectedPumpTarget.Value as Guid?;
+            
+            if (!inwardFacilityID.HasValue)
+            {
+                //TODO: error
+                return;
+            }
+
+            Facility inwardFacility = DatabaseApp.Facility.FirstOrDefault(c => c.FacilityID == inwardFacilityID.Value);
+            if (inwardFacility == null)
+            {
+                //error
+                return;
+            }
+
+            CurrentBookParamRelocation.InwardFacility = inwardFacility;
+            CurrentBookParamRelocation.OutwardFacility = outwardFacility;
+            CurrentBookParamRelocation.InwardQuantity = PumpOverTargetQuantity;
+            CurrentBookParamRelocation.OutwardQuantity = PumpOverTargetQuantity;
+
+            //todo: lock or from another context
+            var config = _PAFSourDoughProducing?.ValueT?.ComponentClass.ACClassConfig_ACClass.FirstOrDefault(c => c.ConfigACUrl == "PumpOverACClassWF");
+            if (config == null)
+                return;
+
+            string configValue = config.Value as string;
+
+            var parts = configValue.Split(';');
+            string wfIdentifier = parts.FirstOrDefault().Trim();
+            string acUrl = parts.LastOrDefault().Trim();
+
+            var wfClass = DatabaseApp.ContextIPlus.ACClassWF.Where(c => c.ACClassMethod != null && c.ACClassMethod.ACIdentifier == wfIdentifier).ToArray().FirstOrDefault(c => c.ConfigACUrl == acUrl);
+            var wfMethod = wfClass?.ACClassMethod;
+
+            RunWorkflow(wfClass, wfMethod);
+
+            PumpOverTargetQuantity = 0;
+            SelectedPumpTarget = null;
+
+            CloseTopDialog();
+        }
+
+        public bool IsEnabledPumpOverStart()
+        {
+            return _PAFSourDoughProducing != null && _PAFSourDoughProducing.ValueT != null;
         }
 
         public override Global.ControlModes OnGetControlModes(IVBContent vbControl)
