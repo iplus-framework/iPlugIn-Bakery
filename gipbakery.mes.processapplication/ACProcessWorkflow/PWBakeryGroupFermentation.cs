@@ -14,6 +14,8 @@ namespace gipbakery.mes.processapplication
     [ACClassInfo(Const.PackName_VarioAutomation, "en{'Workflow group'}de{'Workflow Gruppe'}", Global.ACKinds.TPWGroup, Global.ACStorableTypes.Optional, false, PWProcessFunction.PWClassName, true)]
     public class PWBakeryGroupFermentation : PWGroupVB
     {
+        #region c'tors
+
         static PWBakeryGroupFermentation()
         {
             ACMethod method;
@@ -58,6 +60,12 @@ namespace gipbakery.mes.processapplication
         public const string PN_NextFermentationStage = "NextFermentationStage";
         public const string PN_StartNextFermentationStageTime = "StartNextFermentationStageTime";
         public const string PN_ReadyForDosingTime = "ReadyForDosingTime";
+
+        #endregion
+
+        #region Properties
+
+        #region Properties => TimeCalculation
 
         [ACPropertyBindingSource(800, "Info", "en{'Next fermentation stage'}de{'Nächste Fermentationsstufe'}", "", false, true)]
         public IACContainerTNet<short> NextFermentationStage
@@ -131,6 +139,27 @@ namespace gipbakery.mes.processapplication
             }
         }
 
+        #endregion
+
+        #region Properties => Virtual stores
+
+        private Facility SourceFacility
+        {
+            get;
+            set;
+        }
+
+        private Facility TargetFacility
+        {
+            get;
+            set;
+        }
+
+        #endregion
+
+        #endregion
+
+        #region Methods
 
         [ACMethodState("en{'Executing'}de{'Ausführend'}", 20, true)]
         public override void SMStarting()
@@ -141,7 +170,18 @@ namespace gipbakery.mes.processapplication
         public override void SMRunning()
         {
             base.SMRunning();
+
+            FindVirtualStores();
+
             CalculateDuration();
+
+            ActivatePreProdFunctions();
+        }
+
+        public override void SMCompleted()
+        {
+            DeactivatePreProdFunctions();
+            base.SMCompleted();
         }
 
         public override void SMIdle()
@@ -149,7 +189,52 @@ namespace gipbakery.mes.processapplication
             base.SMIdle();
 
             NextFermentationStage.ValueT = 0;
+
+            DeactivatePreProdFunctions();
         }
+
+        public virtual void ActivatePreProdFunctions()
+        {
+            if (AccessedProcessModule == null)
+                return;
+
+            PAFBakerySourDoughProducing sour = AccessedProcessModule.FindChildComponents<PAFBakerySourDoughProducing>(c => c is PAFBakerySourDoughProducing).FirstOrDefault();
+            if (sour != null)
+            {
+                sour.ACState.ValueT = ACStateEnum.SMRunning;
+                return;
+            }
+
+            PAFBakeryYeastProducing yeast = AccessedProcessModule.FindChildComponents<PAFBakeryYeastProducing>(c => c is PAFBakeryYeastProducing).FirstOrDefault();
+            if (yeast != null)
+            {
+                yeast.ACState.ValueT = ACStateEnum.SMRunning;
+                return;
+            }
+        }
+
+        public virtual void DeactivatePreProdFunctions()
+        {
+            if (AccessedProcessModule == null)
+                return;
+
+            PAFBakerySourDoughProducing sour = AccessedProcessModule.FindChildComponents<PAFBakerySourDoughProducing>(c => c is PAFBakerySourDoughProducing).FirstOrDefault();
+            if (sour != null)
+            {
+                sour.ACState.ValueT = ACStateEnum.SMCompleted;
+                return;
+            }
+
+            PAFBakeryYeastProducing yeast = AccessedProcessModule.FindChildComponents<PAFBakeryYeastProducing>(c => c is PAFBakeryYeastProducing).FirstOrDefault();
+            if (yeast != null)
+            {
+                yeast.ACState.ValueT = ACStateEnum.SMCompleted;
+                return;
+            }
+        }
+
+
+        #region Methods => TimeCalculation
 
         private void CalculateDuration()
         {
@@ -359,7 +444,128 @@ namespace gipbakery.mes.processapplication
             }
         }
 
+        #endregion
 
+        #region Methods => VirutalStores
+
+        public void FindVirtualStores()
+        {
+            PAMParkingspace source;
+            PAMTank target;
+
+            Msg msg = FindSourceAndTargetStore(out source, out target);
+
+            if (msg != null)
+            {
+                if (IsAlarmActive(ProcessAlarm, msg.Message) == null)
+                    Messages.LogMessageMsg(msg);
+                OnNewAlarmOccurred(ProcessAlarm, msg, true);
+                return;
+            }
+
+            using (DatabaseApp dbApp = new DatabaseApp())
+            {
+                Facility sFacility, tFacility;
+
+                FindFacilityForSourceAndTargetStore(dbApp, source, target, out sFacility, out tFacility);
+
+                if (sFacility == null)
+                {
+                    //TODO:Error
+                    return;
+                }
+
+                if (tFacility == null)
+                {
+                    //TODO:Error
+                    return;
+                }
+
+                SourceFacility = sFacility;
+                TargetFacility = tFacility;
+            }
+        }
+
+        public virtual Msg FindSourceAndTargetStore(out PAMParkingspace source, out PAMTank target)
+        {
+            source = null;
+            target = null;
+
+            Msg msg = null;
+
+            PAProcessModule module = AccessedProcessModule;
+            if (module != null)
+            {
+                PAPoint pointIn = module.GetPoint(Const.PAPointMatIn1) as PAPoint;
+                PAPoint pointOut = module.GetPoint(Const.PAPointMatOut1) as PAPoint;
+
+                if (pointIn == null || pointOut == null)
+                {
+                    //TODO: error
+                    return msg;
+                }
+
+                source = pointIn.ConnectionList.FirstOrDefault(c => c.SourceParentComponent is PAMParkingspace)?.SourceParentComponent as PAMParkingspace;
+                target = pointOut.ConnectionList.FirstOrDefault(c => c.TargetParentComponent is PAMTank)?.TargetParentComponent as PAMTank;
+            }
+
+            return msg;
+        }
+
+        public void FindFacilityForSourceAndTargetStore(DatabaseApp dbApp, PAMParkingspace source, PAMTank target, out Facility sourceFacility,
+                                                out Facility targetFacility)
+        {
+            sourceFacility = null;
+            targetFacility = null;
+
+            if (source != null)
+                sourceFacility = dbApp.Facility.FirstOrDefault(c => c.VBiFacilityACClassID == source.ComponentClass.ACClassID);
+
+            Facility temp = target?.Facility?.ValueT?.ValueT;
+            if (temp != null)
+            {
+                targetFacility = temp.FromAppContext<Facility>(dbApp);
+            }
+        }
+
+        [ACMethodInfo("","",9999, true)]
+        public Guid? GetSourceFacilityID()
+        {
+            Guid? result = null;
+            using(ACMonitor.Lock(_20015_LockValue))
+            {
+                result = SourceFacility?.FacilityID;
+            }
+
+            return result;
+        }
+
+        public Facility GetSourceFacility()
+        {
+            Facility result = null;
+            using (ACMonitor.Lock(_20015_LockValue))
+            {
+                result = SourceFacility;
+            }
+
+            return result;
+        }
+
+        public Facility GetTargetFacility()
+        {
+            Facility result = null;
+            using (ACMonitor.Lock(_20015_LockValue))
+            {
+                result = TargetFacility;
+            }
+
+            return result;
+        }
+
+
+        #endregion
+
+        #endregion
 
         public static bool HandleExecuteACMethod_PWBakeryGroupFermentation(out object result, IACComponent acComponent, string acMethodName, gip.core.datamodel.ACClassMethod acClassMethod, params object[] acParameter)
         {

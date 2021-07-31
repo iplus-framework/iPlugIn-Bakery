@@ -137,6 +137,11 @@ namespace gipbakery.mes.processapplication
 
         #region Methods
 
+        public override void SMRunning()
+        {
+            UnSubscribeToProjectWorkCycle();
+        }
+
         public PAEScaleBase GetFermentationStarterScale()
         {
             PAEScaleBase scale = null;
@@ -162,7 +167,7 @@ namespace gipbakery.mes.processapplication
         }
 
 
-
+        //TODO: get store from PWBakeryGroupFermentation
         public void FindSourDoughStore()
         {
             using (Database db = new gip.core.datamodel.Database())

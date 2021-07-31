@@ -118,6 +118,8 @@ namespace gipbakery.mes.processapplication
             set;
         }
 
+        private bool _IsUserAck = false;
+
         private double _ScaleActualValue;
 
         PAEScaleBase _FermentationStarterScale = null;
@@ -148,6 +150,7 @@ namespace gipbakery.mes.processapplication
             {
                 FSTargetQuantity.ValueT = null;
                 _ScaleActualValue = 0;
+                _IsUserAck = false;
             }
             base.SMIdle();
         }
@@ -292,24 +295,32 @@ namespace gipbakery.mes.processapplication
 
                     var prodRelation = relations.FirstOrDefault(c => c.SourceProdOrderPartslistPos.MaterialID == endBatchPos.BookingMaterial.MaterialID);
 
-                    PAMParkingspace sourceStore;
-                    PAMTank targetStore;
+                    PWBakeryGroupFermentation pwGroup = ParentPWGroup as PWBakeryGroupFermentation;
 
-                    FindSourceAndTargetStore(out sourceStore, out targetStore);
-
-                    if (sourceStore == null)
+                    if (pwGroup == null)
                     {
                         //todo error
+                        return;
                     }
 
-                    if (targetStore == null)
+                    Facility sourceFacility = pwGroup.GetSourceFacility();
+
+                    if (sourceFacility == null)
                     {
                         //todo error
+                        return;
                     }
 
-                    Facility sourceFacility, targetFacility;
+                    Facility targetFacility = pwGroup.GetTargetFacility();
 
-                    FindFacilityForSourceAndTargetStore(dbApp, sourceStore, targetStore, out sourceFacility, out targetFacility);
+                    if (targetFacility == null)
+                    {
+                        //todo error
+                        return;
+                    }
+
+                    sourceFacility = sourceFacility.FromAppContext<Facility>(dbApp);
+                    targetFacility = targetFacility.FromAppContext<Facility>(dbApp);
 
                     RelocateFromTargetToSourceFacility(dbApp, sourceFacility, targetFacility);
 
@@ -337,46 +348,18 @@ namespace gipbakery.mes.processapplication
                             FSTargetQuantity.ValueT = prodRelation.TargetQuantityUOM;
                         }
 
-                        TryCompleteFermentationStarter(dbApp, scale, prodRelation.TargetQuantityUOM, sourceFacility, prodRelation);
+                        bool isUserAck = false;
+                        using(ACMonitor.Lock(_20015_LockValue))
+                        {
+                            isUserAck = _IsUserAck;
+                        }
+
+                        if (_IsUserAck)
+                        {
+                            TryCompleteFermentationStarter(dbApp, scale, prodRelation.TargetQuantityUOM, sourceFacility, prodRelation);
+                        }
                     }
                 }
-            }
-        }
-
-        public virtual void FindSourceAndTargetStore(out PAMParkingspace source, out PAMTank target)
-        {
-            source = null;
-            target = null;
-
-            PAProcessModule module = ParentPWGroup.AccessedProcessModule;
-            if (module != null)
-            {
-                PAPoint pointIn = module.GetPoint(Const.PAPointMatIn1) as PAPoint;
-                PAPoint pointOut = module.GetPoint(Const.PAPointMatOut1) as PAPoint;
-
-                if (pointIn == null  || pointOut == null)
-                {
-                    //TODO: error
-                }
-
-                source = pointIn.ConnectionList.FirstOrDefault(c => c.SourceParentComponent is PAMParkingspace)?.SourceParentComponent as PAMParkingspace;
-                target = pointOut.ConnectionList.FirstOrDefault(c => c.TargetParentComponent is PAMTank)?.TargetParentComponent as PAMTank;
-            }
-        }
-
-        public void FindFacilityForSourceAndTargetStore(DatabaseApp dbApp, PAMParkingspace source, PAMTank target, out Facility sourceFacility, 
-                                                        out Facility targetFacility)
-        {
-            sourceFacility = null;
-            targetFacility = null;
-
-            if (source != null)
-                sourceFacility = dbApp.Facility.FirstOrDefault(c => c.VBiFacilityACClassID == source.ComponentClass.ACClassID);
-
-            Facility temp = target?.Facility?.ValueT?.ValueT;
-            if (temp != null)
-            {
-                targetFacility = temp.FromAppContext<Facility>(dbApp);
             }
         }
 
@@ -538,25 +521,27 @@ namespace gipbakery.mes.processapplication
             return true;
         }
 
-        public bool TryCompleteFermentationStarter(DatabaseApp dbApp, PAEScaleBase scale, double targetQuantity, Facility sourceFacility, 
+        public Msg TryCompleteFermentationStarter(DatabaseApp dbApp, PAEScaleBase scale, double targetQuantity, Facility sourceFacility, 
                                                    ProdOrderPartslistPosRelation prodRelation)
         {
+            Msg msg = null;
+
             if (scale.ActualValue.ValueT >= targetQuantity)
             {
-                Msg msg;
 
-                var availableQuants = sourceFacility.FacilityCharge_Facility.Where(c => c.MaterialID == prodRelation.SourceProdOrderPartslistPos.MaterialID);
+                var availableQuants = sourceFacility.FacilityCharge_Facility.Where(c => c.MaterialID == prodRelation.SourceProdOrderPartslistPos.MaterialID && !c.NotAvailable);
                 if (availableQuants.Any())
                 {
                     MDProdOrderPartslistPosState posState = DatabaseApp.s_cQry_GetMDProdOrderPosState(dbApp, MDProdOrderPartslistPosState.ProdOrderPartslistPosStates.Completed).FirstOrDefault();
 
                     if (posState == null)
                     {
+                        SubscribeToProjectWorkCycle();
                         //TODO
                         // Error50265: MDProdOrderPartslistPosState for Completed-State doesn't exist
                         msg = new Msg(this, eMsgLevel.Error, PWClassName, "DoManualWeighingBooking(1)", 1702, "Error50265");
                         ActivateProcessAlarmWithLog(msg, false);
-                        return false;
+                        return msg;
                     }
 
                     bool errorInBooking = false;
@@ -579,48 +564,31 @@ namespace gipbakery.mes.processapplication
                             CurrentACState = ACStateEnum.SMCompleted;
                         }
                     }
-
                 }
                 else
                 {
                     //wait for available quant in source facility
-                    return false;
+                    SubscribeToProjectWorkCycle();
+                    return msg;
                 }
             }
             else
-                return false;
+            {
+                SubscribeToProjectWorkCycle();
+                return msg;
+            }
 
-            return true;
+            return msg;
         }
 
 
         [ACMethodInfo("","",700)]
-        public bool AckFermentationStarter(bool force)
+        public void AckFermentationStarter(bool force)
         {
-            PAEScaleBase scale = null;
-            double actValue = 0;
             using (ACMonitor.Lock(_20015_LockValue))
             {
-                scale = _FermentationStarterScale;
-                actValue = _ScaleActualValue;
+                _IsUserAck = true;
             }
-
-            double diff = 0;
-            if (scale != null)
-            {
-                diff = scale.ActualValue.ValueT - actValue;
-            }
-
-            if ((diff >= FSTargetQuantity.ValueT) || force)
-            {
-                CurrentACState = ACStateEnum.SMCompleted;
-                using (ACMonitor.Lock(_20015_LockValue))
-                {
-                    FSTargetQuantity.ValueT = null;
-                }
-                return true;
-            }
-           return false;
         }
 
         private static bool HandleExecuteACMethod_PWBakeryFermentationStarter(out object result, IACComponent acComponent, string acMethodName, gip.core.datamodel.ACClassMethod acClassMethod, object[] acParameter)
