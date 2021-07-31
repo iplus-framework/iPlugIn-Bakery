@@ -2,6 +2,7 @@
 using gip.core.datamodel;
 using gip.core.processapplication;
 using gip.mes.datamodel;
+using gip.mes.facility;
 using gip.mes.processapplication;
 using System;
 using System.Collections.Generic;
@@ -14,6 +15,23 @@ namespace gipbakery.mes.processapplication
     [ACClassInfo(Const.PackName_VarioAutomation, "en{'Fermentation starter'}de{'Anstellgut'}", Global.ACKinds.TPWNodeStatic, Global.ACStorableTypes.Optional, false, "PWProcessFunction", true, "", "", 9999)]
     public class PWBakeryFermentationStarter : PWNodeProcessMethod
     {
+
+        static PWBakeryFermentationStarter()
+        {
+            ACMethod method;
+            method = new ACMethod(ACStateConst.SMStarting);
+            Dictionary<string, string> paramTranslation = new Dictionary<string, string>();
+
+            method.ParameterValueList.Add(new ACValue("AutoDetectTolerance", typeof(short?), null, Global.ParamOption.Optional));
+            paramTranslation.Add("AutoDetectTolerance", "en{'Auto detect tolerance [%]'}de{'Toleranz automatisch erkennen [%]'}");
+
+            var wrapper = new ACMethodWrapper(method, "en{'Fermentation starter'}de{'Anstellgut'}", typeof(PWBakeryFermentationStarter), paramTranslation, null);
+            ACMethod.RegisterVirtualMethod(typeof(PWBakeryFermentationStarter), ACStateConst.SMStarting, wrapper);
+            RegisterExecuteHandler(typeof(PWBakeryFermentationStarter), HandleExecuteACMethod_PWBakeryFermentationStarter);
+        }
+
+
+
         public PWBakeryFermentationStarter(gip.core.datamodel.ACClass acType, IACObject content, IACObject parentACObject, ACValueList parameter, string acIdentifier = "") : 
             base(acType, content, parentACObject, parameter, acIdentifier)
         {
@@ -23,6 +41,75 @@ namespace gipbakery.mes.processapplication
 
         public const string PN_FSTargetQuantity = "FSTargetQuantity";
         public const string MN_AckFermentationStarter = "AckFermentationStarter";
+
+
+        private ACMethod _MyConfiguration;
+        [ACPropertyInfo(9999)]
+        public ACMethod MyConfiguration
+        {
+            get
+            {
+                using (ACMonitor.Lock(_20015_LockValue))
+                {
+                    if (_MyConfiguration != null)
+                        return _MyConfiguration;
+                }
+
+                var myNewConfig = NewACMethodWithConfiguration();
+                using (ACMonitor.Lock(_20015_LockValue))
+                {
+                    _MyConfiguration = myNewConfig;
+                }
+                return myNewConfig;
+            }
+        }
+
+
+        public int? AutoDetectTolerance
+        {
+            get
+            {
+                var method = MyConfiguration;
+                if (method != null)
+                {
+                    var acValue = method.ParameterValueList.GetACValue("AutoDetectTolerance");
+                    if (acValue != null)
+                    {
+                        if (acValue.Value != null)
+                            return acValue.ParamAsInt32;
+                    }
+                }
+                return null;
+            }
+        }
+
+        public PWMethodVBBase ParentPWMethodVBBase
+        {
+            get
+            {
+                return ParentRootWFNode as PWMethodVBBase;
+            }
+        }
+
+        protected FacilityManager ACFacilityManager
+        {
+            get
+            {
+                if (ParentPWMethodVBBase == null)
+                    return null;
+                return ParentPWMethodVBBase.ACFacilityManager as FacilityManager;
+            }
+        }
+
+        public ACProdOrderManager ProdOrderManager
+        {
+            get
+            {
+                PWMethodProduction pwMethodProduction = ParentPWMethod<PWMethodProduction>();
+                return pwMethodProduction != null ? pwMethodProduction.ProdOrderManager : null;
+            }
+        }
+
 
         [ACPropertyBindingSource]
         public IACContainerTNet<double?> FSTargetQuantity
@@ -194,15 +281,318 @@ namespace gipbakery.mes.processapplication
                         return;
                     }
 
-                    var targetRelation = intermediateChildPos.ProdOrderPartslistPosRelation_TargetProdOrderPartslistPos.FirstOrDefault();
-                    using (ACMonitor.Lock(_20015_LockValue))
+
+                    var relations = intermediateChildPos.ProdOrderPartslistPosRelation_TargetProdOrderPartslistPos.ToArray();
+
+                    if (relations.Count() > 2)
                     {
-                        FSTargetQuantity.ValueT = targetRelation.TargetQuantityUOM;
+                        //TODO: error
+                        return;
                     }
-                    UnSubscribeToProjectWorkCycle();
+
+                    var prodRelation = relations.FirstOrDefault(c => c.SourceProdOrderPartslistPos.MaterialID == endBatchPos.BookingMaterial.MaterialID);
+
+                    PAMParkingspace sourceStore;
+                    PAMTank targetStore;
+
+                    FindSourceAndTargetStore(out sourceStore, out targetStore);
+
+                    if (sourceStore == null)
+                    {
+                        //todo error
+                    }
+
+                    if (targetStore == null)
+                    {
+                        //todo error
+                    }
+
+                    Facility sourceFacility, targetFacility;
+
+                    FindFacilityForSourceAndTargetStore(dbApp, sourceStore, targetStore, out sourceFacility, out targetFacility);
+
+                    RelocateFromTargetToSourceFacility(dbApp, sourceFacility, targetFacility);
+
+                    if (prodRelation == null)
+                    {
+                        //todo
+                        // if on source facility exists quant with material which is same like production material, error because prodRelation is null
+
+                        CurrentACState = ACStateEnum.SMCompleted;
+                        return;
+                    }
+
+
+                    if (AutoDetectTolerance != null)
+                    {
+                        double tolerance = prodRelation.TargetQuantityUOM * AutoDetectTolerance.Value / 100;
+                        double targetQuantity = prodRelation.TargetQuantityUOM - tolerance;
+
+                        TryCompleteFermentationStarter(dbApp, scale, targetQuantity, sourceFacility, prodRelation);
+                    }
+                    else
+                    {
+                        using (ACMonitor.Lock(_20015_LockValue))
+                        {
+                            FSTargetQuantity.ValueT = prodRelation.TargetQuantityUOM;
+                        }
+
+                        TryCompleteFermentationStarter(dbApp, scale, prodRelation.TargetQuantityUOM, sourceFacility, prodRelation);
+                    }
                 }
             }
         }
+
+        public virtual void FindSourceAndTargetStore(out PAMParkingspace source, out PAMTank target)
+        {
+            source = null;
+            target = null;
+
+            PAProcessModule module = ParentPWGroup.AccessedProcessModule;
+            if (module != null)
+            {
+                PAPoint pointIn = module.GetPoint(Const.PAPointMatIn1) as PAPoint;
+                PAPoint pointOut = module.GetPoint(Const.PAPointMatOut1) as PAPoint;
+
+                if (pointIn == null  || pointOut == null)
+                {
+                    //TODO: error
+                }
+
+                source = pointIn.ConnectionList.FirstOrDefault(c => c.SourceParentComponent is PAMParkingspace)?.SourceParentComponent as PAMParkingspace;
+                target = pointOut.ConnectionList.FirstOrDefault(c => c.TargetParentComponent is PAMTank)?.TargetParentComponent as PAMTank;
+            }
+        }
+
+        public void FindFacilityForSourceAndTargetStore(DatabaseApp dbApp, PAMParkingspace source, PAMTank target, out Facility sourceFacility, 
+                                                        out Facility targetFacility)
+        {
+            sourceFacility = null;
+            targetFacility = null;
+
+            if (source != null)
+                sourceFacility = dbApp.Facility.FirstOrDefault(c => c.VBiFacilityACClassID == source.ComponentClass.ACClassID);
+
+            Facility temp = target?.Facility?.ValueT?.ValueT;
+            if (temp != null)
+            {
+                targetFacility = temp.FromAppContext<Facility>(dbApp);
+            }
+        }
+
+        public virtual bool RelocateFromTargetToSourceFacility(DatabaseApp dbApp, Facility source, Facility target)
+        {
+            var quants = target.FacilityCharge_Facility.Where(c => !c.NotAvailable);
+            if (quants.Any())
+            {
+                if (quants.Count() > 1)
+                {
+                    //todo error
+                    return false;
+                }
+                else
+                {
+                    FacilityCharge quant = quants.FirstOrDefault();
+
+                    if (ACFacilityManager == null)
+                    {
+                        //TODO:Error;
+                        return false;
+                    }
+
+                    bool outwardEnabled = target.OutwardEnabled;
+
+                    if (!target.OutwardEnabled)
+                        target.OutwardEnabled = true;
+
+                    ACMethodBooking bookParamRelocationClone = ACFacilityManager.ACUrlACTypeSignature("!" + GlobalApp.FBT_Relocation_Facility_BulkMaterial, gip.core.datamodel.Database.GlobalDatabase) as ACMethodBooking; // Immer Globalen context um Deadlock zu vermeiden 
+                    var bookingParam = bookParamRelocationClone.Clone() as ACMethodBooking;
+
+                    bookingParam.InwardFacility = source;
+                    bookingParam.OutwardFacility = target;
+
+                    
+
+                    //bookingParam.InwardFacilityCharge = quant;
+                    bookingParam.OutwardFacilityCharge = quant;
+
+                    bookingParam.InwardQuantity = quant.AvailableQuantity;
+                    bookingParam.OutwardQuantity = quant.AvailableQuantity;
+
+                    //bookingParam.InwardMaterial = quant.Material;
+                    //bookingParam.OutwardMaterial = quant.Material;
+
+                    //bookingParam.InwardFacilityLot = quant.FacilityLot;
+                    bookingParam.OutwardFacilityLot = quant.FacilityLot;
+
+                    //bookingParam.InwardFacilityLocation = source;
+
+                    ACMethodEventArgs resultBooking = ACFacilityManager.BookFacility(bookingParam, dbApp);
+                    Msg msg;
+
+                    target.OutwardEnabled = outwardEnabled;
+
+                    if (resultBooking.ResultState == Global.ACMethodResultState.Failed || resultBooking.ResultState == Global.ACMethodResultState.Notpossible)
+                    {
+                        msg = new Msg(bookingParam.ValidMessage.InnerMessage, this, eMsgLevel.Error, PWClassName, "DoManualWeighingBooking(60)", 2045);
+                        ActivateProcessAlarm(msg, false);
+                        return false;
+                    }
+                    else
+                    {
+                        if (!bookingParam.ValidMessage.IsSucceded() || bookingParam.ValidMessage.HasWarnings())
+                        {
+                            //collectedMessages.AddDetailMessage(resultBooking.ValidMessage);
+                            msg = new Msg(bookingParam.ValidMessage.InnerMessage, this, eMsgLevel.Error, PWClassName, "DoManualWeighingBooking(70)", 2053);
+                            ActivateProcessAlarmWithLog(msg, false);
+                        }
+                    }
+
+                    msg = dbApp.ACSaveChanges();
+                }
+            }
+            return true;
+        }
+
+        public virtual bool BookFermentationStarter(DatabaseApp dbApp, ProdOrderPartslistPosRelation prodRelation, FacilityCharge facilityCharge, Facility facility)
+        {
+            try
+            {
+                MsgWithDetails collectedMessages = new MsgWithDetails();
+                Msg msg = null;
+
+                FacilityPreBooking facilityPreBooking = ProdOrderManager.NewOutwardFacilityPreBooking(this.ACFacilityManager, dbApp, prodRelation);
+                ACMethodBooking bookingParam = facilityPreBooking.ACMethodBooking as ACMethodBooking;
+                bookingParam.OutwardQuantity = (double)facilityCharge.AvailableQuantity;
+                bookingParam.OutwardFacility = facility;
+                bookingParam.OutwardFacilityCharge = facilityCharge;
+                //bookingParam.SetCompleted = true;
+                if (ParentPWGroup != null && ParentPWGroup.AccessedProcessModule != null)
+                    bookingParam.PropertyACUrl = ParentPWGroup.AccessedProcessModule.GetACUrl();
+                msg = dbApp.ACSaveChangesWithRetry();
+
+                if (msg != null)
+                {
+                    collectedMessages.AddDetailMessage(msg);
+                    ActivateProcessAlarmWithLog(new Msg(msg.Message, this, eMsgLevel.Error, PWClassName, "DoManualWeighingBooking(40)", 2020), false);
+                    return false;
+                }
+                else if (facilityPreBooking != null)
+                {
+                    bookingParam.IgnoreIsEnabled = true;
+                    ACMethodEventArgs resultBooking = ACFacilityManager.BookFacilityWithRetry(ref bookingParam, dbApp);
+                    if (resultBooking.ResultState == Global.ACMethodResultState.Failed || resultBooking.ResultState == Global.ACMethodResultState.Notpossible)
+                    {
+                        msg = new Msg(bookingParam.ValidMessage.InnerMessage, this, eMsgLevel.Error, PWClassName, "DoManualWeighingBooking(60)", 2045);
+                        ActivateProcessAlarm(msg, false);
+                        return false;
+                    }
+                    else
+                    {
+                        if (!bookingParam.ValidMessage.IsSucceded() || bookingParam.ValidMessage.HasWarnings())
+                        {
+                            collectedMessages.AddDetailMessage(resultBooking.ValidMessage);
+                            msg = new Msg(bookingParam.ValidMessage.InnerMessage, this, eMsgLevel.Error, PWClassName, "DoManualWeighingBooking(70)", 2053);
+                            ActivateProcessAlarmWithLog(msg, false);
+                            return false;
+                        }
+                        if (bookingParam.ValidMessage.IsSucceded())
+                        {
+                            facilityPreBooking.DeleteACObject(dbApp, true);
+                            prodRelation.IncreaseActualQuantityUOM(bookingParam.OutwardQuantity.Value);
+                            msg = dbApp.ACSaveChangesWithRetry();
+                            if (msg != null)
+                            {
+                                collectedMessages.AddDetailMessage(msg);
+                                msg = new Msg(msg.Message, this, eMsgLevel.Error, PWClassName, "DoManualWeighingBooking(80)", 2065);
+                                ActivateProcessAlarmWithLog(msg, false);
+                            }
+
+                            msg = dbApp.ACSaveChangesWithRetry();
+                            if (msg != null)
+                            {
+                                collectedMessages.AddDetailMessage(msg);
+                                msg = new Msg(msg.Message, this, eMsgLevel.Error, PWClassName, "DoManualWeighingBooking(90)", 2094);
+                                ActivateProcessAlarmWithLog(msg, false);
+                            }
+                            else
+                            {
+                                prodRelation.RecalcActualQuantityFast();
+                                if (dbApp.IsChanged)
+                                    dbApp.ACSaveChanges();
+                            }
+                        }
+                        else
+                            collectedMessages.AddDetailMessage(resultBooking.ValidMessage);
+                    }
+                }
+
+            }
+            catch (Exception e)
+            {
+                //TODO:error
+                return false;
+            }
+
+
+            return true;
+        }
+
+        public bool TryCompleteFermentationStarter(DatabaseApp dbApp, PAEScaleBase scale, double targetQuantity, Facility sourceFacility, 
+                                                   ProdOrderPartslistPosRelation prodRelation)
+        {
+            if (scale.ActualValue.ValueT >= targetQuantity)
+            {
+                Msg msg;
+
+                var availableQuants = sourceFacility.FacilityCharge_Facility.Where(c => c.MaterialID == prodRelation.SourceProdOrderPartslistPos.MaterialID);
+                if (availableQuants.Any())
+                {
+                    MDProdOrderPartslistPosState posState = DatabaseApp.s_cQry_GetMDProdOrderPosState(dbApp, MDProdOrderPartslistPosState.ProdOrderPartslistPosStates.Completed).FirstOrDefault();
+
+                    if (posState == null)
+                    {
+                        //TODO
+                        // Error50265: MDProdOrderPartslistPosState for Completed-State doesn't exist
+                        msg = new Msg(this, eMsgLevel.Error, PWClassName, "DoManualWeighingBooking(1)", 1702, "Error50265");
+                        ActivateProcessAlarmWithLog(msg, false);
+                        return false;
+                    }
+
+                    bool errorInBooking = false;
+
+                    foreach (FacilityCharge quant in availableQuants)
+                    {
+                        bool result = BookFermentationStarter(dbApp, prodRelation, quant, sourceFacility);
+                        if (!result && !errorInBooking)
+                        {
+                            errorInBooking = true;
+                        }
+                    }
+
+                    if (!errorInBooking)
+                    {
+                        prodRelation.MDProdOrderPartslistPosState = posState;
+                        msg = dbApp.ACSaveChanges();
+                        if (msg == null)
+                        {
+                            CurrentACState = ACStateEnum.SMCompleted;
+                        }
+                    }
+
+                }
+                else
+                {
+                    //wait for available quant in source facility
+                    return false;
+                }
+            }
+            else
+                return false;
+
+            return true;
+        }
+
 
         [ACMethodInfo("","",700)]
         public bool AckFermentationStarter(bool force)
@@ -232,5 +622,11 @@ namespace gipbakery.mes.processapplication
             }
            return false;
         }
+
+        private static bool HandleExecuteACMethod_PWBakeryFermentationStarter(out object result, IACComponent acComponent, string acMethodName, gip.core.datamodel.ACClassMethod acClassMethod, object[] acParameter)
+        {
+            return HandleExecuteACMethod_PWNodeProcessMethod(out result, acComponent, acMethodName, acClassMethod, acParameter);
+        }
+
     }
 }

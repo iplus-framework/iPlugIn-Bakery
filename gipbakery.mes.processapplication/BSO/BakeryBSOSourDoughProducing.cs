@@ -516,7 +516,7 @@ namespace gipbakery.mes.processapplication
             }
 
             ACChildInstanceInfo waterFunc = childInstances.FirstOrDefault(c => _PAFBakeryDosingWaterType.IsAssignableFrom(c.ACType.ValueT.ObjectType));
-            if (func != null)
+            if (waterFunc != null)
             {
                 ACComponent funcComp = processModule.ACUrlCommand(waterFunc.ACIdentifier) as ACComponent;
                 if (funcComp == null)
@@ -696,9 +696,11 @@ namespace gipbakery.mes.processapplication
                     return;
                 }
 
-                FermentationQuantityProp.PropertyChanged += FermentationQuantityProp_PropertyChanged;
-                HandleFermentationQunatity();
-
+                if (FermentationQuantityProp != null)
+                {
+                    FermentationQuantityProp.PropertyChanged += FermentationQuantityProp_PropertyChanged;
+                    HandleFermentationQunatity();
+                }
                 NextFermentationStageProp.PropertyChanged += NextFermentationStageProp_PropertyChanged;
 
                 StartTimeProp.PropertyChanged += StartTimeProp_PropertyChanged;
@@ -769,7 +771,7 @@ namespace gipbakery.mes.processapplication
         {
             if (FermentationQuantityProp.ValueT != null)
             {
-                MessageItem msgItem = MessagesList.FirstOrDefault(c => c.UserAckPWNode.ValueT == FermentationStarterRef.ValueT);
+                MessageItem msgItem = MessagesList.FirstOrDefault(c => c.UserAckPWNode != null && c.UserAckPWNode.ValueT == FermentationStarterRef.ValueT);
 
                 if (msgItem == null)
                 {
