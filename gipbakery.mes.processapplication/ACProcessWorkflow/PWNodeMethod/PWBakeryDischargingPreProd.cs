@@ -28,8 +28,6 @@ namespace gipbakery.mes.processapplication
             paramTranslation.Add("PrePostQOnDest", "en{'Pre posting quantity to destination at start'}de{'Vorbuchungsmenge auf Ziel bei Start'}");
             method.ParameterValueList.Add(new ACValue("NoPostingOnRelocation", typeof(bool), false, Global.ParamOption.Optional));
             paramTranslation.Add("NoPostingOnRelocation", "en{'No posting at relocation'}de{'Keine Buchung bei Umlagerung'}");
-            method.ParameterValueList.Add(new ACValue("NoPostingOnProd", typeof(bool), false, Global.ParamOption.Optional));
-            paramTranslation.Add("NoPostingOnProd", "en{'No posting at production'}de{'Keine Buchung bei Producion'}");
 
             var wrapper = new ACMethodWrapper(method, "en{'Configuration'}de{'Konfiguration'}", typeof(PWBakeryDischargingPreProd), paramTranslation, null);
             ACMethod.RegisterVirtualMethod(typeof(PWBakeryDischargingPreProd), ACStateConst.SMStarting, wrapper);
@@ -45,56 +43,72 @@ namespace gipbakery.mes.processapplication
 
         private bool _BookingProcessed = false;
 
-        protected bool NoPostingOnProd
+        //protected bool NoPostingOnProd
+        //{
+        //    get
+        //    {
+        //        var method = MyConfiguration;
+        //        if (method != null)
+        //        {
+        //            var acValue = method.ParameterValueList.GetACValue("NoPostingOnProd");
+        //            if (acValue != null)
+        //            {
+        //                return acValue.ParamAsBoolean;
+        //            }
+        //        }
+        //        return false;
+        //    }
+        //}
+
+        public override Msg DoInwardBooking(double actualQuantity, DatabaseApp dbApp, RouteItem dischargingDest, Picking picking, PickingPos pickingPos, ACEventArgs e, bool isDischargingEnd)
         {
-            get
+            if (NoPostingOnRelocation)
             {
-                var method = MyConfiguration;
-                if (method != null)
+                MDDelivPosLoadState loadToTruck = DatabaseApp.s_cQry_GetMDDelivPosLoadState(dbApp, MDDelivPosLoadState.DelivPosLoadStates.LoadToTruck).FirstOrDefault();
+                MDDelivPosState completed = DatabaseApp.s_cQry_GetMDDelivPosState(dbApp, MDDelivPosState.DelivPosStates.CompletelyAssigned).FirstOrDefault();
+
+                if (loadToTruck != null)
                 {
-                    var acValue = method.ParameterValueList.GetACValue("NoPostingOnProd");
-                    if (acValue != null)
-                    {
-                        return acValue.ParamAsBoolean;
-                    }
+                    pickingPos.MDDelivPosLoadState = loadToTruck;
+
+                    if (pickingPos.OutOrderPos != null)
+                        pickingPos.OutOrderPos.MDDelivPosState = completed;
+
+                    if (pickingPos.InOrderPos != null)
+                        pickingPos.InOrderPos.MDDelivPosState = completed;
+
+                    dbApp.ACSaveChanges();
                 }
-                return false;
             }
+            return base.DoInwardBooking(actualQuantity, dbApp, dischargingDest, picking, pickingPos, e, isDischargingEnd);
         }
 
-        public override Msg DoInwardBooking(double actualQuantity, DatabaseApp dbApp, RouteItem dischargingDest, Facility inwardFacility, ProdOrderPartslistPos currentBatchPos, ACEventArgs e, bool isDischargingEnd, bool blockQuant = false)
-        {
-            if (!NoPostingOnProd)
-                return base.DoInwardBooking(actualQuantity, dbApp, dischargingDest, inwardFacility, currentBatchPos, e, isDischargingEnd, blockQuant);
-            return null;
-        }
+        //public override StartDisResult CheckCachedModuleDestinations(ref ACComponent dischargeToModule, ref Msg msg)
+        //{
+        //    if (!NoPostingOnProd)
+        //    {
+        //        return base.CheckCachedModuleDestinations(ref dischargeToModule, ref msg);
+        //    }
+        //    else
+        //    {
+        //        using (Database db = new gip.core.datamodel.Database())
+        //        {
+        //            RoutingResult rResult = ACRoutingService.FindSuccessors(RoutingService, db, RoutingService != null && RoutingService.IsProxy,
+        //                                ParentPWGroup.AccessedProcessModule, PAProcessModule.SelRuleID_ProcessModule, RouteDirections.Forwards, new object[] { },
+        //                                (c, p, r) => c.ACKind == Global.ACKinds.TPAProcessModule,
+        //                                null,
+        //                                0, true, true, false, false);
 
-        public override StartDisResult CheckCachedModuleDestinations(ref ACComponent dischargeToModule, ref Msg msg)
-        {
-            if (!NoPostingOnProd)
-            {
-                return base.CheckCachedModuleDestinations(ref dischargeToModule, ref msg);
-            }
-            else
-            {
-                using (Database db = new gip.core.datamodel.Database())
-                {
-                    RoutingResult rResult = ACRoutingService.FindSuccessors(RoutingService, db, RoutingService != null && RoutingService.IsProxy,
-                                        ParentPWGroup.AccessedProcessModule, PAProcessModule.SelRuleID_ProcessModule, RouteDirections.Forwards, new object[] { },
-                                        (c, p, r) => c.ACKind == Global.ACKinds.TPAProcessModule,
-                                        null,
-                                        0, true, true, false, false);
+        //            if (rResult != null && rResult.Routes.Any())
+        //            {
+        //                dischargeToModule = rResult.Routes.FirstOrDefault()?.GetRouteTarget()?.TargetACComponent as ACComponent;
+        //            }
 
-                    if (rResult != null && rResult.Routes.Any())
-                    {
-                        dischargeToModule = rResult.Routes.FirstOrDefault()?.GetRouteTarget()?.TargetACComponent as ACComponent;
-                    }
-
-                }
+        //        }
                 
-                return StartDisResult.WaitForCallback;
-            }
-        }
+        //        return StartDisResult.WaitForCallback;
+        //    }
+        //}
 
         public override void SMIdle()
         {

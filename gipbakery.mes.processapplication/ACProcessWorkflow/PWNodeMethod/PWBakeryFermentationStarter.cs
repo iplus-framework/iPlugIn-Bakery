@@ -164,8 +164,9 @@ namespace gipbakery.mes.processapplication
 
             Msg msg = null;
 
-            PAFBakerySourDoughProducing sourDoughProducing = ParentPWGroup.AccessedProcessModule.FindChildComponents<PAFBakerySourDoughProducing>().FirstOrDefault();
-            if (sourDoughProducing == null)
+            PAFBakeryYeastProducing preProdFunction = ParentPWGroup.AccessedProcessModule.FindChildComponents<PAFBakeryYeastProducing>().FirstOrDefault();
+
+            if (preProdFunction == null)
             {
                 //TODO: add message
                 string error = "The process function PAFBakerySourDoughProducing is not installed on AcessedProcessModule";
@@ -174,7 +175,7 @@ namespace gipbakery.mes.processapplication
                 return;
             }
 
-            PAEScaleBase scale = sourDoughProducing.GetFermentationStarterScale();
+            PAEScaleBase scale = preProdFunction.GetFermentationStarterScale();
             if (scale == null)
             {
                 //TODO: add message
@@ -322,7 +323,7 @@ namespace gipbakery.mes.processapplication
                     sourceFacility = sourceFacility.FromAppContext<Facility>(dbApp);
                     targetFacility = targetFacility.FromAppContext<Facility>(dbApp);
 
-                    RelocateFromTargetToSourceFacility(dbApp, sourceFacility, targetFacility);
+                    RelocateFromTargetToSourceFacility(dbApp, sourceFacility, targetFacility, scale);
 
                     if (prodRelation == null)
                     {
@@ -333,6 +334,10 @@ namespace gipbakery.mes.processapplication
                         return;
                     }
 
+                    using (ACMonitor.Lock(_20015_LockValue))
+                    {
+                        FSTargetQuantity.ValueT = prodRelation.TargetQuantityUOM;
+                    }
 
                     if (AutoDetectTolerance != null)
                     {
@@ -343,11 +348,6 @@ namespace gipbakery.mes.processapplication
                     }
                     else
                     {
-                        using (ACMonitor.Lock(_20015_LockValue))
-                        {
-                            FSTargetQuantity.ValueT = prodRelation.TargetQuantityUOM;
-                        }
-
                         bool isUserAck = false;
                         using(ACMonitor.Lock(_20015_LockValue))
                         {
@@ -363,7 +363,7 @@ namespace gipbakery.mes.processapplication
             }
         }
 
-        public virtual bool RelocateFromTargetToSourceFacility(DatabaseApp dbApp, Facility source, Facility target)
+        public virtual bool RelocateFromTargetToSourceFacility(DatabaseApp dbApp, Facility source, Facility target, PAEScaleBase scale)
         {
             var quants = target.FacilityCharge_Facility.Where(c => !c.NotAvailable);
             if (quants.Any())
@@ -399,8 +399,8 @@ namespace gipbakery.mes.processapplication
                     //bookingParam.InwardFacilityCharge = quant;
                     bookingParam.OutwardFacilityCharge = quant;
 
-                    bookingParam.InwardQuantity = quant.AvailableQuantity;
-                    bookingParam.OutwardQuantity = quant.AvailableQuantity;
+                    bookingParam.InwardQuantity = scale.ActualValue.ValueT;
+                    bookingParam.OutwardQuantity = scale.ActualValue.ValueT;
 
                     //bookingParam.InwardMaterial = quant.Material;
                     //bookingParam.OutwardMaterial = quant.Material;

@@ -276,6 +276,9 @@ namespace gipbakery.mes.processapplication
 
             List<PWBakeryEndOnTime> endOnTimeNodes = FindChildComponents<PWBakeryEndOnTime>(1);
 
+            if (endOnTimeNodes == null || !endOnTimeNodes.Any())
+                return;
+
             int stages = endOnTimeNodes.Count;
 
             PWBakeryEndOnTime lastNode = endOnTimeNodes.FirstOrDefault(x => x.FindSuccessors<PWDischarging>(true, c => c is PWDischarging, d => d is PWDosing, 0).Any());
