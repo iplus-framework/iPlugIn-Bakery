@@ -25,6 +25,7 @@ namespace gipbakery.mes.processapplication
             _CleaningMode = new ACPropertyConfigValue<BakeryPreProdCleaningMode>(this, "CleaningMode", BakeryPreProdCleaningMode.OverBits);
             _ContinueProdACClassWF = new ACPropertyConfigValue<string>(this, "ContinueProdACClassWF", "");
             _PumpOverACClassWF = new ACPropertyConfigValue<string>(this, "PumpOverACClassWF", "");
+            _CleaningProdACClassWF = new ACPropertyConfigValue<string>(this, "CleaningProdACClassWF", "");
         }
 
         public override bool ACPostInit()
@@ -35,6 +36,7 @@ namespace gipbakery.mes.processapplication
             temp = TemperatureSensorACUrl;
             temp = ContinueProdACClassWF;
             temp = PumpOverACClassWF;
+            temp = CleaningProdACClassWF;
             BakeryPreProdCleaningMode mode = CleaningMode;
 
             FindStore();
@@ -53,6 +55,9 @@ namespace gipbakery.mes.processapplication
         public const string MN_Clean = "Clean";
         public const string MN_SwitchVirtualStoreOutwardEnabled = "SwitchVirtualStoreOutwardEnabled";
         public const string MN_GetPumpOverTargets = "GetPumpOverTargets";
+
+        public const string PN_CleaningMode = "CleaningMode";
+        public const string PN_CleaningProdACClassWF = "CleaningProdACClassWF";
 
         #endregion
 
@@ -117,6 +122,18 @@ namespace gipbakery.mes.processapplication
             {
                 _ContinueProdACClassWF.ValueT = value;
                 OnPropertyChanged("ContinueProdACClassWF");
+            }
+        }
+
+        private ACPropertyConfigValue<string> _CleaningProdACClassWF;
+        [ACPropertyConfig("en{'Cleaning planning ACClassWF'}de{'Reinigen Planung ACClassWF'}")]
+        public string CleaningProdACClassWF
+        {
+            get => _CleaningProdACClassWF.ValueT;
+            set
+            {
+                _CleaningProdACClassWF.ValueT = value;
+                OnPropertyChanged("CleaningProdACClassWF");
             }
         }
 
@@ -255,7 +272,6 @@ namespace gipbakery.mes.processapplication
             if (CleaningMode == BakeryPreProdCleaningMode.OverBits)
                 return CleanOverBits(program);
 
-            //TODO: clean over workflow
             return null;
 
         }

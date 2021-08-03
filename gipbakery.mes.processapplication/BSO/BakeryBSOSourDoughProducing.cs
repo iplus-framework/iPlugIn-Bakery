@@ -119,7 +119,7 @@ namespace gipbakery.mes.processapplication
 
         private ACRef<ACComponent> _PAFSourDoughProducing;
 
-        public override ACComponent PAFPreProducingFunction
+        public override ACComponent PAFPreProducing
         {
             get => _PAFSourDoughProducing?.ValueT;
         }
@@ -528,6 +528,23 @@ namespace gipbakery.mes.processapplication
             if (e.PropertyName == Const.ValueT)
             {
                 FlourDiffQuantity = FlourDiffQuantityProp.ValueT;
+            }
+        }
+
+        protected override void HandleDischargingACState()
+        {
+            string text = Root.Environment.TranslateText(this, "tbDosingReady");
+
+            if (DischargingACStateProp.ValueT == ACStateEnum.SMRunning)
+            {
+                IsDischargingActive = true;
+                StartDateTime = text;
+            }
+            else
+            {
+                IsDischargingActive = false;
+                if (StartDateTime == text)
+                    StartDateTime = null;
             }
         }
 

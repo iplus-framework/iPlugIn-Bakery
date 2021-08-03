@@ -116,7 +116,7 @@ namespace gipbakery.mes.processapplication
 
         private ACRef<ACComponent> _PAFYeastProducing;
 
-        public virtual ACComponent PAFPreProducingFunction
+        public virtual ACComponent PAFPreProducing
         {
             get => _PAFYeastProducing?.ValueT;
         }
@@ -365,7 +365,7 @@ namespace gipbakery.mes.processapplication
             }
         }
 
-        protected void HandleDischargingACState()
+        protected virtual void HandleDischargingACState()
         {
             string text = Root.Environment.TranslateText(this, "tbDosingReady");
 
@@ -381,7 +381,6 @@ namespace gipbakery.mes.processapplication
                 //    StartDateTime = null;
             }
         }
-
 
         protected void ProcessModuleOrderInfo_PropertyChanged(object sender, PropertyChangedEventArgs e)
         {
@@ -520,16 +519,93 @@ namespace gipbakery.mes.processapplication
         [ACMethodInfo("", "en{'Clean'}de{'Reinigen'}", 801, true)]
         public void Clean()
         {
-            Msg resultMsg = _PAFYeastProducing.ValueT.ExecuteMethod(PAFBakeryYeastProducing.MN_Clean, (short)11) as Msg;
-            if (resultMsg != null)
+            gip.core.datamodel.ACClass pafClass = PAFPreProducing?.ComponentClass.FromIPlusContext<gip.core.datamodel.ACClass>(DatabaseApp.ContextIPlus);
+            if (pafClass == null)
             {
-                Messages.Msg(resultMsg);
+                //error
+                return;
+            }
+
+            var config = pafClass.ACClassConfig_ACClass.FirstOrDefault(c => c.ConfigACUrl == PAFBakeryYeastProducing.PN_CleaningMode);
+            if (config == null)
+            {
+                //error
+                return;
+            }
+
+            BakeryPreProdCleaningMode? mode = config.Value as BakeryPreProdCleaningMode?;
+            if (mode == null)
+            {
+                //Error
+                return;
+            }
+
+            if (mode.Value == BakeryPreProdCleaningMode.OverBits)
+            {
+                Msg resultMsg = PAFPreProducing.ExecuteMethod(PAFBakeryYeastProducing.MN_Clean, (short)11) as Msg;
+                if (resultMsg != null)
+                {
+                    Messages.Msg(resultMsg);
+                }
+            }
+            else
+            {
+                bool managers = CheckAndInitManagers();
+                if (!managers)
+                    return;
+
+                ClearBookingData();
+
+                if (_VirtualStore == null || _VirtualStore.ValueT == null)
+                    return;
+
+                var outwardFacilityRef = _VirtualStore.ValueT.GetPropertyNet("Facility") as IACContainerTNet<ACRef<Facility>>;
+
+                if (outwardFacilityRef == null)
+                {
+                    //TODO: error
+                }
+
+                Facility outFacility = outwardFacilityRef.ValueT?.ValueT;
+
+                if (outFacility == null)
+                {
+                    //TODO: error
+                    return;
+                }
+
+                Facility outwardFacility = outFacility.FromAppContext<Facility>(DatabaseApp);
+
+                outwardFacility.OutwardEnabled = outFacility.OutwardEnabled;
+
+                CurrentBookParamRelocation.InwardFacility = outwardFacility;
+                CurrentBookParamRelocation.OutwardFacility = outwardFacility;
+                CurrentBookParamRelocation.InwardQuantity = 0.0001;
+                CurrentBookParamRelocation.OutwardQuantity = 0.0001;
+
+                config = pafClass.ACClassConfig_ACClass.FirstOrDefault(c => c.ConfigACUrl == PAFBakeryYeastProducing.PN_CleaningProdACClassWF);
+                if (config == null)
+                {
+                    //error
+                    return;
+                }
+
+                string configValue = config.Value as string;
+
+                var parts = configValue.Split(';');
+                string wfIdentifier = parts.FirstOrDefault().Trim();
+                string acUrl = parts.LastOrDefault().Trim();
+
+                var wfClass = DatabaseApp.ContextIPlus.ACClassWF.Where(c => c.ACClassMethod != null && c.ACClassMethod.ACIdentifier == wfIdentifier).ToArray().FirstOrDefault(c => c.ConfigACUrl == acUrl);
+                var wfMethod = wfClass?.ACClassMethod;
+
+                RunWorkflow(wfClass, wfMethod);
             }
         }
 
         public bool IsEnabledClean()
         {
-            return ProcessModuleOrderInfo?.ValueT == null && PAFPreProducingFunction != null;
+            return ProcessModuleOrderInfo?.ValueT == null && PAFPreProducing != null;
         }
 
         [ACMethodInfo("", "", 802, true)]
@@ -537,27 +613,15 @@ namespace gipbakery.mes.processapplication
         {
             if (IsEnabledStoreOutwardEnabledOn())
             {
-                PAFPreProducingFunction?.ExecuteMethod(PAFBakeryYeastProducing.MN_SwitchVirtualStoreOutwardEnabled);
+                PAFPreProducing?.ExecuteMethod(PAFBakeryYeastProducing.MN_SwitchVirtualStoreOutwardEnabled);
 
                 if (!IsDischargingActive)
                 {
-                    if (Messages.Question(this, "Question50065") == Global.MsgResult.Yes)
+                    if (Messages.Question(this, "Question50066") == Global.MsgResult.Yes)
                     {
-                        if (_ACFacilityManager == null)
-                        {
-                            _ACFacilityManager = FacilityManager.ACRefToServiceInstance(this);
-                            if (_ACFacilityManager == null)
-                            {
-                                //Error50432: The facility manager is null.
-                                Messages.Error(this, "Error50432");
-                                return;
-                            }
-                        }
-
-                        if (_ACPickingManager == null)
-                        {
-                            _ACPickingManager = ACRefToPickingManager();
-                        }
+                        bool managers = CheckAndInitManagers();
+                        if (!managers)
+                            return;
 
                         ClearBookingData();
 
@@ -589,7 +653,7 @@ namespace gipbakery.mes.processapplication
                         CurrentBookParamRelocation.OutwardQuantity = 0.0001;
 
                         //todo: lock or from another context
-                        var config = PAFPreProducingFunction?.ComponentClass.ACClassConfig_ACClass.FirstOrDefault(c => c.ConfigACUrl == "ContinueProdACClassWF");
+                        var config = PAFPreProducing?.ComponentClass.ACClassConfig_ACClass.FirstOrDefault(c => c.ConfigACUrl == "ContinueProdACClassWF");
                         if (config == null)
                             return;
 
@@ -610,7 +674,7 @@ namespace gipbakery.mes.processapplication
 
         public bool IsEnabledStoreOutwardEnabledOn()
         {
-            return PAFPreProducingFunction != null;
+            return PAFPreProducing != null;
         }
 
         [ACMethodInfo("", "", 802, true)]
@@ -623,7 +687,7 @@ namespace gipbakery.mes.processapplication
                     //The sourdough is ready for dosing. Do you want to finish the sourdough order? 
                     //Pressing the "No" key only removes the dosing availability and locks the storage container.
 
-                    var questionResult = Messages.Question(this, "Question50064");
+                    var questionResult = Messages.Question(this, "Question50067");
                     if (questionResult == Global.MsgResult.Yes && DischargingACStateProp != null)
                     {
                         DischargingACStateProp.ValueT = ACStateEnum.SMCompleted;
@@ -634,19 +698,19 @@ namespace gipbakery.mes.processapplication
                     }
                 }
 
-                PAFPreProducingFunction?.ExecuteMethod(PAFBakeryYeastProducing.MN_SwitchVirtualStoreOutwardEnabled);
+                PAFPreProducing?.ExecuteMethod(PAFBakeryYeastProducing.MN_SwitchVirtualStoreOutwardEnabled);
             }
         }
 
         public bool IsEnabledStoreOutwardEnabledOff()
         {
-            return PAFPreProducingFunction != null;
+            return PAFPreProducing != null;
         }
 
         [ACMethodInfo("", "en{'Pump over'}de{'Umpumpen'}", 802, true)]
         public void PumpOver()
         {
-            ACValueList targets = PAFPreProducingFunction?.ExecuteMethod(PAFBakeryYeastProducing.MN_GetPumpOverTargets) as ACValueList;
+            ACValueList targets = PAFPreProducing?.ExecuteMethod(PAFBakeryYeastProducing.MN_GetPumpOverTargets) as ACValueList;
 
             PumpTargets = targets;
 
@@ -656,21 +720,7 @@ namespace gipbakery.mes.processapplication
                 return;
             }
 
-            if (_ACFacilityManager == null)
-            {
-                _ACFacilityManager = FacilityManager.ACRefToServiceInstance(this);
-                if (_ACFacilityManager == null)
-                {
-                    //Error50432: The facility manager is null.
-                    Messages.Error(this, "Error50432");
-                    return;
-                }
-            }
-
-            if (_ACPickingManager == null)
-            {
-                _ACPickingManager = ACRefToPickingManager();
-            }
+            CheckAndInitManagers();
 
             ClearBookingData();
             ShowDialog(this, "PumpOverDialog");
@@ -678,7 +728,7 @@ namespace gipbakery.mes.processapplication
 
         public bool IsEnabledPumpOver()
         {
-            return PAFPreProducingFunction != null;
+            return PAFPreProducing != null;
         }
 
         [ACMethodInfo("", "en{'Pump over'}de{'Umpumpen'}", 803, true)]
@@ -725,7 +775,7 @@ namespace gipbakery.mes.processapplication
             CurrentBookParamRelocation.OutwardQuantity = PumpOverTargetQuantity;
 
             //todo: lock or from another context
-            var config = PAFPreProducingFunction?.ComponentClass.ACClassConfig_ACClass.FirstOrDefault(c => c.ConfigACUrl == "PumpOverACClassWF");
+            var config = PAFPreProducing?.ComponentClass.ACClassConfig_ACClass.FirstOrDefault(c => c.ConfigACUrl == "PumpOverACClassWF");
             if (config == null)
                 return;
 
@@ -748,7 +798,28 @@ namespace gipbakery.mes.processapplication
 
         public bool IsEnabledPumpOverStart()
         {
-            return PAFPreProducingFunction != null;
+            return PAFPreProducing != null;
+        }
+
+        public bool CheckAndInitManagers()
+        {
+            if (_ACFacilityManager == null)
+            {
+                _ACFacilityManager = FacilityManager.ACRefToServiceInstance(this);
+                if (_ACFacilityManager == null)
+                {
+                    //Error50432: The facility manager is null.
+                    Messages.Error(this, "Error50432");
+                    return false;
+                }
+            }
+
+            if (_ACPickingManager == null)
+            {
+                _ACPickingManager = ACRefToPickingManager();
+            }
+
+            return true;
         }
 
         public override Global.ControlModes OnGetControlModes(IVBContent vbControl)

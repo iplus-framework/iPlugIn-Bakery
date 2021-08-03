@@ -34,9 +34,9 @@ namespace gipbakery.mes.processapplication
             RegisterExecuteHandler(typeof(PWBakeryDischargingPreProd), HandleExecuteACMethod_PWBakeryDischargingPreProd);
         }
 
-        
 
-        public PWBakeryDischargingPreProd(gip.core.datamodel.ACClass acType, IACObject content, IACObject parentACObject, ACValueList parameter, string acIdentifier = "") : 
+
+        public PWBakeryDischargingPreProd(gip.core.datamodel.ACClass acType, IACObject content, IACObject parentACObject, ACValueList parameter, string acIdentifier = "") :
             base(acType, content, parentACObject, parameter, acIdentifier)
         {
         }
@@ -77,7 +77,7 @@ namespace gipbakery.mes.processapplication
                     if (pickingPos.InOrderPos != null)
                         pickingPos.InOrderPos.MDDelivPosState = completed;
 
-                    dbApp.ACSaveChanges();
+                    return dbApp.ACSaveChanges();
                 }
             }
             return base.DoInwardBooking(actualQuantity, dbApp, dischargingDest, picking, pickingPos, e, isDischargingEnd);
@@ -105,7 +105,7 @@ namespace gipbakery.mes.processapplication
         //            }
 
         //        }
-                
+
         //        return StartDisResult.WaitForCallback;
         //    }
         //}
@@ -297,9 +297,24 @@ namespace gipbakery.mes.processapplication
                                                     PickingPos pickingPos = pwMethod.CurrentPickingPos != null ? pwMethod.CurrentPickingPos.FromAppContext<PickingPos>(dbApp) : null;
                                                     if (picking != null)
                                                     {
+                                                        if (NoPostingOnRelocation)
+                                                        {
+                                                            if (pickingPos != null)
+                                                            {
+                                                                MDDelivPosLoadState loadToTruck = DatabaseApp.s_cQry_GetMDDelivPosLoadState(dbApp, MDDelivPosLoadState.DelivPosLoadStates.LoadToTruck).FirstOrDefault();
+                                                                if (loadToTruck != null)
+                                                                {
+                                                                    pickingPos.MDDelivPosLoadState = loadToTruck;
+                                                                    Msg msg = dbApp.ACSaveChanges();
+                                                                    //TODO alarm
+                                                                }
+                                                            }
+                                                        }
+
                                                         if (this.IsSimulationOn && actualQuantity <= 0.000001 && pickingPos != null)
                                                             actualQuantity = pickingPos.TargetQuantityUOM;
                                                         DoInwardBooking(actualQuantity, dbApp, routeItem, picking, pickingPos, e, true);
+
                                                     }
                                                 }
                                                 else if (pwMethod.CurrentFacilityBooking != null)
@@ -358,6 +373,27 @@ namespace gipbakery.mes.processapplication
                     }
                     else if (taskEntry.State == PointProcessingState.Deleted && CurrentACState != ACStateEnum.SMIdle)
                     {
+                        if (NoPostingOnRelocation)
+                        {
+                            using (DatabaseApp dbApp = new DatabaseApp())
+                            {
+                                var pwMethod = ParentPWMethod<PWMethodRelocation>();
+                                PickingPos pickingPos = pwMethod.CurrentPickingPos != null ? pwMethod.CurrentPickingPos.FromAppContext<PickingPos>(dbApp) : null;
+
+
+                                if (pickingPos != null)
+                                {
+                                    MDDelivPosLoadState loadToTruck = DatabaseApp.s_cQry_GetMDDelivPosLoadState(dbApp, MDDelivPosLoadState.DelivPosLoadStates.LoadToTruck).FirstOrDefault();
+                                    if (loadToTruck != null)
+                                    {
+                                        pickingPos.MDDelivPosLoadState = loadToTruck;
+                                        Msg msg = dbApp.ACSaveChanges();
+                                        //TODO alarm
+                                    }
+                                }
+                            }
+                        }
+
                         UnSubscribeToProjectWorkCycle();
                         _LastCallbackResult = e;
                         CurrentACState = ACStateEnum.SMCompleted;
