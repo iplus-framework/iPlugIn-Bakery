@@ -367,18 +367,13 @@ namespace gipbakery.mes.processapplication
 
         protected virtual void HandleDischargingACState()
         {
-            string text = Root.Environment.TranslateText(this, "tbDosingReady");
-
             if (DischargingACStateProp.ValueT == ACStateEnum.SMRunning)
             {
                 IsDischargingActive = true;
-                //StartDateTime = text;
             }
             else
             {
                 IsDischargingActive = false;
-                //if (StartDateTime == text)
-                //    StartDateTime = null;
             }
         }
 
@@ -576,7 +571,9 @@ namespace gipbakery.mes.processapplication
 
                 Facility outwardFacility = outFacility.FromAppContext<Facility>(DatabaseApp);
 
-                outwardFacility.OutwardEnabled = outFacility.OutwardEnabled;
+                bool outFacilityOutwardEnabled = outFacility.OutwardEnabled;
+
+                outwardFacility.OutwardEnabled = true;
 
                 CurrentBookParamRelocation.InwardFacility = outwardFacility;
                 CurrentBookParamRelocation.OutwardFacility = outwardFacility;
@@ -600,6 +597,8 @@ namespace gipbakery.mes.processapplication
                 var wfMethod = wfClass?.ACClassMethod;
 
                 RunWorkflow(wfClass, wfMethod);
+
+                outFacility.OutwardEnabled = outFacilityOutwardEnabled;
             }
         }
 
