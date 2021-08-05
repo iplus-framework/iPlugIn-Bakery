@@ -84,6 +84,8 @@
     <Compile Include="BSO\BakeryBSOTemperature.cs" />
     <Compile Include="BSO\BakeryBSOWorkCenterSelector.cs" />
     <Compile Include="BSO\BakeryBSOYeastProducing.cs" />
+    <Compile Include="Converter\BakeryFuncSerial2006Cleaning.cs" />
+    <Compile Include="Converter\BakeryFuncSerial2006Pumping.cs" />
     <Compile Include="Model\MaterialTempMeasureItem.cs" />
     <Compile Include="Model\TempMeasurementModeEnum.cs" />
     <Compile Include="PAModules\PABakeryTempService.cs" />
@@ -169,6 +171,9 @@
     </Reference>
     <Reference Include="gip.mes.processapplication">
       <HintPath>$(IPlusIncludeDir)\gip.mes.processapplication.dll</HintPath>
+    </Reference>
+    <Reference Include="gip.mes.processapplication">
+      <HintPath>$(IPlusIncludeDir)\gip2006.variobatch.processapplication.dll</HintPath>
     </Reference>
   </ItemGroup>
   <ItemGroup />
