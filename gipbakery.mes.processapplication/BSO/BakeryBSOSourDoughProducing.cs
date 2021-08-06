@@ -312,6 +312,8 @@ namespace gipbakery.mes.processapplication
             ProcessModuleOrderInfo = null;
 
             var childInstances = processModule.GetChildInstanceInfo(1, false);
+            if (childInstances == null || !childInstances.Any())
+                return;
 
             ACChildInstanceInfo func = childInstances.FirstOrDefault(c => _PAFBakerySourDoughProdType.IsAssignableFrom(c.ACType.ValueT.ObjectType));
             if (func != null)

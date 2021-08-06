@@ -291,6 +291,7 @@ namespace gipbakery.mes.processapplication
                 //todo error
                 return;
             }
+            lastNode.EndOnTime.ValueT = plannedEndTime;
 
             endOnTimeNodes.Remove(lastNode);
 
