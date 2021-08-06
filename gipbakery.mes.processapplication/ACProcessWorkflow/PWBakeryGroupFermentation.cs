@@ -271,7 +271,10 @@ namespace gipbakery.mes.processapplication
             if (plannedEndTime == DateTime.MinValue)
             {
                 //Error
-                //return;
+
+                Msg msg = new Msg(eMsgLevel.Error, "Scheduled end date is not configured!");
+                OnNewAlarmOccurred(ProcessAlarm, msg, true);
+                return;
             }
 
             List<PWBakeryEndOnTime> endOnTimeNodes = FindChildComponents<PWBakeryEndOnTime>(1);
@@ -290,9 +293,6 @@ namespace gipbakery.mes.processapplication
             }
 
             endOnTimeNodes.Remove(lastNode);
-
-            //TODO:write planned end date
-            lastNode.EndOnTime.ValueT = DateTime.Now.AddHours(5);
 
             ReadyForDosingTime.ValueT = lastNode.EndOnTime.ValueT;
 
