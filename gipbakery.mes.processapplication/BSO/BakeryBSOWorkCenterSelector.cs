@@ -36,9 +36,10 @@ namespace gipbakery.mes.processapplication
             set;
         }
 
-        protected override void OnInputComponentCreated(InputComponentItem item, ProdOrderPartslistPosRelation relation)
+        protected override void OnInputComponentCreated(InputComponentItem item, ProdOrderPartslistPosRelation relation, DatabaseApp dbApp)
         {
-            relation?.SourceProdOrderPartslistPos?.Material.MaterialConfig_Material.AutoRefresh();
+            using(ACMonitor.Lock(dbApp.QueryLock_1X000))
+                relation?.SourceProdOrderPartslistPos?.Material.MaterialConfig_Material.AutoRefresh();
 
             MaterialConfig temp = relation?.SourceProdOrderPartslistPos?.Material
                                            .MaterialConfig_Material.FirstOrDefault(c => c.VBiACClassID == CurrentProcessModule.ComponentClass.ACClassID
