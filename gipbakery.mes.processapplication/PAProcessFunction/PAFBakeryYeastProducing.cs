@@ -13,7 +13,7 @@ using System.Threading.Tasks;
 namespace gipbakery.mes.processapplication
 {
     [ACClassInfo(Const.PackName_VarioAutomation, "en{'Yeast'}de{'Hefe'}", Global.ACKinds.TPAProcessFunction, Global.ACStorableTypes.Required, false, true, "", BSOConfig = BakeryBSOYeastProducing.ClassName, SortIndex = 50)]
-    public class PAFBakeryYeastProducing : PAProcessFunction
+    public class PAFBakeryYeastProducing : PAFWorkCenterSelItemBase
     {
         #region c'tors
 

@@ -2,6 +2,7 @@
 using gip.core.datamodel;
 using gip.core.processapplication;
 using gip.mes.datamodel;
+using gip.mes.processapplication;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -11,7 +12,7 @@ using System.Threading.Tasks;
 namespace gipbakery.mes.processapplication
 {
     [ACClassInfo(Const.PackName_VarioAutomation, "en{'Cyclic temperature measuring'}de{'Zyklische Temperaturmessung'}", Global.ACKinds.TPAProcessFunction, Global.ACStorableTypes.Required, false, true, "", BSOConfig = BakeryBSOTemperature.ClassName, SortIndex = 200)]
-    public class PAFBakeryTempMeasuring : PAProcessFunction
+    public class PAFBakeryTempMeasuring : PAFWorkCenterSelItemBase
     {
         #region c'tors
 
@@ -202,10 +203,8 @@ namespace gipbakery.mes.processapplication
                 {
                     isActive = MaterialTemperatureMeasureItems.Any(c => c.IsTempMeasureNeeded);
                 }
-                if (isActive)
-                    CurrentACState = ACStateEnum.SMRunning;
-                else
-                    CurrentACState = ACStateEnum.SMIdle;
+
+                NeedWork.ValueT = isActive;
             }
         }
 
@@ -270,9 +269,9 @@ namespace gipbakery.mes.processapplication
                 NotificationsOff.ValueT = hintOff;
             }
 
-            if (hintOff && CurrentACState != ACStateEnum.SMIdle)
-                CurrentACState = ACStateEnum.SMIdle;
-            else if (!hintOff && CurrentACState != ACStateEnum.SMRunning)
+            if (hintOff && NeedWork.ValueT)
+                NeedWork.ValueT = false;
+            else if (!hintOff && !NeedWork.ValueT)
             {
                 bool isAnyCompTempMeasureNeeded = false;
                 using (ACMonitor.Lock(_20015_LockValue))
@@ -281,7 +280,7 @@ namespace gipbakery.mes.processapplication
                 }
 
                 if (isAnyCompTempMeasureNeeded)
-                    CurrentACState = ACStateEnum.SMRunning;
+                    NeedWork.ValueT = true;
             }
         }
 
@@ -389,10 +388,8 @@ namespace gipbakery.mes.processapplication
                     {
                         isActive = MaterialTemperatureMeasureItems.Any(c => c.IsTempMeasureNeeded);
                     }
-                    if (isActive)
-                        CurrentACState = ACStateEnum.SMRunning;
-                    else
-                        CurrentACState = ACStateEnum.SMIdle;
+
+                    NeedWork.ValueT = isActive;
                 }
             }
         }

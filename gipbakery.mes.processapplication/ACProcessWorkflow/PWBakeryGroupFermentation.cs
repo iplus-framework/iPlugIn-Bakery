@@ -61,9 +61,13 @@ namespace gipbakery.mes.processapplication
         public const string PN_StartNextFermentationStageTime = "StartNextFermentationStageTime";
         public const string PN_ReadyForDosingTime = "ReadyForDosingTime";
 
+        public new const string PWClassName = "PWBakeryGroupFermentation";
+
         #endregion
 
         #region Properties
+
+        private bool _IsTimeCalculated = false;
 
         #region Properties => TimeCalculation
 
@@ -171,11 +175,29 @@ namespace gipbakery.mes.processapplication
         {
             base.SMRunning();
 
-            FindVirtualStores();
+            bool calculated = false;
+            using(ACMonitor.Lock(_20015_LockValue))
+            {
+                calculated = _IsTimeCalculated;
+            }
 
-            CalculateDuration();
+            if (!calculated)
+            {
+                FindVirtualStores();
 
-            ActivatePreProdFunctions();
+                CalculateDuration();
+
+                ActivatePreProdFunctions();
+
+                using (ACMonitor.Lock(_20015_LockValue))
+                {
+                    _IsTimeCalculated = true;
+                }
+            }
+
+            SubscribeToProjectWorkCycle();
+
+            CheckIfStartIsTooLate();
         }
 
         public override void SMCompleted()
@@ -188,6 +210,11 @@ namespace gipbakery.mes.processapplication
         {
             base.SMIdle();
 
+            using(ACMonitor.Lock(_20015_LockValue))
+            {
+                _IsTimeCalculated = false;
+            }
+
             NextFermentationStage.ValueT = 0;
 
             DeactivatePreProdFunctions();
@@ -198,18 +225,10 @@ namespace gipbakery.mes.processapplication
             if (AccessedProcessModule == null)
                 return;
 
-            PAFBakerySourDoughProducing sour = AccessedProcessModule.FindChildComponents<PAFBakerySourDoughProducing>(c => c is PAFBakerySourDoughProducing).FirstOrDefault();
-            if (sour != null)
-            {
-                sour.ACState.ValueT = ACStateEnum.SMRunning;
-                return;
-            }
-
             PAFBakeryYeastProducing yeast = AccessedProcessModule.FindChildComponents<PAFBakeryYeastProducing>(c => c is PAFBakeryYeastProducing).FirstOrDefault();
             if (yeast != null)
             {
-                yeast.ACState.ValueT = ACStateEnum.SMRunning;
-                return;
+                yeast.NeedWork.ValueT = true;
             }
         }
 
@@ -218,21 +237,62 @@ namespace gipbakery.mes.processapplication
             if (AccessedProcessModule == null)
                 return;
 
-            PAFBakerySourDoughProducing sour = AccessedProcessModule.FindChildComponents<PAFBakerySourDoughProducing>(c => c is PAFBakerySourDoughProducing).FirstOrDefault();
-            if (sour != null)
-            {
-                sour.ACState.ValueT = ACStateEnum.SMCompleted;
-                return;
-            }
-
             PAFBakeryYeastProducing yeast = AccessedProcessModule.FindChildComponents<PAFBakeryYeastProducing>(c => c is PAFBakeryYeastProducing).FirstOrDefault();
             if (yeast != null)
             {
-                yeast.ACState.ValueT = ACStateEnum.SMCompleted;
-                return;
+                yeast.NeedWork.ValueT = false;
             }
         }
 
+        public void CheckIfStartIsTooLate()
+        {
+            if (StartNextFermentationStageTime.ValueT > DateTime.MinValue)
+            {
+                if (StartNextFermentationStageTime.ValueT < DateTime.Now)
+                {
+                    string orderInfo = AccessedProcessModule?.OrderInfo.ValueT;
+                    orderInfo = orderInfo.Replace("\r", "").Replace("\n", " ");
+
+                    //Warning50041: The production order {0} is planned to start at {1} but now is {2}. Please take a look.
+
+                    Msg msg = new Msg(this, eMsgLevel.Error, PWClassName, "CheckIfStartIsTooLate(10)", 256, "Warning50041", 
+                                      orderInfo, StartNextFermentationStageTime.ValueT, DateTime.Now);
+
+                    OnNewAlarmOccurred(ProcessAlarm, msg, true);
+                    if (IsAlarmActive(ProcessAlarm, msg.Message) == null)
+                    {
+                        Messages.LogMessageMsg(msg);
+                    }
+                    
+                    UnSubscribeToProjectWorkCycle();
+                }
+            }
+        }
+
+        public void RunCalcAgain()
+        {
+            using(ACMonitor.Lock(_20015_LockValue))
+            {
+                _IsTimeCalculated = false;
+            }
+            SubscribeToProjectWorkCycle();
+        }
+
+        [ACMethodInteractionClient("", "en{'Recalculate prod times'}de{'Neuberechnung der Produktionszeiten'}", 800, true)]
+        public static void RunCalculationAgain(IACComponent acComponent)
+        {
+            PWBakeryGroupFermentation group = acComponent as PWBakeryGroupFermentation;
+            if (group != null)
+                group.RunCalcAgain();
+        }
+
+        public static bool IsEnabledRunCalculationAgain(IACComponent acComponent)
+        {
+            if (acComponent == null)
+                return false;
+
+            return true;
+        }
 
         #region Methods => TimeCalculation
 
@@ -303,7 +363,10 @@ namespace gipbakery.mes.processapplication
             {
                 PWBakeryEndOnTime prevEndOnTime = FindPrevEndOnTimeNode(currentNode);
                 if (prevEndOnTime == null)
+                {
+                    StartNextFermentationStageTime.ValueT = currentNode.EndOnTime.ValueT;
                     break;
+                }
 
                 IEnumerable<ACComponent> parallelNodes = FindParallelNodes(prevEndOnTime);
 

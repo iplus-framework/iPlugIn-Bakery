@@ -194,6 +194,7 @@ namespace gipbakery.mes.processapplication
 
         public override void Activate(ACComponent selectedProcessModule)
         {
+            SubscribeToWFNodes();
             InitBSO(selectedProcessModule);
         }
 
