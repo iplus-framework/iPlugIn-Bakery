@@ -31,30 +31,34 @@ namespace gipbakery.mes.processapplication
                 {
                     PartslistPos partslistPos = rel.SourceProdOrderPartslistPos.BasedOnPartslistPos;
 
-                    if(IsTempMeasurementConfigured(partslistPos))
+                    bool isTempMeasurementConfigured = IsTempMeasurementConfigured(partslistPos);
+
+                    if (isTempMeasurementConfigured)
                     {
-                        InsertOrModifyConfig(partslistPos.Material.MaterialConfig_Material, dbApp, partslistPos.Material, partslistPos.PartslistID);
+                        InsertOrModifyConfig(partslistPos.Material.MaterialConfig_Material, dbApp, partslistPos.Material, partslistPos.PartslistID, isTempMeasurementConfigured);
                         anyConfig = true;
                         continue;
                     }
-                    
-                    if (IsTempMeasurementConfigured(partslistPos?.Material))
+
+                    isTempMeasurementConfigured = IsTempMeasurementConfigured(partslistPos?.Material);
+
+                    if (isTempMeasurementConfigured)
                     {
-                        InsertOrModifyConfig(partslistPos.Material.MaterialConfig_Material, dbApp, partslistPos.Material, null);
+                        InsertOrModifyConfig(partslistPos.Material.MaterialConfig_Material, dbApp, partslistPos.Material, null, isTempMeasurementConfigured);
                         anyConfig = true;
                         continue;
                     }
 
                     if (IsTemperatureConfigured(partslistPos))
                     {
-                        InsertOrModifyConfig(partslistPos.Material.MaterialConfig_Material, dbApp, partslistPos.Material, partslistPos.PartslistID);
+                        InsertOrModifyConfig(partslistPos.Material.MaterialConfig_Material, dbApp, partslistPos.Material, partslistPos.PartslistID, isTempMeasurementConfigured);
                         anyConfig = true;
                         continue;
                     }
 
                     if (IsTemperatureConfigured(partslistPos?.Material))
                     {
-                        InsertOrModifyConfig(partslistPos.Material.MaterialConfig_Material, dbApp, partslistPos.Material, null);
+                        InsertOrModifyConfig(partslistPos.Material.MaterialConfig_Material, dbApp, partslistPos.Material, null, isTempMeasurementConfigured);
                         anyConfig = true;
                     }
                 }
@@ -104,7 +108,7 @@ namespace gipbakery.mes.processapplication
             return false;
         }
 
-        private void InsertOrModifyConfig(EntityCollection<MaterialConfig> materialConfigs, DatabaseApp dbApp, Material material, Guid? partslistPosID)
+        private void InsertOrModifyConfig(EntityCollection<MaterialConfig> materialConfigs, DatabaseApp dbApp, Material material, Guid? partslistPosID, bool isTempMeasurement)
         {
             Guid? processModuleID = ParentPWGroup?.AccessedProcessModule?.ComponentClass.ACClassID;
 
@@ -129,7 +133,7 @@ namespace gipbakery.mes.processapplication
                 return;
             }
 
-            if (materialConfig.Expression != TempMeasurementModeEnum.On.ToString())
+            if (isTempMeasurement && materialConfig.Expression != TempMeasurementModeEnum.On.ToString())
                 materialConfig.Expression = TempMeasurementModeEnum.On.ToString();
 
             if (!partslistPosID.HasValue && !string.IsNullOrEmpty(materialConfig.Comment))

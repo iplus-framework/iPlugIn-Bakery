@@ -46,7 +46,8 @@ namespace gipbakery.mes.processapplication
                     }
                 }
             }
-            else
+            
+            if (MeasurePeriod == null)
             {
                 var prop = materialConfig.Material.ACProperties.GetOrCreateACPropertyExtByName(PAFBakeryTempMeasuring.PN_CyclicMeasurement, false);
                 if (prop != null)

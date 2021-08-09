@@ -252,6 +252,9 @@ namespace gipbakery.mes.processapplication
             {
                 MaterialTemperatureMeasureItems.Remove(measureItem);
                 ChangedTemperatureMeasureItems.ValueT = changedItems;
+
+                if (!MaterialTemperatureMeasureItems.Any())
+                    NeedWork.ValueT = false;
             }
         }
 
