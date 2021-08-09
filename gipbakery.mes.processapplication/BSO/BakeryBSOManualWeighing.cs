@@ -26,6 +26,7 @@ namespace gipbakery.mes.processapplication
 
         private Type _BakeryTempCalcType = typeof(PWBakeryTempCalc);
         private Type _BakeryRecvPointType = typeof(BakeryReceivingPoint);
+        private Type _BakeryAckFlourDischarge = typeof(PWBakeryFlourDischargingAck);
 
         [ACPropertyInfo(9999)]
         public ACRef<IACComponentPWNode> BakeryTempCalculator
@@ -57,15 +58,15 @@ namespace gipbakery.mes.processapplication
 
         private IACContainerTNet<bool> IsCoverUpDown;
 
-        private bool _IsCoverUpDownVisible;
+        private CoverFlourButtonEnum _CoverFlourBtnMode;
         [ACPropertyInfo(9999)]
-        public bool IsCoverUpDownVisible
+        public CoverFlourButtonEnum CoverFlourBtnMode
         {
-            get => _IsCoverUpDownVisible;
+            get => _CoverFlourBtnMode;
             set
             {
-                _IsCoverUpDownVisible = value;
-                OnPropertyChanged("IsCoverUpDownVisible");
+                _CoverFlourBtnMode = value;
+                OnPropertyChanged("CoverFlourBtnMode");
             }
         }
 
@@ -199,9 +200,16 @@ namespace gipbakery.mes.processapplication
             ResetTemperatureDialogParam();
             base.Activate(selectedProcessModule);
 
-            IsCoverUpDownVisible = false;
+            CoverFlourBtnMode = CoverFlourButtonEnum.None;
 
-            if (_BakeryRecvPointType.IsAssignableFrom(selectedProcessModule.ComponentClass.ObjectType))
+            ACClass recvPointClass = null;
+
+            using(ACMonitor.Lock(gip.core.datamodel.Database.GlobalDatabase.QueryLock_1X000))
+            {
+                recvPointClass = selectedProcessModule?.ComponentClass.FromIPlusContext<ACClass>(Database.ContextIPlus);
+            }
+
+            if (recvPointClass != null && _BakeryRecvPointType.IsAssignableFrom(recvPointClass.ObjectType))
             {
                 var isCoverUpDown = selectedProcessModule.GetPropertyNet("IsCoverDown") as IACContainerTNet<bool>;
                 if (isCoverUpDown != null)
@@ -209,8 +217,26 @@ namespace gipbakery.mes.processapplication
                     bool? isBounded = selectedProcessModule.ExecuteMethod("IsCoverDownPropertyBounded") as bool?;
                     if (isBounded.HasValue && isBounded.Value)
                     {
+                        bool cover = false;
+
+                        var config = recvPointClass.ACClassConfig_ACClass.FirstOrDefault(c => c.ConfigACUrl == "WithCover");
+                        if (config != null)
+                        {
+                            bool? val = config.Value as bool?;
+                            if (val.HasValue)
+                                cover = val.Value;
+                        }
+                        else
+                        {
+                            Messages.Error(this, "Can not find the configuration property WithCover on a receiving point!");
+                        }
+
+                        if (cover)
+                            CoverFlourBtnMode = CoverFlourButtonEnum.CoverUpDownVisible;
+                        else
+                            CoverFlourBtnMode = CoverFlourButtonEnum.FlourDischargeVisible;
+
                         IsCoverUpDown = isCoverUpDown;
-                        IsCoverUpDownVisible = true;
                     }
                 }
             }
@@ -369,13 +395,25 @@ namespace gipbakery.mes.processapplication
         {
             if (IsEnabledRecvPointCoverUpDown())
             {
-                IsCoverUpDown.ValueT = !IsCoverUpDown.ValueT;
+                if (CoverFlourBtnMode == CoverFlourButtonEnum.CoverUpDownVisible)
+                {
+                    IsCoverUpDown.ValueT = !IsCoverUpDown.ValueT;
+                }
+                else if (CoverFlourBtnMode == CoverFlourButtonEnum.FlourDischargeVisible)
+                {
+                    IsCoverUpDown.ValueT = true;
+                    
+                    //MessageItem msgItem = MessagesList.FirstOrDefault(c => c.UserAckPWNodeType != null && _BakeryAckFlourDischarge.IsAssignableFrom(c.UserAckPWNodeType));
+                    //if (msgItem)
+                    
+                }
+
             }
         }
 
         public bool IsEnabledRecvPointCoverUpDown()
         {
-            return IsCoverUpDown != null && IsCoverUpDownVisible;
+            return IsCoverUpDown != null && CoverFlourBtnMode > CoverFlourButtonEnum.None;
         }
 
         #region Methods => Temperature dialog
@@ -633,5 +671,12 @@ namespace gipbakery.mes.processapplication
         }
 
         #endregion
+    }
+
+    public enum CoverFlourButtonEnum : short
+    {
+        None = 0,
+        CoverUpDownVisible = 10,
+        FlourDischargeVisible = 20
     }
 }

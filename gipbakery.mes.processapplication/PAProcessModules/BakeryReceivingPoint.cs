@@ -32,6 +32,7 @@ namespace gipbakery.mes.processapplication
             _PAPointMatIn6 = new PAPoint(this, "PAPointMatIn6");
 
             _RecvPointReadyScaleACUrl = new ACPropertyConfigValue<string>(this, "RecvPointReadyScaleACUrl", "");
+            _WithCover = new ACPropertyConfigValue<bool>(this, "WithCover", false);
         }
 
         public override bool ACInit(Global.ACStartTypes startChildMode = Global.ACStartTypes.Automatic)
@@ -44,6 +45,7 @@ namespace gipbakery.mes.processapplication
         public override bool ACPostInit()
         {
             var temp = RecvPointReadyScaleACUrl;
+            bool temp1 = WithCover;
             return base.ACPostInit();
         }
 
@@ -67,6 +69,18 @@ namespace gipbakery.mes.processapplication
             }
         }
 
+        private ACPropertyConfigValue<bool> _WithCover;
+        [ACPropertyConfig("en{'Receiving point with cover'}de{'Abnahmestelle mit Abdeckung'}")]
+        public bool WithCover
+        {
+            get => _WithCover.ValueT;
+            set
+            {
+                _WithCover.ValueT = value;
+                OnPropertyChanged("WithCover");
+            }
+        }
+
         [ACPropertyBindingSource(IsPersistable = true)]
         public IACContainerTNet<double> DoughCorrTemp
         {
@@ -74,7 +88,7 @@ namespace gipbakery.mes.processapplication
             set;
         }
 
-        [ACPropertyBindingTarget(600, "", "en{'Receiving point cover down'}de{'Empfangsstellenabdeckung unten'}", "", true)]
+        [ACPropertyBindingTarget(600, "", "en{'Receiving point cover down / Flour discharge'}de{'Empfangsstellenabdeckung unten / Mehl Ablassen'}", "", true)]
         public IACContainerTNet<bool> IsCoverDown
         {
             get;
