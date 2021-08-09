@@ -294,11 +294,11 @@ namespace gipbakery.mes.processapplication
                         {
                             //Error50424: The dosing function for {0} can not be found at {1}.
                             Msg msg = new Msg(this, eMsgLevel.Error, ClassName, "InitializeWaterSensor(20)", 285, "Error50424", wType.ToString(), cacheItem.Key.ComponentClass.ACUrlComponent);
-                            if (IsAlarmActive(ServiceAlarm, msg.Message) == null)
-                            {
-                                OnNewAlarmOccurred(ServiceAlarm, msg);
+                            //if (IsAlarmActive(ServiceAlarm, msg.Message) == null)
+                            //{
+                                //OnNewAlarmOccurred(ServiceAlarm, msg);
                                 Root.Messages.LogMessageMsg(msg);
-                            }
+                            //}
                         }
                         else
                         {
