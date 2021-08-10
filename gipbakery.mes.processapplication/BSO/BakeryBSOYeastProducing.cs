@@ -65,6 +65,45 @@ namespace gipbakery.mes.processapplication
         private Type _PAFBakeryYeastProdType = typeof(PAFBakeryYeastProducing);
         protected Type _PAFDischargingType = typeof(PAFDischarging);
 
+        #region Properties => VirtualSourceStoreInfo
+
+        public Guid? VirtualSourceStoreID
+        {
+            get;
+            set;
+        }
+
+        public Facility VirtualSourceFacility
+        {
+            get;
+            set;
+        }
+
+        private FacilityCharge _SelectedSourceFC;
+        [ACPropertySelected(9999, "SourceFC")]
+        public FacilityCharge SelectedSourceFC
+        {
+            get => _SelectedSourceFC;
+            set
+            {
+                _SelectedSourceFC = value;
+                OnPropertyChanged("SelectedSourceFC");
+            }
+        }
+
+        public List<FacilityCharge> _SourceFCList;
+        [ACPropertyList(9999, "SourceFC")]
+        public List<FacilityCharge> SourceFCList
+        {
+            get => _SourceFCList;
+            set
+            {
+                _SourceFCList = value;
+                OnPropertyChanged("SourceFCList");
+            }
+        }
+
+        #endregion
 
         private string _ReadyForDosing;
         [ACPropertyInfo(806, "", "en{'Ready for dosing'}de{'Dosierbereitschaft'}")]
@@ -155,6 +194,8 @@ namespace gipbakery.mes.processapplication
             }
         }
 
+        public IACContainerTNet<bool> RefreshParkingSpace;
+
         public IACContainerTNet<string> ProcessModuleOrderInfo;
 
         protected ACRef<IACComponentPWGroup> PWGroupFermentation
@@ -234,6 +275,12 @@ namespace gipbakery.mes.processapplication
             {
                 ProcessModuleOrderInfo.PropertyChanged -= ProcessModuleOrderInfo_PropertyChanged;
                 ProcessModuleOrderInfo = null;
+            }
+
+            if (RefreshParkingSpace != null)
+            {
+                RefreshParkingSpace.PropertyChanged -= RefreshParkingSpace_PropertyChanged;
+                RefreshParkingSpace = null;
             }
 
             if (_RoutingService != null)
@@ -357,6 +404,53 @@ namespace gipbakery.mes.processapplication
             ProcessModuleOrderInfo.PropertyChanged += ProcessModuleOrderInfo_PropertyChanged;
             string orderInfo = ProcessModuleOrderInfo.ValueT;
             ParentBSOWCS.ApplicationQueue.Add(() => HandleOrderInfoPropChanged(orderInfo));
+
+            VirtualSourceStoreID = _PAFYeastProducing.ValueT.ExecuteMethod(PAFBakeryYeastProducing.MN_GetSourceVirtualStoreID) as Guid?;
+
+            if (VirtualSourceStoreID.HasValue)
+            {
+                VirtualSourceFacility = DatabaseApp.Facility.FirstOrDefault(c => c.VBiFacilityACClassID == VirtualSourceStoreID);
+
+                if (VirtualSourceFacility == null)
+                {
+                    //TODO:error
+                    return;
+                }
+
+                RefreshVirtualSourceStore();
+
+                gip.core.datamodel.ACClass module = VirtualSourceFacility.GetFacilityACClass(DatabaseApp.ContextIPlus);
+
+                if (module != null)
+                {
+                    var component = Root.ACUrlCommand(module.GetACUrlComponent()) as ACComponent;
+                    if (component != null)
+                    {
+                        RefreshParkingSpace = component.GetPropertyNet("RefreshParkingSpace") as IACContainerTNet<bool>;
+                        if (RefreshParkingSpace != null)
+                        {
+                            RefreshParkingSpace.PropertyChanged += RefreshParkingSpace_PropertyChanged;
+                        }
+                    }
+                }
+            }
+        }
+
+        private void RefreshParkingSpace_PropertyChanged(object sender, PropertyChangedEventArgs e)
+        {
+            if (e.PropertyName == Const.ValueT)
+            {
+                ParentBSOWCS.ApplicationQueue.Add(() => RefreshVirtualSourceStore());
+            }
+        }
+
+        protected void RefreshVirtualSourceStore()
+        {
+            if (VirtualSourceFacility == null)
+                return;
+
+            VirtualSourceFacility.FacilityCharge_Facility.AutoRefresh();
+            SourceFCList = VirtualSourceFacility.FacilityCharge_Facility.Where(c => !c.NotAvailable).ToList();
         }
 
         protected void DischargingACStateProp_PropertyChanged(object sender, PropertyChangedEventArgs e)

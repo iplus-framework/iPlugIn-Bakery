@@ -39,14 +39,18 @@ namespace gipbakery.mes.processapplication
             temp = CleaningProdACClassWF;
             BakeryPreProdCleaningMode mode = CleaningMode;
 
-            FindStore();
-
             return result;
+        }
+
+        public override void SMIdle()
+        {
+            base.SMIdle();
+            FindStores();
         }
 
         public override bool ACDeInit(bool deleteACClassTask = false)
         {
-            VirtualStore = null;
+            VirtualTargetStore = null;
             return base.ACDeInit(deleteACClassTask);
         }
 
@@ -55,6 +59,7 @@ namespace gipbakery.mes.processapplication
         public const string MN_Clean = "Clean";
         public const string MN_SwitchVirtualStoreOutwardEnabled = "SwitchVirtualStoreOutwardEnabled";
         public const string MN_GetPumpOverTargets = "GetPumpOverTargets";
+        public const string MN_GetSourceVirtualStoreID = "GetSourceVirtualStoreID";
 
         public const string PN_CleaningMode = "CleaningMode";
         public const string PN_CleaningProdACClassWF = "CleaningProdACClassWF";
@@ -140,8 +145,13 @@ namespace gipbakery.mes.processapplication
 
         #endregion
 
+        public PAMParkingspace VirtualSourceStore
+        {
+            get;
+            set;
+        }
 
-        public PAMSilo VirtualStore
+        public PAMSilo VirtualTargetStore
         {
             get;
             set;
@@ -189,55 +199,67 @@ namespace gipbakery.mes.processapplication
 
 
         //TODO: get store from PWBakeryGroupFermentation
-        public void FindStore()
+        public void FindStores()
         {
-            using (Database db = new gip.core.datamodel.Database())
+            PAMParkingspace source;
+            PAMTank target;
+
+            FindVirtualStores(ParentACComponent as PAProcessModule, out source, out target);
+
+            VirtualSourceStore = source;
+            VirtualTargetStore = target;
+
+            if (VirtualSourceStore == null)
             {
-                RoutingResult rr = ACRoutingService.FindSuccessors(RoutingService, db, false, this.ParentACComponent.ComponentClass, PAMSilo.SelRuleID_Silo, RouteDirections.Forwards,
-                                                                   null, null, null, 1, true, true);
+                //TODO:error
+            }
 
-                if (rr == null)
-                {
-                    return;
-                }
-
-                if (rr.Message != null && rr.Message.MessageLevel > eMsgLevel.Info)
-                {
-                    //error
-                    return;
-                }
-
-                if (!rr.Routes.Any())
-                {
-
-                }
-
-                RouteItem rItem = rr.Routes.FirstOrDefault().GetRouteTarget();
-
-                VirtualStore = rItem?.TargetACComponent as PAMSilo;
-
-                if (VirtualStore == null)
-                {
-                    //todo error
-                }
+            if (VirtualTargetStore == null)
+            {
+                //TODO:error
             }
         }
 
+        [ACMethodInfo("","",9999)]
+        public Guid? GetSourceVirtualStoreID()
+        {
+            return VirtualSourceStore?.ComponentClass.ACClassID;
+        }
+
+        public static void FindVirtualStores(PAProcessModule module, out PAMParkingspace source, out PAMTank target)
+        {
+            source = null;
+            target = null;
+
+            if (module != null)
+            {
+                PAPoint pointIn = module.GetPoint(Const.PAPointMatIn1) as PAPoint;
+                PAPoint pointOut = module.GetPoint(Const.PAPointMatOut1) as PAPoint;
+
+                if (pointIn == null || pointOut == null)
+                {
+                    return;
+                }
+
+                source = pointIn.ConnectionList.FirstOrDefault(c => c.SourceParentComponent is PAMParkingspace)?.SourceParentComponent as PAMParkingspace;
+                target = pointOut.ConnectionList.FirstOrDefault(c => c.TargetParentComponent is PAMTank)?.TargetParentComponent as PAMTank;
+            }
+        }
 
 
         [ACMethodInfo("", "", 800)]
         public string GetVirtualStoreACUrl()
         {
-            return VirtualStore?.ACUrl;
+            return VirtualTargetStore?.ACUrl;
         }
 
         [ACMethodInfo("", "", 800)]
         public void SwitchVirtualStoreOutwardEnabled()
         {
-            if (VirtualStore == null)
+            if (VirtualTargetStore == null)
                 return;
 
-            Facility facility = VirtualStore.Facility?.ValueT?.ValueT;
+            Facility facility = VirtualTargetStore.Facility?.ValueT?.ValueT;
 
             if (facility == null)
                 return;
@@ -254,9 +276,6 @@ namespace gipbakery.mes.processapplication
                 }
             }
         }
-
-
-
 
 
 

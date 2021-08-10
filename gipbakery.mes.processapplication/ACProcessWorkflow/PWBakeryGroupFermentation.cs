@@ -561,19 +561,11 @@ namespace gipbakery.mes.processapplication
             Msg msg = null;
 
             PAProcessModule module = AccessedProcessModule;
-            if (module != null)
+            PAFBakeryYeastProducing.FindVirtualStores(module, out source, out target);
+
+            if (source == null || target == null)
             {
-                PAPoint pointIn = module.GetPoint(Const.PAPointMatIn1) as PAPoint;
-                PAPoint pointOut = module.GetPoint(Const.PAPointMatOut1) as PAPoint;
-
-                if (pointIn == null || pointOut == null)
-                {
-                    //TODO: error
-                    return msg;
-                }
-
-                source = pointIn.ConnectionList.FirstOrDefault(c => c.SourceParentComponent is PAMParkingspace)?.SourceParentComponent as PAMParkingspace;
-                target = pointOut.ConnectionList.FirstOrDefault(c => c.TargetParentComponent is PAMTank)?.TargetParentComponent as PAMTank;
+                //todo error
             }
 
             return msg;
