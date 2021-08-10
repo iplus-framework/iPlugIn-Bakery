@@ -29,6 +29,9 @@ namespace gipbakery.mes.processapplication
             method.ParameterValueList.Add(new ACValue("NoPostingOnRelocation", typeof(bool), false, Global.ParamOption.Optional));
             paramTranslation.Add("NoPostingOnRelocation", "en{'No posting at relocation'}de{'Keine Buchung bei Umlagerung'}");
 
+            method.ParameterValueList.Add(new ACValue("UseScaleWeightOnPost", typeof(bool), false, Global.ParamOption.Optional));
+            paramTranslation.Add("UseScaleWeightOnPost", "en{'Use scale gross weight on posting'}de{'Waagenbruttogewicht bei der Buchung verwenden'}");
+
             var wrapper = new ACMethodWrapper(method, "en{'Configuration'}de{'Konfiguration'}", typeof(PWBakeryDischargingPreProd), paramTranslation, null);
             ACMethod.RegisterVirtualMethod(typeof(PWBakeryDischargingPreProd), ACStateConst.SMStarting, wrapper);
             RegisterExecuteHandler(typeof(PWBakeryDischargingPreProd), HandleExecuteACMethod_PWBakeryDischargingPreProd);
@@ -43,22 +46,20 @@ namespace gipbakery.mes.processapplication
 
         private bool _BookingProcessed = false;
 
-        //protected bool NoPostingOnProd
-        //{
-        //    get
-        //    {
-        //        var method = MyConfiguration;
-        //        if (method != null)
-        //        {
-        //            var acValue = method.ParameterValueList.GetACValue("NoPostingOnProd");
-        //            if (acValue != null)
-        //            {
-        //                return acValue.ParamAsBoolean;
-        //            }
-        //        }
-        //        return false;
-        //    }
-        //}
+        public bool UseScaleWeightOnPost
+        {
+            get
+            {
+                var method = MyConfiguration;
+                if (method != null)
+                {
+                    var acValue = method.ParameterValueList.GetACValue("UseScaleWeightOnPost");
+                    if (acValue != null)
+                        return acValue.ParamAsBoolean;
+                }
+                return false;
+            }
+        }
 
         public override Msg DoInwardBooking(double actualQuantity, DatabaseApp dbApp, RouteItem dischargingDest, Picking picking, PickingPos pickingPos, ACEventArgs e, bool isDischargingEnd)
         {
@@ -169,15 +170,16 @@ namespace gipbakery.mes.processapplication
                                 actualQuantity = acValue.ParamAsDouble;
                             //short simulationWeight = (short)acMethod["Source"];
 
-                            if (actualQuantity <= 0.000001)
+                            if (UseScaleWeightOnPost && actualQuantity <= 0.000001)
                             {
                                 PAFBakeryDosingFlour flourDosing = discharging.ParentACComponent.FindChildComponents<PAFBakeryDosingFlour>(c => c is PAFBakeryDosingFlour).FirstOrDefault();
                                 if (flourDosing != null)
                                 {
-                                    actualQuantity = flourDosing.CurrentScaleForWeighing.ActualValue.ValueT;
+                                    double? actValue = flourDosing.CurrentScaleForWeighing?.ActualValue.ValueT;
+                                    if (actValue.HasValue)
+                                        actualQuantity = actValue.Value;
                                 }
                             }
-
 
                             using (var dbIPlus = new Database())
                             using (var dbApp = new DatabaseApp(dbIPlus))
