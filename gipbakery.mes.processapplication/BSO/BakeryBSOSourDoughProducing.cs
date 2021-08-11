@@ -307,47 +307,11 @@ namespace gipbakery.mes.processapplication
 
         protected override void InitBSO(ACComponent processModule)
         {
-            if (ProcessModuleOrderInfo != null)
-                ProcessModuleOrderInfo.PropertyChanged -= ProcessModuleOrderInfo_PropertyChanged;
-
-            ProcessModuleOrderInfo = null;
+            base.InitBSO(processModule);
 
             var childInstances = processModule.GetChildInstanceInfo(1, false);
             if (childInstances == null || !childInstances.Any())
                 return;
-
-            ACChildInstanceInfo func = childInstances.FirstOrDefault(c => _PAFBakerySourDoughProdType.IsAssignableFrom(c.ACType.ValueT.ObjectType));
-            if (func != null)
-            {
-                ACComponent funcComp = processModule.ACUrlCommand(func.ACIdentifier) as ACComponent;
-                if (funcComp == null)
-                    return;
-
-                _PAFSourDoughProducing = new ACRef<ACComponent>(funcComp, this);
-
-                string scaleACUrl = _PAFSourDoughProducing.ValueT.ExecuteMethod(PAFBakerySourDoughProducing.MN_GetFermentationStarterScaleACUrl) as string;
-
-                ACComponent scale = _PAFSourDoughProducing.ValueT?.ACUrlCommand(scaleACUrl) as ACComponent;
-                if (scale != null)
-                {
-                    PreProdScale = scale;
-                }
-                else
-                {
-                    //error
-                }
-
-                string storeACUrl = _PAFSourDoughProducing.ValueT.ExecuteMethod(PAFBakerySourDoughProducing.MN_GetVirtualStoreACUrl) as string;
-                ACComponent store = _PAFSourDoughProducing.ValueT?.ACUrlCommand(storeACUrl) as ACComponent;
-                if (store != null)
-                {
-                    VirtualStore = store;
-                }
-                else
-                {
-                    //error
-                }
-            }
 
             ACChildInstanceInfo flourFunc = childInstances.FirstOrDefault(c => _PAFBakeryDosingFlourType.IsAssignableFrom(c.ACType.ValueT.ObjectFullType));
             if (flourFunc != null)
@@ -420,36 +384,19 @@ namespace gipbakery.mes.processapplication
                 tempRef.Detach();
                 tempRef = null;
             }
+        }
 
-            ACChildInstanceInfo dischFunc = childInstances.FirstOrDefault(c => _PAFDischargingType.IsAssignableFrom(c.ACType.ValueT.ObjectType));
-            if (dischFunc != null)
+        public override void InitPreProdFunction(ACComponent processModule, IEnumerable<ACChildInstanceInfo> childInstances)
+        {
+            ACChildInstanceInfo func = childInstances.FirstOrDefault(c => _PAFBakerySourDoughProdType.IsAssignableFrom(c.ACType.ValueT.ObjectType));
+            if (func != null)
             {
-                ACComponent funcComp = processModule.ACUrlCommand(dischFunc.ACIdentifier) as ACComponent;
+                ACComponent funcComp = processModule.ACUrlCommand(func.ACIdentifier) as ACComponent;
                 if (funcComp == null)
                     return;
 
-                DischargingACStateProp = funcComp?.GetPropertyNet(Const.ACState) as IACContainerTNet<ACStateEnum>;
-                if (DischargingACStateProp != null)
-                {
-                    DischargingACStateProp.PropertyChanged += DischargingACStateProp_PropertyChanged;
-                    HandleDischargingACState();
-                }
-                else
-                {
-                    //error
-                }
+                _PAFSourDoughProducing = new ACRef<ACComponent>(funcComp, this);
             }
-
-            ProcessModuleOrderInfo = processModule.GetPropertyNet("OrderInfo") as IACContainerTNet<string>;
-            if (ProcessModuleOrderInfo == null)
-            {
-                //error
-                return;
-            }
-
-            ProcessModuleOrderInfo.PropertyChanged += ProcessModuleOrderInfo_PropertyChanged;
-            string orderInfo = ProcessModuleOrderInfo.ValueT;
-            ParentBSOWCS.ApplicationQueue.Add(() =>  HandleOrderInfoPropChanged(orderInfo));
         }
 
         public override void OnHandleOrderInfoPropChanged()

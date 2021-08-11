@@ -117,6 +117,18 @@ namespace gipbakery.mes.processapplication
             }
         }
 
+        private string _MixingSpeed;
+        [ACPropertyInfo(807, "", "en{'Mixing speed'}de{'Drehzahl'}")]
+        public string MixingSpeed
+        {
+            get => _MixingSpeed;
+            set
+            {
+                _MixingSpeed = value;
+                OnPropertyChanged("MixingSpeed");
+            }
+        }
+
         public ACValue _SelectedPumpTarget;
         [ACPropertySelected(850, "PumpTargets")]
         public ACValue SelectedPumpTarget
@@ -183,7 +195,7 @@ namespace gipbakery.mes.processapplication
             set;
         }
 
-        [ACPropertyInfo(807)]
+        [ACPropertyInfo(808)]
         public ACComponent VirtualStore
         {
             get => _VirtualStore?.ValueT;
@@ -193,6 +205,19 @@ namespace gipbakery.mes.processapplication
                 OnPropertyChanged("VirtualStore");
             }
         }
+
+        private ACRef<ACComponent> _PumpOverProcessModule;
+        [ACPropertyInfo(809)]
+        public ACComponent PumpOverProcessModule
+        {
+            get => _PumpOverProcessModule?.ValueT;
+            set
+            {
+                _PumpOverProcessModule = new ACRef<ACComponent>(value, this);
+                OnPropertyChanged("PumpOverProcessModule");
+            }
+        }
+
 
         public IACContainerTNet<bool> RefreshParkingSpace;
 
@@ -342,18 +367,24 @@ namespace gipbakery.mes.processapplication
             if (childInstances == null || !childInstances.Any())
                 return;
 
-            ACChildInstanceInfo func = childInstances.FirstOrDefault(c => _PAFBakeryYeastProdType.IsAssignableFrom(c.ACType.ValueT.ObjectType));
-            if (func != null)
+            InitPreProdFunction(processModule, childInstances);
+
+            if (PAFPreProducing != null)
             {
-                ACComponent funcComp = processModule.ACUrlCommand(func.ACIdentifier) as ACComponent;
-                if (funcComp == null)
+                gip.core.datamodel.ACClass funcClass = null;
+                
+                using(ACMonitor.Lock(gip.core.datamodel.Database.GlobalDatabase.QueryLock_1X000))
+                    funcClass = PAFPreProducing?.ComponentClass?.FromIPlusContext<gip.core.datamodel.ACClass>(DatabaseApp.ContextIPlus);
+
+                if (funcClass == null)
+                {
+                    Messages.Error(this, "The component class of pre production function can not be found!");
                     return;
+                }
 
-                _PAFYeastProducing = new ACRef<ACComponent>(funcComp, this);
+                string scaleACUrl = GetConfigValue(funcClass, PAFBakeryYeastProducing.PN_FermentationStarterScaleACUrl) as string;
 
-                string scaleACUrl = _PAFYeastProducing.ValueT.ExecuteMethod(PAFBakeryYeastProducing.MN_GetFermentationStarterScaleACUrl) as string;
-
-                ACComponent scale = _PAFYeastProducing.ValueT?.ACUrlCommand(scaleACUrl) as ACComponent;
+                ACComponent scale = PAFPreProducing?.ACUrlCommand(scaleACUrl) as ACComponent;
                 if (scale != null)
                 {
                     PreProdScale = scale;
@@ -363,8 +394,8 @@ namespace gipbakery.mes.processapplication
                     //error
                 }
 
-                string storeACUrl = _PAFYeastProducing.ValueT.ExecuteMethod(PAFBakeryYeastProducing.MN_GetVirtualStoreACUrl) as string;
-                ACComponent store = _PAFYeastProducing.ValueT?.ACUrlCommand(storeACUrl) as ACComponent;
+                string storeACUrl = PAFPreProducing.ExecuteMethod(PAFBakeryYeastProducing.MN_GetVirtualStoreACUrl) as string;
+                ACComponent store = PAFPreProducing?.ACUrlCommand(storeACUrl) as ACComponent;
                 if (store != null)
                 {
                     VirtualStore = store;
@@ -373,6 +404,10 @@ namespace gipbakery.mes.processapplication
                 {
                     //error
                 }
+
+                string pumpOverModuleACUrl = GetConfigValue(funcClass, PAFBakeryYeastProducing.PN_PumpOverProcessModuleACUrl) as string;
+                if (!string.IsNullOrEmpty(pumpOverModuleACUrl))
+                    PumpOverProcessModule = Root.ACUrlCommand(pumpOverModuleACUrl) as ACComponent;
             }
 
             ACChildInstanceInfo dischFunc = childInstances.FirstOrDefault(c => _PAFDischargingType.IsAssignableFrom(c.ACType.ValueT.ObjectType));
@@ -405,7 +440,7 @@ namespace gipbakery.mes.processapplication
             string orderInfo = ProcessModuleOrderInfo.ValueT;
             ParentBSOWCS.ApplicationQueue.Add(() => HandleOrderInfoPropChanged(orderInfo));
 
-            VirtualSourceStoreID = _PAFYeastProducing.ValueT.ExecuteMethod(PAFBakeryYeastProducing.MN_GetSourceVirtualStoreID) as Guid?;
+            VirtualSourceStoreID = PAFPreProducing?.ExecuteMethod(PAFBakeryYeastProducing.MN_GetSourceVirtualStoreID) as Guid?;
 
             if (VirtualSourceStoreID.HasValue)
             {
@@ -436,7 +471,32 @@ namespace gipbakery.mes.processapplication
             }
         }
 
-        private void RefreshParkingSpace_PropertyChanged(object sender, PropertyChangedEventArgs e)
+        public virtual void InitPreProdFunction(ACComponent processModule, IEnumerable<ACChildInstanceInfo> childInstances)
+        {
+            ACChildInstanceInfo func = childInstances.FirstOrDefault(c => _PAFBakeryYeastProdType.IsAssignableFrom(c.ACType.ValueT.ObjectType));
+            if (func != null)
+            {
+                ACComponent funcComp = processModule.ACUrlCommand(func.ACIdentifier) as ACComponent;
+                if (funcComp == null)
+                    return;
+
+                _PAFYeastProducing = new ACRef<ACComponent>(funcComp, this);
+            }
+        }
+
+        protected object GetConfigValue(gip.core.datamodel.ACClass acClass, string configName)
+        {
+            if (acClass == null || string.IsNullOrEmpty(configName))
+                return null;
+
+            var config = acClass.ACClassConfig_ACClass.FirstOrDefault(c => c.ConfigACUrl == configName);
+            if (config == null)
+                return null;
+
+            return config.Value;
+        }
+
+        protected void RefreshParkingSpace_PropertyChanged(object sender, PropertyChangedEventArgs e)
         {
             if (e.PropertyName == Const.ValueT)
             {
@@ -449,6 +509,7 @@ namespace gipbakery.mes.processapplication
             if (VirtualSourceFacility == null)
                 return;
 
+            VirtualSourceFacility.FacilityCharge_Facility.AutoLoad();
             VirtualSourceFacility.FacilityCharge_Facility.AutoRefresh();
             SourceFCList = VirtualSourceFacility.FacilityCharge_Facility.Where(c => !c.NotAvailable).ToList();
         }
@@ -807,6 +868,13 @@ namespace gipbakery.mes.processapplication
         {
             ACValueList targets = PAFPreProducing?.ExecuteMethod(PAFBakeryYeastProducing.MN_GetPumpOverTargets) as ACValueList;
 
+            if (VirtualSourceFacility != null && targets != null)
+            {
+                ACValue pTarget = targets.FirstOrDefault(c => c.ParamAsGuid == VirtualSourceFacility.FacilityID);
+                if (pTarget != null)
+                    targets.Remove(pTarget);
+            }
+
             PumpTargets = targets;
 
             if (PumpTargets == null || !PumpTargets.Any())
@@ -814,6 +882,8 @@ namespace gipbakery.mes.processapplication
                 //TODO: error
                 return;
             }
+
+
 
             CheckAndInitManagers();
 

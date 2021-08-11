@@ -26,6 +26,7 @@ namespace gipbakery.mes.processapplication
             _ContinueProdACClassWF = new ACPropertyConfigValue<string>(this, "ContinueProdACClassWF", "");
             _PumpOverACClassWF = new ACPropertyConfigValue<string>(this, "PumpOverACClassWF", "");
             _CleaningProdACClassWF = new ACPropertyConfigValue<string>(this, "CleaningProdACClassWF", "");
+            _PumpOverProcessModuleACUrl = new ACPropertyConfigValue<string>(this, "PumpOverProcessModuleACUrl", "");
         }
 
         public override bool ACPostInit()
@@ -37,6 +38,7 @@ namespace gipbakery.mes.processapplication
             temp = ContinueProdACClassWF;
             temp = PumpOverACClassWF;
             temp = CleaningProdACClassWF;
+            temp = PumpOverProcessModuleACUrl;
             BakeryPreProdCleaningMode mode = CleaningMode;
 
             return result;
@@ -54,7 +56,6 @@ namespace gipbakery.mes.processapplication
             return base.ACDeInit(deleteACClassTask);
         }
 
-        public const string MN_GetFermentationStarterScaleACUrl = "GetFermentationStarterScaleACUrl";
         public const string MN_GetVirtualStoreACUrl = "GetVirtualStoreACUrl";
         public const string MN_Clean = "Clean";
         public const string MN_SwitchVirtualStoreOutwardEnabled = "SwitchVirtualStoreOutwardEnabled";
@@ -63,6 +64,8 @@ namespace gipbakery.mes.processapplication
 
         public const string PN_CleaningMode = "CleaningMode";
         public const string PN_CleaningProdACClassWF = "CleaningProdACClassWF";
+        public const string PN_FermentationStarterScaleACUrl = "FermentationStarterScaleACUrl";
+        public const string PN_PumpOverProcessModuleACUrl = "PumpOverProcessModuleACUrl";
 
         #endregion
 
@@ -142,6 +145,17 @@ namespace gipbakery.mes.processapplication
             }
         }
 
+        private ACPropertyConfigValue<string> _PumpOverProcessModuleACUrl;
+        [ACPropertyConfig("en{'Pump over process module ACUrl'}de{'Umpumpen Prozessmodul ACUrl'}")]
+        public string PumpOverProcessModuleACUrl
+        {
+            get => _PumpOverProcessModuleACUrl.ValueT;
+            set
+            {
+                _PumpOverProcessModuleACUrl.ValueT = value;
+                OnPropertyChanged("PumpOverProcessModuleACUrl");
+            }
+        }
 
         #endregion
 
@@ -188,13 +202,6 @@ namespace gipbakery.mes.processapplication
             }
 
             return scale;
-        }
-
-        [ACMethodInfo("", "", 800)]
-        public string GetFermentationStarterScaleACUrl()
-        {
-            PAEScaleBase scale = GetFermentationStarterScale();
-            return scale?.ACUrl;
         }
 
 
