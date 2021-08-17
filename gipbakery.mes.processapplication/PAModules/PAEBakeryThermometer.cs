@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace gipbakery.mes.processapplication
 {
-    [ACClassInfo(Const.PackName_VarioSystem, "en{'Bakery Thermometer'}de{'Backerei Thermometer)'}", Global.ACKinds.TPAModule, Global.ACStorableTypes.Required, false, true, "", "", 9999)]
+    [ACClassInfo(Const.PackName_VarioSystem, "en{'Bakery Thermometer'}de{'Backerei Thermometer'}", Global.ACKinds.TPAModule, Global.ACStorableTypes.Required, false, true, "", "", 9999)]
     public class PAEBakeryThermometer : PAEThermometer
     {
         #region c'tors
