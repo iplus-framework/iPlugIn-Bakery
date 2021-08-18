@@ -48,6 +48,8 @@ namespace gipbakery.mes.processapplication
                 ProcessModuleOrderInfo = null;
             }
 
+            DeActivate();
+
             _PWFermentationStarterType = null;
             _PAFBakeryYeastProdType = null;
             _PAFDischargingType = null;
@@ -629,7 +631,7 @@ namespace gipbakery.mes.processapplication
 
                 if (msgItem == null)
                 {
-                    string message = Root.Environment.TranslateText(this, "msgFermentationStarter", FermentationQuantityProp.ValueT);
+                    string message = Root.Environment.TranslateText(this, "msgFermentationStarter", Math.Round(FermentationQuantityProp.ValueT.Value,2));
                     msgItem = new MessageItem(FermentationStarterRef.ValueT, this);
                     msgItem.Message = message;
                     AddToMessageList(msgItem);
@@ -963,7 +965,7 @@ namespace gipbakery.mes.processapplication
 
         public bool IsEnabledPumpOverStart()
         {
-            return PAFPreProducing != null;
+            return PAFPreProducing != null && SelectedPumpTarget != null && PumpOverTargetQuantity > 0;
         }
 
         public bool CheckAndInitManagers()

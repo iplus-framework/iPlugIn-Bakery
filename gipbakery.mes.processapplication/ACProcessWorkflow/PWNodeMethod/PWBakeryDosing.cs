@@ -60,7 +60,39 @@ namespace gipbakery.mes.processapplication
 
         #region Properties
 
-        
+        public double SourProdDosingUnit
+        {
+            get
+            {
+                var method = MyConfiguration;
+                if (method != null)
+                {
+                    var acValue = method.ParameterValueList.GetACValue("FlowRate1");
+                    if (acValue != null)
+                    {
+                        return acValue.ParamAsDouble;
+                    }
+                }
+                return 10;
+            }
+        }
+
+        public TimeSpan SourProdDosingPause
+        {
+            get
+            {
+                var method = MyConfiguration;
+                if (method != null)
+                {
+                    var acValue = method.ParameterValueList.GetACValue("PulsationPauseTime");
+                    if (acValue != null)
+                    {
+                        return acValue.ParamAsTimeSpan;
+                    }
+                }
+                return new TimeSpan(0,0,2);
+            }
+        }
 
         #endregion
 
@@ -92,7 +124,7 @@ namespace gipbakery.mes.processapplication
             return result;
         }
 
-        public TimeSpan CalculateDuration(bool doseSimultaneously, double dosUnit, int dosPause, PAProcessModule processModule, out PAFBakeryDosingWater water)
+        public TimeSpan CalculateDuration(bool doseSimultaneously, PAProcessModule processModule, out PAFBakeryDosingWater water)
         {
             PAProcessFunction responsibleFunc;
             water = null;
@@ -130,11 +162,12 @@ namespace gipbakery.mes.processapplication
                 {
                     if (flour != null)
                     {
-                        int nDosImpulse = (int)(targetQuantity / dosUnit);
+                        int nDosImpulse = (int)(targetQuantity / SourProdDosingUnit);
                         nDosImpulse--;
                         double nDosZeit = 0;
-                        if ((nDosImpulse > 0) && (dosPause > 0))
-                            nDosZeit = nDosImpulse * dosPause;
+                        double dosPauseSec = SourProdDosingPause.TotalSeconds;
+                        if ((nDosImpulse > 0) && (dosPauseSec > 0))
+                            nDosZeit = nDosImpulse * dosPauseSec;
 
                         return TimeSpan.FromSeconds(nDosZeit + (targetQuantity.Value * dosingTimeSecPerKg.Value));
                     }

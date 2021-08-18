@@ -41,10 +41,10 @@ namespace gipbakery.mes.processapplication
 
             method.ParameterValueList.Add(new ACValue("DoseInSourProdSimultaneously ", typeof(bool), false, Global.ParamOption.Optional));
             paramTranslation.Add("DoseInSourProdSimultaneously", "en{'Dose in sour dough production simultaneously'}de{'Dosiere in der Sauerteigproduktion gleichzeitig'}");
-            method.ParameterValueList.Add(new ACValue("SourProdDosingUnit", typeof(double), 10.0, Global.ParamOption.Optional));
-            paramTranslation.Add("SourProdDosingUnit", "en{'Sour dough production dosing unit [kg]'}de{'SauerteigDosiereinheit [kg]'}");
-            method.ParameterValueList.Add(new ACValue("SourProdDosingPause", typeof(int), 2, Global.ParamOption.Optional));
-            paramTranslation.Add("SourProdDosingPause", "en{'Sour dough production dosing pause [sec]'}de{'SauerteigDospause [sec]'}");
+            //method.ParameterValueList.Add(new ACValue("SourProdDosingUnit", typeof(double), 10.0, Global.ParamOption.Optional));
+            //paramTranslation.Add("SourProdDosingUnit", "en{'Sour dough production dosing unit [kg]'}de{'SauerteigDosiereinheit [kg]'}");
+            //method.ParameterValueList.Add(new ACValue("SourProdDosingPause", typeof(int), 2, Global.ParamOption.Optional));
+            //paramTranslation.Add("SourProdDosingPause", "en{'Sour dough production dosing pause [sec]'}de{'SauerteigDospause [sec]'}");
 
             var wrapper = new ACMethodWrapper(method, "en{'Configuration'}de{'Konfiguration'}", typeof(PWBakeryGroupFermentation), paramTranslation, null);
             ACMethod.RegisterVirtualMethod(typeof(PWBakeryGroupFermentation), ACStateConst.SMStarting, wrapper);
@@ -106,40 +106,6 @@ namespace gipbakery.mes.processapplication
                     }
                 }
                 return false;
-            }
-        }
-
-        public double SourProdDosingUnit
-        {
-            get
-            {
-                var method = MyConfiguration;
-                if (method != null)
-                {
-                    var acValue = method.ParameterValueList.GetACValue("SourProdDosingUnit");
-                    if (acValue != null)
-                    {
-                        return acValue.ParamAsDouble;
-                    }
-                }
-                return 10;
-            }
-        }
-
-        public int SourProdDosingPause
-        {
-            get
-            {
-                var method = MyConfiguration;
-                if (method != null)
-                {
-                    var acValue = method.ParameterValueList.GetACValue("SourProdDosingPause");
-                    if (acValue != null)
-                    {
-                        return acValue.ParamAsInt32;
-                    }
-                }
-                return 2;
             }
         }
 
@@ -450,9 +416,11 @@ namespace gipbakery.mes.processapplication
 
             PAFBakeryDosingWater waterFunc = null;
 
+
+            //SourProdDosingUnit(Auslastung) => FlowRate1
             foreach (PWBakeryDosing dosingNode in dosingNodes)
             {
-                TimeSpan result = dosingNode.CalculateDuration(doseSim, SourProdDosingUnit, SourProdDosingPause, processModule, out waterFunc);
+                TimeSpan result = dosingNode.CalculateDuration(doseSim, processModule, out waterFunc);
                 if (result > TimeSpan.Zero)
                     ts.Add(result);
             }
