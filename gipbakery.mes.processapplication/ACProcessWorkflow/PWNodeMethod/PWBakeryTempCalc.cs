@@ -919,7 +919,7 @@ namespace gipbakery.mes.processapplication
 
                 // The calculated water temperature of {0} °C can not be reached, the maximum water temperature is {1} °C and the target quantity is {2} {3}. 
                 TemperatureCalculationResult.ValueT = Root.Environment.TranslateText(this, "TempCalcResultMax", targetWaterTemperature.ToString("F2"), warmWater.AverageTemperature,
-                                                                                                                totalWaterQuantity, "kg");
+                                                                                                                totalWaterQuantity.ToString("F2"), "kg");
                 WaterCalcResult.ValueT = targetWaterTemperature;
 
                 return;
