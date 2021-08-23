@@ -86,6 +86,9 @@
     <Compile Include="BSO\BakeryBSOYeastProducing.cs" />
     <Compile Include="Converter\BakeryFuncSerial2006Cleaning.cs" />
     <Compile Include="Converter\BakeryFuncSerial2006Pumping.cs" />
+    <Compile Include="Model\BakeryRecvPointTemperature.cs" />
+    <Compile Include="Model\BakeryThermometerInfoItem.cs" />
+    <Compile Include="Model\MaterialTemperature.cs" />
     <Compile Include="Model\MaterialTempMeasureItem.cs" />
     <Compile Include="Model\TempMeasurementModeEnum.cs" />
     <Compile Include="PAModules\PABakeryTempService.cs" />

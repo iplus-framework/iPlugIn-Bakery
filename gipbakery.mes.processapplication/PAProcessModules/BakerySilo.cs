@@ -1,4 +1,5 @@
-﻿using gip.core.datamodel;
+﻿using gip.core.autocomponent;
+using gip.core.datamodel;
 using gip.mes.processapplication;
 using System;
 using System.Collections.Generic;
@@ -18,6 +19,11 @@ namespace gipbakery.mes.processapplication
         {
         }
 
+        public override bool ACPostInit()
+        {
+            return base.ACPostInit();
+        }
+
         #endregion
 
         #region Properties
@@ -34,6 +40,18 @@ namespace gipbakery.mes.processapplication
                 }
 
                 return _Thermometers;
+            }
+        }
+
+        private ACPropertyConfigValue<short> _WarmingOffset;
+        [ACPropertyConfig("en{'Warming offset according room temperature [%]'}de{'Wärmeausgleich nach Raumtemperatur [%]'}")]
+        public short WarmingOffset
+        {
+            get => _WarmingOffset.ValueT;
+            set
+            {
+                _WarmingOffset.ValueT = value;
+                OnPropertyChanged("WarmingOffset");
             }
         }
 
