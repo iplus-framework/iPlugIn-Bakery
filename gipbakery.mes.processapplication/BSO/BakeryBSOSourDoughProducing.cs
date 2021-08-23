@@ -298,11 +298,8 @@ namespace gipbakery.mes.processapplication
                 ReadyForDosingProp = null;
             }
 
-            if (MessagesList.Any())
-            {
-                MessagesList.Clear();
-                MessagesList = MessagesList.ToList();
-            }
+            _MessagesListSafe.Clear();
+            RefreshMessageList();
         }
 
         protected override void InitBSO(ACComponent processModule)

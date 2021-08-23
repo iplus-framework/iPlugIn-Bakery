@@ -351,11 +351,8 @@ namespace gipbakery.mes.processapplication
                 PWGroupFermentation = null;
             }
 
-            if (MessagesList.Any())
-            {
-                MessagesList.Clear();
-                MessagesList = MessagesList.ToList();
-            }
+            _MessagesListSafe.Clear();
+            RefreshMessageList();
         }
 
         protected virtual void InitBSO(ACComponent processModule)
@@ -627,7 +624,7 @@ namespace gipbakery.mes.processapplication
         {
             if (FermentationQuantityProp.ValueT != null)
             {
-                MessageItem msgItem = MessagesList.FirstOrDefault(c => c.UserAckPWNode != null && c.UserAckPWNode.ValueT == FermentationStarterRef.ValueT);
+                MessageItem msgItem = _MessagesListSafe.FirstOrDefault(c => c.UserAckPWNode != null && c.UserAckPWNode.ValueT == FermentationStarterRef.ValueT);
 
                 if (msgItem == null)
                 {
@@ -635,13 +632,17 @@ namespace gipbakery.mes.processapplication
                     msgItem = new MessageItem(FermentationStarterRef.ValueT, this);
                     msgItem.Message = message;
                     AddToMessageList(msgItem);
+                    RefreshMessageList();
                 }
             }
             else
             {
-                MessageItem msgItem = MessagesList.FirstOrDefault(c => c.UserAckPWNode != null && c.UserAckPWNode.ValueT == FermentationStarterRef.ValueT);
+                MessageItem msgItem = _MessagesListSafe.FirstOrDefault(c => c.UserAckPWNode != null && c.UserAckPWNode.ValueT == FermentationStarterRef.ValueT);
                 if (msgItem != null)
+                {
                     RemoveFromMessageList(msgItem);
+                    RefreshMessageList();
+                }
             }
         }
 
@@ -801,30 +802,39 @@ namespace gipbakery.mes.processapplication
                             return;
                         }
 
-                        Facility outwardFacility = outFacility.FromAppContext<Facility>(DatabaseApp);
+                        try
+                        {
+                            Facility outwardFacility = outFacility.FromAppContext<Facility>(DatabaseApp);
+                            outFacility.AutoRefresh();
 
-                        outwardFacility.OutwardEnabled = outFacility.OutwardEnabled;
+                            outwardFacility.OutwardEnabled = outFacility.OutwardEnabled;
 
-                        CurrentBookParamRelocation.InwardFacility = outwardFacility;
-                        CurrentBookParamRelocation.OutwardFacility = outwardFacility;
-                        CurrentBookParamRelocation.InwardQuantity = 0.0001;
-                        CurrentBookParamRelocation.OutwardQuantity = 0.0001;
+                            CurrentBookParamRelocation.InwardFacility = outwardFacility;
+                            CurrentBookParamRelocation.OutwardFacility = outwardFacility;
+                            CurrentBookParamRelocation.InwardQuantity = 0.0001;
+                            CurrentBookParamRelocation.OutwardQuantity = 0.0001;
 
-                        //todo: lock or from another context
-                        var config = PAFPreProducing?.ComponentClass.ACClassConfig_ACClass.FirstOrDefault(c => c.ConfigACUrl == "ContinueProdACClassWF");
-                        if (config == null)
-                            return;
+                            gip.core.datamodel.ACClass compClass = PAFPreProducing?.ComponentClass.FromIPlusContext<gip.core.datamodel.ACClass>(DatabaseApp.ContextIPlus);
 
-                        string configValue = config.Value as string;
+                            var config = compClass?.ACClassConfig_ACClass.FirstOrDefault(c => c.ConfigACUrl == "ContinueProdACClassWF");
+                            if (config == null)
+                                return;
 
-                        var parts = configValue.Split(';');
-                        string wfIdentifier = parts.FirstOrDefault().Trim();
-                        string acUrl = parts.LastOrDefault().Trim();
+                            string configValue = config.Value as string;
 
-                        var wfClass = DatabaseApp.ContextIPlus.ACClassWF.Where(c => c.ACClassMethod != null && c.ACClassMethod.ACIdentifier == wfIdentifier).ToArray().FirstOrDefault(c => c.ConfigACUrl == acUrl);
-                        var wfMethod = wfClass?.ACClassMethod;
+                            var parts = configValue.Split(';');
+                            string wfIdentifier = parts.FirstOrDefault().Trim();
+                            string acUrl = parts.LastOrDefault().Trim();
 
-                        RunWorkflow(wfClass, wfMethod);
+                            var wfClass = DatabaseApp.ContextIPlus.ACClassWF.Where(c => c.ACClassMethod != null && c.ACClassMethod.ACIdentifier == wfIdentifier).ToArray().FirstOrDefault(c => c.ConfigACUrl == acUrl);
+                            var wfMethod = wfClass?.ACClassMethod;
+
+                            RunWorkflow(wfClass, wfMethod);
+                        }
+                        catch (Exception e)
+                        {
+                            Messages.LogException(this.GetACUrl(), "StoreOutwardEnabledOn(10)", e);
+                        }
                     }
                 }
             }
