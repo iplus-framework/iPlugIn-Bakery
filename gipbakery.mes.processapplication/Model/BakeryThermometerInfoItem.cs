@@ -10,6 +10,8 @@ namespace gipbakery.mes.processapplication
     public class BakeryThermometerInfoItem : IACObject
     {
 
+        
+
 
         public IACObject ParentACObject => throw new NotImplementedException();
 

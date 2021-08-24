@@ -36,6 +36,14 @@ namespace gipbakery.mes.processapplication
             set;
         }
 
+        public short? WarmingOffset
+        {
+            get
+            {
+                return (ParentACComponent as BakerySilo)?.WarmingOffset;
+            }
+        }
+
         public double ActualValueForCalculation
         {
             get
@@ -60,6 +68,24 @@ namespace gipbakery.mes.processapplication
         #endregion
 
         #region Methods
+
+        public double CalculateTemperatureWithOffset(double roomTemp)
+        {
+            short? offset = WarmingOffset;
+
+            if (offset.HasValue && offset > 0)
+            {
+                double offsetPercent = offset.Value > 100 ? 100 : offset.Value;
+
+                double difference = roomTemp - ActualValueForCalculation;
+                if (difference > 0)
+                {
+                    double calcOffset = difference * (offsetPercent / 100);
+                    return ActualValueForCalculation + calcOffset;
+                }
+            }
+            return ActualValueForCalculation;
+        }
 
         #endregion
     }

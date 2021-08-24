@@ -14,8 +14,77 @@ namespace gipbakery.mes.processapplication
 {
     [DataContract]
     [ACSerializeableInfo()]
+    [ACClassInfo(Const.PackName_VarioSystem, "en{'Material temperature base'}de{'Material temperature base'}", Global.ACKinds.TACSimpleClass)]
+    public class MaterialTemperatureBase : INotifyPropertyChanged
+    {
+        public MaterialTemperatureBase()
+        {
+
+        }
+
+        [DataMember]
+        [ACPropertyInfo(9999)]
+        public string MaterialNo
+        {
+            get;
+            set;
+        }
+
+        private double? _AverageTemperature;
+        [DataMember]
+        [ACPropertyInfo(9999)]
+        public double? AverageTemperature
+        {
+            get => _AverageTemperature;
+            set
+            {
+                _AverageTemperature = value;
+                OnPropertyChanged("AverageTemperature");
+            }
+        }
+
+        private double? _AverageTemperatureWithOffset;
+        [DataMember]
+        [ACPropertyInfo(9999)]
+        public double? AverageTemperatureWithOffset
+        {
+            get => _AverageTemperatureWithOffset;
+            set
+            {
+                _AverageTemperatureWithOffset = value;
+                OnPropertyChanged("AverageTemperatureWithOffset");
+            }
+        }
+
+        public event PropertyChangedEventHandler PropertyChanged;
+
+        public void OnPropertyChanged(string propertyName)
+        {
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+        }
+    }
+
+    [CollectionDataContract]
+    [ACSerializeableInfo()]
+    [ACClassInfo(Const.PackName_VarioSystem, "en{'Material temperature base'}de{'Material temperature base'}", Global.ACKinds.TACSimpleClass)]
+    public class MaterialTempBaseList : List<MaterialTemperatureBase>
+    {
+        public MaterialTempBaseList() : base()
+        {
+
+        }
+
+        public MaterialTempBaseList(IEnumerable<MaterialTemperatureBase> collection) : base (collection)
+        {
+
+        }
+    }
+
+
+    [DataContract]
+    [ACSerializeableInfo()]
     [ACClassInfo(Const.PackName_VarioSystem, "en{'Material temperature'}de{'Material temperature'}", Global.ACKinds.TACSimpleClass)]
-    public class MaterialTemperature : IACObject, INotifyPropertyChanged
+    public class MaterialTemperature : MaterialTemperatureBase, IACObject
     {
         public MaterialTemperature()
         {
@@ -26,14 +95,6 @@ namespace gipbakery.mes.processapplication
 
         [IgnoreDataMember]
         public bool IsRoomTemperature
-        {
-            get;
-            set;
-        }
-
-        [DataMember]
-        [ACPropertyInfo(9999)]
-        public string MaterialNo
         {
             get;
             set;
@@ -61,31 +122,17 @@ namespace gipbakery.mes.processapplication
             set;
         }
 
-        [IgnoreDataMember]
-        public double AverageTemperatureCalc
+        public void CalculateAverageTemperature(double roomTemp)
         {
-            get
+            var temp = GetBakeryThermometers();
+            if (temp.Any())
             {
-                var temp = GetBakeryThermometers();
-                if (temp.Any())
-                {
-                    return temp.Sum(c => c.ActualValueForCalculation) / temp.Count();
-                }
-                return 0.0;
+                AverageTemperature = temp.Sum(c => c.ActualValueForCalculation) / temp.Count();
+                AverageTemperatureWithOffset = Math.Round(temp.Sum(c => c.CalculateTemperatureWithOffset(roomTemp)) / temp.Count(), 1);
+                return;
             }
-        }
-
-        private double? _AverageTemperature;
-        [DataMember]
-        [ACPropertyInfo(9999)]
-        public double? AverageTemperature
-        {
-            get => _AverageTemperature;
-            set
-            {
-                _AverageTemperature = value;
-                OnPropertyChanged("AverageTemperature");
-            }
+            AverageTemperature = 0.0;
+            AverageTemperatureWithOffset = 0.0;
         }
 
         [DataMember]
@@ -141,7 +188,7 @@ namespace gipbakery.mes.processapplication
         [IgnoreDataMember]
         public string ACCaption => this.ACIdentifier;
 
-        public event PropertyChangedEventHandler PropertyChanged;
+        
 
         public void AddSilo(BakerySilo bakerySilo)
         {
@@ -213,9 +260,6 @@ namespace gipbakery.mes.processapplication
 
         #endregion
 
-        public void OnPropertyChanged(string propertyName)
-        {
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
-        }
+        
     }
 }

@@ -137,7 +137,7 @@ namespace gipbakery.mes.processapplication
                 }
                 else
                 {
-                    mt.AverageTemperature = mt.AverageTemperatureCalc;
+                    mt.CalculateAverageTemperature(recvPoint.RoomTemperature.ValueT);
                 }
             }
         }

@@ -136,7 +136,7 @@ namespace gipbakery.mes.processapplication
         }
 
         [ACMethodInfo("", "", 9999)]
-        public ACValueList GetAverageTemperatures(Guid receivingPointID)
+        public MaterialTempBaseList GetAverageTemperatures(Guid receivingPointID)
         {
             KeyValuePair<BakeryReceivingPoint, BakeryRecvPointTemperature>? cacheItem = null;
 
@@ -148,7 +148,9 @@ namespace gipbakery.mes.processapplication
             if (cacheItem == null)
                 return null;
 
-            return new ACValueList(cacheItem.Value.Value.MaterialTempInfos.Where(t => !string.IsNullOrEmpty(t.MaterialNo)).Select(c => new ACValue(c.MaterialNo, c.AverageTemperature)).ToArray());
+            return new MaterialTempBaseList(cacheItem.Value.Value.MaterialTempInfos.Where(t => !string.IsNullOrEmpty(t.MaterialNo)));
+
+            //return new ACValueList(cacheItem.Value.Value.MaterialTempInfos.Where(t => !string.IsNullOrEmpty(t.MaterialNo)).Select(c => new ACValue(c.MaterialNo, c.AverageTemperature)).ToArray());
         }
 
         [ACMethodInfo("", "", 9999)]
@@ -414,7 +416,7 @@ namespace gipbakery.mes.processapplication
                             dbApp.MaterialConfig.AddObject(materialConfig);
                         }
 
-                        materialConfig.Value = material.AverageTemperature;
+                        materialConfig.Value = material.AverageTemperatureWithOffset;
                     }
                 }
 

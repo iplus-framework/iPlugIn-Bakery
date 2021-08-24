@@ -17,10 +17,12 @@ namespace gipbakery.mes.processapplication
         public BakerySilo(ACClass acType, IACObject content, IACObject parentACObject, ACValueList parameter, string acIdentifier = "") : 
             base(acType, content, parentACObject, parameter, acIdentifier)
         {
+            _WarmingOffset = new ACPropertyConfigValue<short>(this, "WarmingOffset", 0);
         }
 
         public override bool ACPostInit()
         {
+            short temp = WarmingOffset;
             return base.ACPostInit();
         }
 

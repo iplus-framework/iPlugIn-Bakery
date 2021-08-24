@@ -257,20 +257,22 @@ namespace gipbakery.mes.processapplication
                 // 2 Refresh temperatures info
                 if (_TemperatureServiceInfo.ValueT == 1)
                 {
-                    Task.Run(() =>
+                    ParentBSOWCS?.ApplicationQueue.Add(() =>
                     {
                         if (MaterialTemperatures == null || TemperatureServiceProxy == null || TemperatureServiceProxy.ValueT == null)
                             return;
 
-                        ACValueList result = TemperatureServiceProxy.ValueT.ExecuteMethod(PABakeryTempService.MN_GetAverageTemperatures, ParentBSOWCS.CurrentProcessModule.ComponentClass.ACClassID) as ACValueList;
+                        MaterialTempBaseList result = TemperatureServiceProxy.ValueT.ExecuteMethod(PABakeryTempService.MN_GetAverageTemperatures, 
+                                                                                                   ParentBSOWCS.CurrentProcessModule.ComponentClass.ACClassID) as MaterialTempBaseList;
                         if (result != null && result.Any())
                         {
-                            foreach (ACValue acValue in result)
+                            foreach (MaterialTemperatureBase tempBase in result)
                             {
-                                MaterialTemperature mt = MaterialTemperatures.FirstOrDefault(c => c.MaterialNo == acValue.ACIdentifier);
+                                MaterialTemperature mt = MaterialTemperatures.FirstOrDefault(c => c.MaterialNo == tempBase.MaterialNo);
                                 if (mt != null)
                                 {
-                                    mt.AverageTemperature = acValue.ParamAsDouble;
+                                    mt.AverageTemperature = tempBase.AverageTemperature;
+                                    mt.AverageTemperatureWithOffset = tempBase.AverageTemperatureWithOffset;
                                 }
                             }
                         }
@@ -278,7 +280,7 @@ namespace gipbakery.mes.processapplication
                 }
                 else if (_TemperatureServiceInfo.ValueT == 2)
                 {
-                    Task.Run(() =>
+                    ParentBSOWCS?.ApplicationQueue.Add(() =>
                     {
                         if (TemperatureServiceProxy == null || TemperatureServiceProxy.ValueT == null)
                             return;
