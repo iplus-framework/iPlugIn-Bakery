@@ -486,7 +486,7 @@ namespace gipbakery.mes.processapplication
         public void FindVirtualStores()
         {
             PAMParkingspace source;
-            PAMTank target;
+            PAMSilo target;
 
             Msg msg = FindSourceAndTargetStore(out source, out target);
 
@@ -521,7 +521,7 @@ namespace gipbakery.mes.processapplication
             }
         }
 
-        public virtual Msg FindSourceAndTargetStore(out PAMParkingspace source, out PAMTank target)
+        public virtual Msg FindSourceAndTargetStore(out PAMParkingspace source, out PAMSilo target)
         {
             source = null;
             target = null;
@@ -539,7 +539,7 @@ namespace gipbakery.mes.processapplication
             return msg;
         }
 
-        public void FindFacilityForSourceAndTargetStore(DatabaseApp dbApp, PAMParkingspace source, PAMTank target, out Facility sourceFacility,
+        public void FindFacilityForSourceAndTargetStore(DatabaseApp dbApp, PAMParkingspace source, PAMSilo target, out Facility sourceFacility,
                                                 out Facility targetFacility)
         {
             sourceFacility = null;

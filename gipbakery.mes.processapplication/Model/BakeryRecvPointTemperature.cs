@@ -110,6 +110,18 @@ namespace gipbakery.mes.processapplication
                         }
                     }
                 }
+                else
+                {
+                    ACPropertyNet<bool> outwardEnabled = sender as ACPropertyNet<bool>;
+                    if (outwardEnabled != null)
+                    {
+                        var silo = outwardEnabled.ParentACComponent as BakerySilo;
+                        if (silo != null)
+                        {
+                            bool isOutwardEnabled = silo.OutwardEnabled.ValueT;
+                        }
+                    }
+                }
             }
         }
 

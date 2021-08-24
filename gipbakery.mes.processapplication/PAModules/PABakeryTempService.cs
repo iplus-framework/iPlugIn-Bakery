@@ -98,6 +98,8 @@ namespace gipbakery.mes.processapplication
         [ACPropertyBindingSource(710, "Error", "en{'Service alarm'}de{'Service Alarm'}", "", false, false)]
         public IACContainerTNet<PANotifyState> ServiceAlarm { get; set; }
 
+        private List<BakerySilo> _PossibleSilos;
+
         #endregion
 
         #region Methods
@@ -192,11 +194,14 @@ namespace gipbakery.mes.processapplication
                     {
                         silosWithBakeryPTC.Add(possibleSilo);
                         possibleSilo.MaterialNo.PropertyChanged += MaterialNo_PropertyChanged;
+                        possibleSilo.OutwardEnabled.PropertyChanged += OutwardEnabled_PropertyChanged;
                     }
                 }
 
                 receivingPoints.AddRange(project.FindChildComponents<BakeryReceivingPoint>(c => c is BakeryReceivingPoint));
             }
+
+            _PossibleSilos = silosWithBakeryPTC;
 
             using (Database db = new gip.core.datamodel.Database())
             using (gip.mes.datamodel.DatabaseApp dbApp = new gip.mes.datamodel.DatabaseApp(db))
@@ -251,10 +256,36 @@ namespace gipbakery.mes.processapplication
             }
         }
 
+        private void OutwardEnabled_PropertyChanged(object sender, PropertyChangedEventArgs e)
+        {
+            if (e.PropertyName == Const.ValueT)
+            {
+                IACContainerTNet<bool> propValue = sender as IACContainerTNet<bool>;
+                if (propValue != null)
+                {
+                    SetTempServiceInfo(0);
+                    foreach (var bakeryTempItem in Temperatures.Values)
+                    {
+                        bakeryTempItem.SiloMaterialNoPropertyChanged(sender, e);
+                    }
+                    SetTempServiceInfo(2);
+                }
+            }
+        }
+
         private void DeinitCache()
         {
             if (Temperatures == null)
                 return;
+
+            if (_PossibleSilos != null && _PossibleSilos.Any())
+            {
+                foreach (BakerySilo silo in _PossibleSilos)
+                {
+                    silo.MaterialNo.PropertyChanged -= MaterialNo_PropertyChanged;
+                    silo.OutwardEnabled.PropertyChanged -= OutwardEnabled_PropertyChanged;
+                }
+            }
 
             foreach(var cacheItem in Temperatures.Values)
             {

@@ -144,7 +144,7 @@ namespace gipbakery.mes.processapplication
 
         [IgnoreDataMember]
         [ACPropertyInfo(9999)]
-        public List<Tuple<string, string, string>> BakeryThermometersInfo
+        public List<BakeryThermometerInfoItem> BakeryThermometersInfo
         {
             get;
             set;
@@ -188,7 +188,6 @@ namespace gipbakery.mes.processapplication
         [IgnoreDataMember]
         public string ACCaption => this.ACIdentifier;
 
-        
 
         public void AddSilo(BakerySilo bakerySilo)
         {
@@ -213,27 +212,25 @@ namespace gipbakery.mes.processapplication
 
         public IEnumerable<PAEBakeryThermometer> GetBakeryThermometers()
         {
-            return BakeryThermometers.Concat(SilosWithPTC.SelectMany(c => c.Thermometers.Where(t => !t.DisabledForTempCalculation)));
+            return BakeryThermometers.Concat(SilosWithPTC.Where(x => x.OutwardEnabled.ValueT).SelectMany(c => c.Thermometers.Where(t => !t.DisabledForTempCalculation)));
         }
 
         public void BuildBakeryThermometersInfo(DatabaseApp dbApp)
         {
             Material = dbApp.Material.FirstOrDefault(c => c.MaterialNo == MaterialNo);
-            BakeryThermometersInfo = new List<Tuple<string, string, string>>();
+            BakeryThermometersInfo = new List<BakeryThermometerInfoItem>();
 
             foreach (string tACUrl in BakeryThermometersACUrls)
             {
                 ACComponent tProxy = dbApp.Root().ACUrlCommand(tACUrl) as ACComponent;
                 if (tProxy != null)
                 {
-                    string siloACCaption = null;
-
-                    if (typeof(PAMSilo).IsAssignableFrom(tProxy.ParentACComponent.ComponentClass.ObjectType))
+                    IACContainerTNet<bool> outwardEnabled = tProxy.ParentACComponent?.GetPropertyNet("OutwardEnabled") as IACContainerTNet<bool>;
+                    if (outwardEnabled != null)
                     {
-                        siloACCaption += tProxy.ParentACComponent.ACCaption;
+                        string siloACCaption = tProxy.ParentACComponent?.ACCaption;
+                        BakeryThermometersInfo.Add(new BakeryThermometerInfoItem(siloACCaption, tProxy, outwardEnabled.ValueT));
                     }
-
-                    BakeryThermometersInfo.Add(new Tuple<string, string, string>(siloACCaption, tProxy.ACCaption, tACUrl));
                 }
             }
         }

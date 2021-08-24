@@ -209,7 +209,7 @@ namespace gipbakery.mes.processapplication
         public void FindStores()
         {
             PAMParkingspace source;
-            PAMTank target;
+            PAMSilo target;
 
             FindVirtualStores(ParentACComponent as PAProcessModule, out source, out target);
 
@@ -233,7 +233,7 @@ namespace gipbakery.mes.processapplication
             return VirtualSourceStore?.ComponentClass.ACClassID;
         }
 
-        public static void FindVirtualStores(PAProcessModule module, out PAMParkingspace source, out PAMTank target)
+        public static void FindVirtualStores(PAProcessModule module, out PAMParkingspace source, out PAMSilo target)
         {
             source = null;
             target = null;
@@ -249,7 +249,7 @@ namespace gipbakery.mes.processapplication
                 }
 
                 source = pointIn.ConnectionList.FirstOrDefault(c => c.SourceParentComponent is PAMParkingspace)?.SourceParentComponent as PAMParkingspace;
-                target = pointOut.ConnectionList.FirstOrDefault(c => c.TargetParentComponent is PAMTank)?.TargetParentComponent as PAMTank;
+                target = pointOut.ConnectionList.FirstOrDefault(c => c.TargetParentComponent is PAMSilo)?.TargetParentComponent as PAMSilo;
             }
         }
 

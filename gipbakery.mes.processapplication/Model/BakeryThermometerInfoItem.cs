@@ -1,46 +1,52 @@
 ﻿using gip.core.datamodel;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using System.ComponentModel;
 
 namespace gipbakery.mes.processapplication
 {
-    public class BakeryThermometerInfoItem : IACObject
+    [ACClassInfo(Const.PackName_VarioSystem, "en{'BakeryThermometerInfoItem'}de{'BakeryThermometerInfoItem'}", Global.ACKinds.TACSimpleClass)]
+    public class BakeryThermometerInfoItem : INotifyPropertyChanged
     {
-
-        
-
-
-        public IACObject ParentACObject => throw new NotImplementedException();
-
-        public IACType ACType => throw new NotImplementedException();
-
-        public IEnumerable<IACObject> ACContentList => throw new NotImplementedException();
-
-        public string ACIdentifier => throw new NotImplementedException();
-
-        public string ACCaption => throw new NotImplementedException();
-
-        public bool ACUrlBinding(string acUrl, ref IACType acTypeInfo, ref object source, ref string path, ref Global.ControlModes rightControlMode)
+        public BakeryThermometerInfoItem(string siloACCaption, IACComponent tempSensor, bool siloOutwardEnabled)
         {
-            throw new NotImplementedException();
+            SiloACCaption = siloACCaption;
+            TempSensorACCaption = tempSensor.ACCaption;
+            TempSensorACUrl = tempSensor.ACUrl;
+            SiloOutwardEnabled = siloOutwardEnabled;
         }
 
-        public object ACUrlCommand(string acUrl, params object[] acParameter)
+        [ACPropertyInfo(9999)]
+        public string SiloACCaption
         {
-            throw new NotImplementedException();
+            get;
+            set;
         }
 
-        public string GetACUrl(IACObject rootACObject = null)
+        [ACPropertyInfo(9999)]
+        public string TempSensorACCaption
         {
-            throw new NotImplementedException();
+            get;
+            set;
         }
 
-        public bool IsEnabledACUrlCommand(string acUrl, params object[] acParameter)
+        [ACPropertyInfo(9999)]
+        public string TempSensorACUrl
         {
-            throw new NotImplementedException();
+            get;
+            set;
+        }
+
+        [ACPropertyInfo(9999)]
+        public bool SiloOutwardEnabled
+        {
+            get;
+            set;
+        }
+
+        public event PropertyChangedEventHandler PropertyChanged;
+
+        public void OnPropertyChanged(string propertyName)
+        {
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
         }
     }
 }
