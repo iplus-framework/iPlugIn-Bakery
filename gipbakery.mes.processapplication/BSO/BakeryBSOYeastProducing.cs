@@ -260,6 +260,31 @@ namespace gipbakery.mes.processapplication
             }
         }
 
+        #region Properties => Clean
+
+        [ACPropertySelected(860, "CleanItem")]
+        public BakeryCleanInfoItem SelectedCleanItem
+        {
+            get;
+            set;
+        }
+
+        [ACPropertyList(860, "CleanItem")]
+        public IEnumerable<BakeryCleanInfoItem> CleanItemsList
+        {
+            get;
+            set;
+        }
+
+        [ACPropertyInfo(860, "", "en{'Target quantity'}de{'Sollmenge'}")]
+        public double CleanTargetQuantity
+        {
+            get;
+            set;
+        }
+
+        #endregion
+
         #endregion
 
         #region Methods
@@ -674,6 +699,46 @@ namespace gipbakery.mes.processapplication
         [ACMethodInfo("", "en{'Clean'}de{'Reinigen'}", 801, true)]
         public void Clean()
         {
+            RoutingResult rResult = ACRoutingService.FindSuccessors(RoutingService, DatabaseApp.ContextIPlus, true, ParentBSOWCS.CurrentProcessModule.ComponentClass, 
+                                                                    BakeryReceivingPoint.SelRuleID_RecvPoint, RouteDirections.Forwards, null, null, null, 0, true, false);
+
+            IEnumerable<IACComponent> possbileDestinations = rResult.Routes.SelectMany(c => c.GetRouteTargets()).Select(x => x.TargetACComponent);
+
+            List<BakeryCleanInfoItem> items = new List<BakeryCleanInfoItem>();
+
+            BakeryCleanInfoItem drain = new BakeryCleanInfoItem();
+            drain.ACCaption = Root.Environment.TranslateText(this, "txtDrainItem");
+            drain.RouteItemID = 0;
+            items.Add(drain);
+
+            foreach (IACComponent possibleDest in possbileDestinations)
+            {
+                string routeItemID = possibleDest.ACUrlCommand("RouteItemID") as string;
+
+                int routeItemAsNum = -1;
+
+                if (int.TryParse(routeItemID, out routeItemAsNum))
+                {
+                    BakeryCleanInfoItem cleanItem = new BakeryCleanInfoItem();
+                    cleanItem.ACCaption = possibleDest.ACCaption;
+                    cleanItem.RouteItemID = routeItemAsNum;
+                    items.Add(cleanItem);
+                }
+            }
+
+            CleanItemsList = items;
+
+            ShowDialog(this, "CleaningDialog");
+        }
+
+        public bool IsEnabledClean()
+        {
+            return ProcessModuleOrderInfo?.ValueT == null && PAFPreProducing != null;
+        }
+
+        [ACMethodInfo("", "en{'Start clean'}de{'Reinigen starten'}", 801, true)]
+        public void StartClean()
+        {
             gip.core.datamodel.ACClass pafClass = PAFPreProducing?.ComponentClass.FromIPlusContext<gip.core.datamodel.ACClass>(DatabaseApp.ContextIPlus);
             if (pafClass == null)
             {
@@ -759,12 +824,13 @@ namespace gipbakery.mes.processapplication
                 RunWorkflow(wfClass, wfMethod);
 
                 outFacility.OutwardEnabled = outFacilityOutwardEnabled;
+                CloseTopDialog();
             }
         }
 
-        public bool IsEnabledClean()
+        public bool IsEnabledStartClean()
         {
-            return ProcessModuleOrderInfo?.ValueT == null && PAFPreProducing != null;
+            return SelectedCleanItem != null;
         }
 
         [ACMethodInfo("", "", 802, true)]
@@ -994,6 +1060,76 @@ namespace gipbakery.mes.processapplication
             if (_ACPickingManager == null)
             {
                 _ACPickingManager = ACRefToPickingManager();
+            }
+
+            return true;
+        }
+
+        public override bool OnPreStartWorkflow(Picking picking, List<SingleDosingConfigItem> configItems, Route validRoute, gip.core.datamodel.ACClassWF rootWF)
+        {
+            gip.core.datamodel.ACClassWF cleaning = configItems?.FirstOrDefault()?.PWGroup?.ACClassWF_ParentACClassWF
+                                                                .FirstOrDefault(c => c.PWACClass.ACIdentifier.Contains(PWBakeryCleaning.PWClassName));
+
+            if (cleaning == null)
+            {
+                //TODO: translation
+                Messages.Error(this, "Can not find the PWBakeryCleaning ACClassWF");
+                return false;
+            }
+
+            ACMethod acMethod = cleaning.RefPAACClassMethod.ACMethod;
+
+            string preConfigACUrl = rootWF.ConfigACUrl + "\\";
+            string configACUrl = string.Format("{0}\\{1}\\CleaningTarget", cleaning.ConfigACUrl, acMethod.ACIdentifier);
+
+            IACConfig targetConfig = picking.ConfigurationEntries.FirstOrDefault(c => c.PreConfigACUrl == preConfigACUrl && c.LocalConfigACUrl == configACUrl);
+            
+            if (targetConfig == null)
+            {
+                ACConfigParam param = new ACConfigParam()
+                {
+                    ACIdentifier = "CleaningTarget",
+                    ACCaption = acMethod.GetACCaptionForACIdentifier("CleaningTarget"),
+                    ValueTypeACClassID = DatabaseApp.ContextIPlus.GetACType("Int32").ACClassID,
+                    ACClassWF = cleaning
+                };
+
+                targetConfig = ConfigManagerIPlus.ACConfigFactory(picking, param, preConfigACUrl, configACUrl, null);
+                param.ConfigurationList.Insert(0, targetConfig);
+
+                picking.ConfigurationEntries.Append(targetConfig);
+            }
+            targetConfig.Value = SelectedCleanItem.RouteItemID;
+
+            if (CleanTargetQuantity > 0)
+            {
+                configACUrl = string.Format("{0}\\{1}\\TargetQuantity", cleaning.ConfigACUrl, acMethod.ACIdentifier);
+                targetConfig = picking.ConfigurationEntries.FirstOrDefault(c => c.PreConfigACUrl == preConfigACUrl && c.LocalConfigACUrl == configACUrl);
+
+                if (targetConfig == null)
+                {
+                    ACConfigParam param = new ACConfigParam()
+                    {
+                        ACIdentifier = "TargetQuantity",
+                        ACCaption = acMethod.GetACCaptionForACIdentifier("TargetQuantity"),
+                        ValueTypeACClassID = DatabaseApp.ContextIPlus.GetACType("Double").ACClassID,
+                        ACClassWF = cleaning
+                    };
+
+                    targetConfig = ConfigManagerIPlus.ACConfigFactory(picking, param, preConfigACUrl, configACUrl, null);
+                    param.ConfigurationList.Insert(0, targetConfig);
+
+                    picking.ConfigurationEntries.Append(targetConfig);
+                }
+                targetConfig.Value = CleanTargetQuantity;
+            }
+
+
+            Msg msg = DatabaseApp.ACSaveChanges();
+            if (msg != null)
+            {
+                Messages.Msg(msg);
+                return false;
             }
 
             return true;

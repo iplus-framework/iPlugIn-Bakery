@@ -579,7 +579,7 @@ namespace gipbakery.mes.processapplication
 
         #region Methods => SingleDosing
 
-        public override void OnPreStartWorkflow(gip.mes.datamodel.Picking picking, List<SingleDosingConfigItem> configItems, Route validRoute, ACClassWF rootWF)
+        public override bool OnPreStartWorkflow(gip.mes.datamodel.Picking picking, List<SingleDosingConfigItem> configItems, Route validRoute, ACClassWF rootWF)
         {
             base.OnPreStartWorkflow(picking, configItems, validRoute, rootWF);
 
@@ -592,7 +592,7 @@ namespace gipbakery.mes.processapplication
                 {
                     ACClassWF tempCalc = configItem.PWGroup.ACClassWF_ParentACClassWF.FirstOrDefault(x => _BakeryTempCalcType.IsAssignableFrom(x.PWACClass.ObjectType));
                     if (tempCalc == null)
-                        return;
+                        return false;
 
                     string preConfigACUrl = configItem.PreConfigACUrl + "\\";
                     string propertyACUrl = string.Format("{0}\\{1}\\WaterTemp", tempCalc.ConfigACUrl, ACStateEnum.SMStarting);
@@ -607,7 +607,7 @@ namespace gipbakery.mes.processapplication
                     if (waterTempConfig == null)
                     {
                         //The insert process of water temperature configuration for single dosing is failed.
-                        return;
+                        return false;
                     }
                     else
                         waterTempConfig.Value = SingleDosTargetTemperature;
@@ -634,6 +634,7 @@ namespace gipbakery.mes.processapplication
 
                 }
             }
+            return true;
         }
 
         private IACConfig InsertTemperatureConfiguration(string propertyACUrl, string preConfigACUrl, string paramACIdentifier, ACClassWF acClassWF, IACConfigStore configStore)
@@ -720,6 +721,19 @@ namespace gipbakery.mes.processapplication
             }
 
             return base.HandleExecuteACMethod(out result, invocationMode, acMethodName, acClassMethod, acParameter);
+        }
+
+        public override bool AddToMessageList(MessageItem messageItem)
+        {
+            if (messageItem != null && messageItem.UserAckPWNode != null)
+            {
+                if (messageItem.UserAckPWNode.ValueT.ACIdentifier.Contains(PWBakeryFlourDischargingAck.PWClassName))
+                {
+                    messageItem.HandleByAcknowledgeButton = false;
+                }
+            }
+
+            return base.AddToMessageList(messageItem);
         }
 
         #endregion
