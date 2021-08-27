@@ -64,6 +64,7 @@
     <Compile Include="ACProcessWorkflow\PWNodeMethod\PWBakeryDosing.cs" />
     <Compile Include="ACProcessWorkflow\PWNodeMethod\PWBakeryFermentationStarter.cs" />
     <Compile Include="ACProcessWorkflow\PWNodeMethod\PWBakeryManualWeighing.cs" />
+    <Compile Include="ACProcessWorkflow\PWNodeMethod\PWBakeryMixingPreProd.cs" />
     <Compile Include="ACProcessWorkflow\PWNodeMethod\PWBakeryPumping.cs" />
     <Compile Include="ACProcessWorkflow\PWNodeMethod\PWBakeryRecvPointReady.cs" />
     <Compile Include="ACProcessWorkflow\PWNodeMethod\PWBakeryFlourDischargingAck.cs" />

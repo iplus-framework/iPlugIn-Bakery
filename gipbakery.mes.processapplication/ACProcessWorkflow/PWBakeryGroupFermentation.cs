@@ -338,6 +338,10 @@ namespace gipbakery.mes.processapplication
 
                 List<PWBakeryDosing> pwDosings = FindVariableDurationNodes(currentNode, prevEndOnTime, parallelNodes);
                 List<PWBaseNodeProcess> fixDurationNodes = FindFixedDurationNodes(currentNode, prevEndOnTime, parallelNodes);
+                if (currentNode == lastNode)
+                {
+                    fixDurationNodes.Add(currentNode);
+                }
 
                 TimeSpan fixedDuration = CalcualteFixedDuration(fixDurationNodes, stages);
                 TimeSpan variableDuration = CalculateVariableDuration(pwDosings, stages);
