@@ -83,7 +83,18 @@ namespace gipbakery.mes.processapplication
         {
             var possibleMixings = ApplicationManager.FindChildComponents<PWBakeryMixingPreProd>().Where(x => x.ParentPWGroup != ParentPWGroup && x.DosingGroupNo == DosingGroupNo);
             var dosings = possibleMixings.SelectMany(x => x.GetNextDosings());
-            bool anyRun = dosings.Any(c => c.CurrentACState == ACStateEnum.SMRunning || c.CurrentACState == ACStateEnum.SMStarting) || possibleMixings.Any(c => c.CurrentACState == ACStateEnum.SMRunning);
+            bool anyRun = dosings.Any(c => c.CurrentACState == ACStateEnum.SMRunning || c.CurrentACState == ACStateEnum.SMStarting) 
+                       || possibleMixings.Any(c => c.CurrentACState == ACStateEnum.SMRunning);
+
+
+            if (!anyRun)
+            {
+                var cleaningNodes = ApplicationManager.FindChildComponents<PWBakeryCleaning>();
+                if (cleaningNodes != null && cleaningNodes.Any())
+                {
+                    anyRun = cleaningNodes.Any(c => c.CurrentACState == ACStateEnum.SMRunning || c.CurrentACState == ACStateEnum.SMStarting);
+                }
+            }
 
             if (StartingOrder.ValueT.HasValue && !anyRun)
             {

@@ -224,6 +224,7 @@ namespace gipbakery.mes.processapplication
         public IACContainerTNet<bool> RefreshParkingSpace;
 
         public IACContainerTNet<string> ProcessModuleOrderInfo;
+        private bool _IsOrderInfoEmpy = true;
 
         protected ACRef<IACComponentPWGroup> PWGroupFermentation
         {
@@ -249,14 +250,14 @@ namespace gipbakery.mes.processapplication
             set;
         }
 
-        private bool _IsDischargingActive;
-        public bool IsDischargingActive
+        private short _DischargingState;
+        public short DischargingState
         {
-            get => _IsDischargingActive;
+            get => _DischargingState;
             set
             {
-                _IsDischargingActive = value;
-                OnPropertyChanged("IsDischargingActive");
+                _DischargingState = value;
+                OnPropertyChanged("DischargingState");
             }
         }
 
@@ -445,7 +446,7 @@ namespace gipbakery.mes.processapplication
                 if (DischargingACStateProp != null)
                 {
                     DischargingACStateProp.PropertyChanged += DischargingACStateProp_PropertyChanged;
-                    HandleDischargingACState();
+                    HandleDischargingACState(DischargingACStateProp.ValueT);
                 }
                 else
                 {
@@ -542,20 +543,24 @@ namespace gipbakery.mes.processapplication
         {
             if (e.PropertyName == Const.ValueT)
             {
-                HandleDischargingACState();
+                IACContainerTNet<ACStateEnum> senderProp = sender as IACContainerTNet<ACStateEnum>;
+                if (senderProp != null)
+                    HandleDischargingACState(senderProp.ValueT);
             }
         }
 
-        protected virtual void HandleDischargingACState()
+        protected virtual void HandleDischargingACState(ACStateEnum acStateEnum)
         {
-            if (DischargingACStateProp.ValueT == ACStateEnum.SMRunning)
-            {
-                IsDischargingActive = true;
-            }
-            else
-            {
-                IsDischargingActive = false;
-            }
+            DischargingState = (short)acStateEnum;
+
+            //if (ACStateEnum == ACStateEnum.SMRunning)
+            //{
+            //    DischargingState = true;
+            //}
+            //else
+            //{
+            //    DischargingState = false;
+            //}
         }
 
         protected void ProcessModuleOrderInfo_PropertyChanged(object sender, PropertyChangedEventArgs e)
@@ -563,6 +568,7 @@ namespace gipbakery.mes.processapplication
             if (e.PropertyName == Const.ValueT)
             {
                 string orderInfo = ProcessModuleOrderInfo.ValueT;
+                _IsOrderInfoEmpy = string.IsNullOrEmpty(orderInfo);
                 ParentBSOWCS.ApplicationQueue.Add(() => HandleOrderInfoPropChanged(orderInfo));
             }
         }
@@ -733,7 +739,7 @@ namespace gipbakery.mes.processapplication
 
         public bool IsEnabledClean()
         {
-            return ProcessModuleOrderInfo?.ValueT == null && PAFPreProducing != null;
+            return _IsOrderInfoEmpy && PAFPreProducing != null;
         }
 
         [ACMethodInfo("", "en{'Start clean'}de{'Reinigen starten'}", 801, true)]
@@ -838,10 +844,20 @@ namespace gipbakery.mes.processapplication
         {
             if (IsEnabledStoreOutwardEnabledOn())
             {
+                if (!_IsOrderInfoEmpy && DischargingState != (short)ACStateEnum.SMRunning && DischargingState != (short)ACStateEnum.SMPaused)
+                {
+                    //The yeast is not yet ready for dosing. Are you sure you want to release the yeast container?
+                    if (Messages.Question(this, "Question50069") == Global.MsgResult.No) 
+                        return;
+                }
+
+
                 PAFPreProducing?.ExecuteMethod(PAFBakeryYeastProducing.MN_SwitchVirtualStoreOutwardEnabled);
 
-                if (!IsDischargingActive)
+
+                if (_IsOrderInfoEmpy)//process module is not mapped
                 {
+                    //There is no order in the container. Do you want to reactivate the dosing process and temperature control ?
                     if (Messages.Question(this, "Question50066") == Global.MsgResult.Yes)
                     {
                         bool managers = CheckAndInitManagers();
@@ -903,6 +919,17 @@ namespace gipbakery.mes.processapplication
                         }
                     }
                 }
+                else // process module is mapped
+                {
+                    if (DischargingState == (short)ACStateEnum.SMPaused)
+                    {
+                        //Question50068 The emptying readiness of the yeast is interrupted. Do you want to reactivate the dosing ready mode?
+                        if (Messages.Question(this, "Question50068") == Global.MsgResult.Yes)
+                        {
+                            DischargingACStateProp.ValueT = ACStateEnum.SMRunning;
+                        }
+                    }
+                }
             }
         }
 
@@ -916,7 +943,7 @@ namespace gipbakery.mes.processapplication
         {
             if (IsEnabledStoreOutwardEnabledOff())
             {
-                if (IsDischargingActive)
+                if (DischargingState == (short)ACStateEnum.SMRunning)
                 {
                     //The sourdough is ready for dosing. Do you want to finish the sourdough order? 
                     //Pressing the "No" key only removes the dosing availability and locks the storage container.
@@ -1072,9 +1099,7 @@ namespace gipbakery.mes.processapplication
 
             if (cleaning == null)
             {
-                //TODO: translation
-                Messages.Error(this, "Can not find the PWBakeryCleaning ACClassWF");
-                return false;
+                return true;
             }
 
             ACMethod acMethod = cleaning.RefPAACClassMethod.ACMethod;

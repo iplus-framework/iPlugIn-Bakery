@@ -433,7 +433,7 @@ namespace gipbakery.mes.processapplication
         private void SetInfoProperties()
         {
             ReadyForDosing = ReadyForDosingProp.ValueT.ToString();
-            if (!IsDischargingActive)
+            if (DischargingState != (short)ACStateEnum.SMRunning)
                 StartDateTime = StartTimeProp.ValueT.ToString();
             NextStage = NextFermentationStageProp.ValueT;
         }
@@ -478,18 +478,17 @@ namespace gipbakery.mes.processapplication
             }
         }
 
-        protected override void HandleDischargingACState()
+        protected override void HandleDischargingACState(ACStateEnum acState)
         {
             string text = Root.Environment.TranslateText(this, "tbDosingReady");
+            DischargingState = (short)acState;
 
-            if (DischargingACStateProp.ValueT == ACStateEnum.SMRunning)
+            if (acState == ACStateEnum.SMRunning)
             {
-                IsDischargingActive = true;
                 StartDateTime = text;
             }
             else
             {
-                IsDischargingActive = false;
                 if (StartDateTime == text)
                     StartDateTime = null;
             }
