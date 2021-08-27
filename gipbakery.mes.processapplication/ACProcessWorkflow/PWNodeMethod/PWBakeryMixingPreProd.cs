@@ -91,11 +91,6 @@ namespace gipbakery.mes.processapplication
                 if (nextRun == null || nextRun >= StartingOrder.ValueT)
                     return true;
 
-                if (StartingOrder.ValueT < nextRun)
-                {
-                    //TODO: error
-                }
-
                 return false;
             }
             else
