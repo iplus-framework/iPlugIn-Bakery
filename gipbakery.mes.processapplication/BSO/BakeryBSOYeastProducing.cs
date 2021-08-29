@@ -552,15 +552,6 @@ namespace gipbakery.mes.processapplication
         protected virtual void HandleDischargingACState(ACStateEnum acStateEnum)
         {
             DischargingState = (short)acStateEnum;
-
-            //if (ACStateEnum == ACStateEnum.SMRunning)
-            //{
-            //    DischargingState = true;
-            //}
-            //else
-            //{
-            //    DischargingState = false;
-            //}
         }
 
         protected void ProcessModuleOrderInfo_PropertyChanged(object sender, PropertyChangedEventArgs e)
@@ -568,14 +559,17 @@ namespace gipbakery.mes.processapplication
             if (e.PropertyName == Const.ValueT)
             {
                 string orderInfo = ProcessModuleOrderInfo.ValueT;
-                _IsOrderInfoEmpy = string.IsNullOrEmpty(orderInfo);
+                
                 ParentBSOWCS.ApplicationQueue.Add(() => HandleOrderInfoPropChanged(orderInfo));
             }
         }
 
         protected void HandleOrderInfoPropChanged(string orderInfo)
         {
-            if (string.IsNullOrEmpty(orderInfo))
+            bool isOrderEmpty = string.IsNullOrEmpty(orderInfo);
+            _IsOrderInfoEmpy = isOrderEmpty;
+
+            if (isOrderEmpty)
             {
                 Deactivate();
             }
@@ -688,6 +682,7 @@ namespace gipbakery.mes.processapplication
                     bool? result = FermentationStarterRef.ValueT.ExecuteMethod(PWBakeryFermentationStarter.MN_AckFermentationStarter, false) as bool?;
                     if (result.HasValue && !result.Value)
                     {
+                        //The starter were not added to the container!Do you still want to start production?
                         if (Messages.Question(this, "Question50063") == Global.MsgResult.Yes)
                         {
                             FermentationStarterRef.ValueT.ExecuteMethod(PWBakeryFermentationStarter.MN_AckFermentationStarter, true);
@@ -846,7 +841,7 @@ namespace gipbakery.mes.processapplication
             {
                 if (!_IsOrderInfoEmpy && DischargingState != (short)ACStateEnum.SMRunning && DischargingState != (short)ACStateEnum.SMPaused)
                 {
-                    //The yeast is not yet ready for dosing. Are you sure you want to release the yeast container?
+                    //The product is not yet ready to be dosed.Are you sure that you want to release the container?
                     if (Messages.Question(this, "Question50069") == Global.MsgResult.No) 
                         return;
                 }
@@ -923,7 +918,7 @@ namespace gipbakery.mes.processapplication
                 {
                     if (DischargingState == (short)ACStateEnum.SMPaused)
                     {
-                        //Question50068 The emptying readiness of the yeast is interrupted. Do you want to reactivate the dosing ready mode?
+                        //Question50068: The dosing readiness of the container is interrupted. Do you want to reactivate the dosing readiness?
                         if (Messages.Question(this, "Question50068") == Global.MsgResult.Yes)
                         {
                             DischargingACStateProp.ValueT = ACStateEnum.SMRunning;
@@ -945,13 +940,15 @@ namespace gipbakery.mes.processapplication
             {
                 if (DischargingState == (short)ACStateEnum.SMRunning)
                 {
-                    //The sourdough is ready for dosing. Do you want to finish the sourdough order? 
-                    //Pressing the "No" key only removes the dosing availability and locks the storage container.
-
-                    var questionResult = Messages.Question(this, "Question50067");
+                    //The product is ready to be dosed. Do you want to finish the order? With button<No>, only the dosing readiness is taken away and the container is locked.
+                   var questionResult = Messages.Question(this, "Question50067");
                     if (questionResult == Global.MsgResult.Yes && DischargingACStateProp != null)
                     {
                         DischargingACStateProp.ValueT = ACStateEnum.SMCompleted;
+                    }
+                    else if (questionResult == Global.MsgResult.No && DischargingACStateProp != null)
+                    {
+                        DischargingACStateProp.ValueT = ACStateEnum.SMPaused;
                     }
                     else if (questionResult == Global.MsgResult.Cancel)
                     {
