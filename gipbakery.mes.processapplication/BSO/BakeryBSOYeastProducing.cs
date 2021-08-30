@@ -922,6 +922,7 @@ namespace gipbakery.mes.processapplication
                         if (Messages.Question(this, "Question50068") == Global.MsgResult.Yes)
                         {
                             DischargingACStateProp.ValueT = ACStateEnum.SMRunning;
+                            DischargingState = (short)DischargingACStateProp.ValueT;
                         }
                     }
                 }
@@ -940,19 +941,39 @@ namespace gipbakery.mes.processapplication
             {
                 if (DischargingState == (short)ACStateEnum.SMRunning)
                 {
-                    //The product is ready to be dosed. Do you want to finish the order? With button<No>, only the dosing readiness is taken away and the container is locked.
-                   var questionResult = Messages.Question(this, "Question50067");
-                    if (questionResult == Global.MsgResult.Yes && DischargingACStateProp != null)
+                    Global.ControlModes finishOrderRight = Global.ControlModes.Hidden;
+                    string nMethodName;
+                    gip.core.datamodel.ACClassMethod finishOrder = GetACClassMethod("FinishOrder", out nMethodName);
+                    if (finishOrder != null)
+                        finishOrderRight = ComponentClass.RightManager.GetControlMode(finishOrder);
+
+                    if (finishOrderRight == Global.ControlModes.Enabled)
                     {
-                        DischargingACStateProp.ValueT = ACStateEnum.SMCompleted;
+                        //The product is ready to be dosed. Do you want to finish the order? With button<No>, only the dosing readiness is taken away and the container is locked.
+                        var questionResult = Messages.Question(this, "Question50067");
+                        if (questionResult == Global.MsgResult.Yes)
+                            FinishOrder();
+
+                        else if (questionResult == Global.MsgResult.No && DischargingACStateProp != null)
+                        {
+                            DischargingACStateProp.ValueT = ACStateEnum.SMPaused;
+                            DischargingState = (short)DischargingACStateProp.ValueT;
+                        }
+
+                        else if (questionResult == Global.MsgResult.Cancel)
+                            return;
                     }
-                    else if (questionResult == Global.MsgResult.No && DischargingACStateProp != null)
+                    else
                     {
-                        DischargingACStateProp.ValueT = ACStateEnum.SMPaused;
-                    }
-                    else if (questionResult == Global.MsgResult.Cancel)
-                    {
-                        return;
+                        //The product is ready to be dosed. Do you want to take away the dosing readiness and lock the container?
+                        var questionResult = Messages.Question(this, "Question50070");
+                        if (questionResult == Global.MsgResult.Yes)
+                        {
+                            DischargingACStateProp.ValueT = ACStateEnum.SMPaused;
+                            DischargingState = (short)DischargingACStateProp.ValueT;
+                        }
+                        else
+                            return;
                     }
                 }
 
@@ -964,6 +985,17 @@ namespace gipbakery.mes.processapplication
         {
             return PAFPreProducing != null;
         }
+
+        [ACMethodInfo("", "", 802, true)]
+        public void FinishOrder()
+        {
+            if (DischargingACStateProp != null)
+            {
+                DischargingACStateProp.ValueT = ACStateEnum.SMCompleted;
+                DischargingState = (short)DischargingACStateProp.ValueT;
+            }
+        }
+    
 
         [ACMethodInfo("", "en{'Pump over'}de{'Umpumpen'}", 802, true)]
         public void PumpOver()

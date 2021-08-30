@@ -41,7 +41,23 @@ namespace gipbakery.mes.processapplication
             temp = PumpOverProcessModuleACUrl;
             BakeryPreProdCleaningMode mode = CleaningMode;
 
+            PAProcessModule module = ParentACComponent as PAProcessModule;
+            if (module != null)
+            {
+                NeedWork.ValueT = !string.IsNullOrEmpty(module.OrderInfo.ValueT);
+                module.OrderInfo.PropertyChanged += OrderInfo_PropertyChanged;
+            }
+
             return result;
+        }
+
+        private void OrderInfo_PropertyChanged(object sender, System.ComponentModel.PropertyChangedEventArgs e)
+        {
+            IACContainerTNet<string> senderProp = sender as IACContainerTNet<string>;
+            if (senderProp != null)
+            {
+                NeedWork.ValueT = !string.IsNullOrEmpty(senderProp.ValueT);
+            }
         }
 
         public override void SMIdle()
@@ -52,6 +68,12 @@ namespace gipbakery.mes.processapplication
 
         public override bool ACDeInit(bool deleteACClassTask = false)
         {
+            PAProcessModule module = ParentACComponent as PAProcessModule;
+            if (module != null)
+            {
+                module.OrderInfo.PropertyChanged -= OrderInfo_PropertyChanged;
+            }
+
             VirtualTargetStore = null;
             return base.ACDeInit(deleteACClassTask);
         }

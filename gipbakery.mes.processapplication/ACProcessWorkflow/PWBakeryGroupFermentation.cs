@@ -153,7 +153,7 @@ namespace gipbakery.mes.processapplication
 
                 CalculateDuration();
 
-                ActivatePreProdFunctions();
+                //ActivatePreProdFunctions();
 
                 using (ACMonitor.Lock(_20015_LockValue))
                 {
