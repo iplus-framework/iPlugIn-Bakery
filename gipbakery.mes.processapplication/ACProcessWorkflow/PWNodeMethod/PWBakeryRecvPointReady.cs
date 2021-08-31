@@ -80,6 +80,7 @@ namespace gipbakery.mes.processapplication
         }
 
         private PAEScaleBase _AckScale;
+        private bool? _DischargeOverHose = null;
 
         #endregion
 
@@ -98,6 +99,19 @@ namespace gipbakery.mes.processapplication
 
         public override void SMRunning()
         {
+            if (!_DischargeOverHose.HasValue)
+            {
+                bool complete = IsDischargeOverHose();
+                if (complete)
+                {
+                    CurrentACState = ACStateEnum.SMCompleted;
+                    return;
+                }
+            }
+
+            if (!_DischargeOverHose.HasValue)
+                _DischargeOverHose = false;
+
             if (    AckOverScale 
                 && (AckScaleWeight > 0.0000001 || AckScaleWeight < -0.0000001) 
                 && _AckScale == null)
@@ -181,6 +195,7 @@ namespace gipbakery.mes.processapplication
                 _AckScale.ActualValue.PropertyChanged -= ActualValue_PropertyChanged;
                 _AckScale = null;
             }
+            _DischargeOverHose = null;
         }
 
         public static bool HandleExecuteACMethod_PWBakeryRecvPointReady(out object result, IACComponent acComponent, string acMethodName, gip.core.datamodel.ACClassMethod acClassMethod, params object[] acParameter)
@@ -196,6 +211,30 @@ namespace gipbakery.mes.processapplication
             //        return true;
             //}
             return HandleExecuteACMethod_PWNodeUserAck(out result, acComponent, acMethodName, acClassMethod, acParameter);
+        }
+
+        public bool IsDischargeOverHose()
+        {
+            PWBakeryDischargingSingleDos disch = FindSuccessors<PWBakeryDischargingSingleDos>(true, c => c is PWBakeryDischargingSingleDos).FirstOrDefault();
+            if (disch == null)
+                return false;
+
+            BakeryReceivingPoint recvPoint = ParentPWGroup?.AccessedProcessModule as BakeryReceivingPoint;
+            if (recvPoint == null)
+                return false;
+
+            ACMethod dischMethod = disch.ContentACClassWF.RefPAACClassMethod.TypeACSignature();
+            disch.GetConfigForACMethod(dischMethod, true, null);
+
+            ACValue dest = dischMethod.ParameterValueList.GetACValue("Destination");
+            if (dest != null)
+            {
+                short target = dest.ParamAsInt16;
+                if (target == recvPoint.HoseDestination)
+                    return true;
+            }
+
+            return false;
         }
 
         #endregion

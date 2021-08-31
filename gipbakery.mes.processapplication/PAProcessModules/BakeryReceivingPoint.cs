@@ -37,6 +37,7 @@ namespace gipbakery.mes.processapplication
 
             _RecvPointReadyScaleACUrl = new ACPropertyConfigValue<string>(this, "RecvPointReadyScaleACUrl", "");
             _WithCover = new ACPropertyConfigValue<bool>(this, "WithCover", false);
+            _HoseDestination = new ACPropertyConfigValue<int>(this, "HoseDestination", 999);
         }
 
         public override bool ACInit(Global.ACStartTypes startChildMode = Global.ACStartTypes.Automatic)
@@ -50,6 +51,7 @@ namespace gipbakery.mes.processapplication
         {
             var temp = RecvPointReadyScaleACUrl;
             bool temp1 = WithCover;
+            int temp2 = HoseDestination;
             return base.ACPostInit();
         }
 
@@ -84,6 +86,19 @@ namespace gipbakery.mes.processapplication
                 OnPropertyChanged("WithCover");
             }
         }
+
+        private ACPropertyConfigValue<int> _HoseDestination;
+        [ACPropertyConfig("en{'Discharging over hose, target destination ID'}de{'Entladung über Schlauch, Zielort-ID'}")]
+        public int HoseDestination
+        {
+            get => _HoseDestination.ValueT;
+            set
+            {
+                _HoseDestination.ValueT = value;
+                OnPropertyChanged("HoseDestination");
+            }
+        }
+
 
         [ACPropertyBindingSource(IsPersistable = true)]
         public IACContainerTNet<double> DoughCorrTemp

@@ -18,6 +18,7 @@ namespace gipbakery.mes.processapplication
         public BakeryBSOManualWeighing(ACClass acType, IACObject content, IACObject parentACObject, ACValueList parameter, string acIdentifier = "") :
             base(acType, content, parentACObject, parameter, acIdentifier)
         {
+            
         }
 
         #endregion
@@ -26,7 +27,6 @@ namespace gipbakery.mes.processapplication
 
         private Type _BakeryTempCalcType = typeof(PWBakeryTempCalc);
         private Type _BakeryRecvPointType = typeof(BakeryReceivingPoint);
-        private Type _BakeryAckFlourDischarge = typeof(PWBakeryFlourDischargingAck);
         private ACMonitorObject _71100_TempCalcLock = new ACMonitorObject(71100);
 
         [ACPropertyInfo(9999)]
@@ -188,6 +188,18 @@ namespace gipbakery.mes.processapplication
             {
                 _SingleDosTargetTemperature = value;
                 OnPropertyChanged("SingleDosTargetTemperature");
+            }
+        }
+
+        private bool _DischargeOverHose;
+        [ACPropertyInfo(850, "", "en{'Over hose'}de{'Über Schlauch'}")]
+        public bool DischargeOverHose
+        {
+            get => _DischargeOverHose;
+            set
+            {
+                _DischargeOverHose = value;
+                OnPropertyChanged("DischargeOverHose");
             }
         }
 
@@ -634,6 +646,60 @@ namespace gipbakery.mes.processapplication
 
                 }
             }
+
+            bool result = AddDischargingConfig(picking, configItems, validRoute, rootWF);
+
+            return result;
+        }
+
+        private bool AddDischargingConfig(gip.mes.datamodel.Picking picking, List<SingleDosingConfigItem> configItems, Route validRoute, ACClassWF rootWF)
+        {
+            if (!DischargeOverHose)
+                return true;
+
+            SingleDosingConfigItem configItem = configItems.FirstOrDefault(c => c.PWGroup.ACClassWF_ParentACClassWF
+                                                                                 .Any(x => _BakeryTempCalcType.IsAssignableFrom(x.PWACClass.ObjectType)));
+
+            if (configItem != null)
+            {
+                gip.core.datamodel.ACClassWF discharging = configItem.PWGroup.ACClassWF_ParentACClassWF
+                                                                             .FirstOrDefault(c => c.PWACClass.ACIdentifier.Contains("PWBakeryDischargingSingleDos"));
+
+                if (discharging != null)
+                {
+                    ACMethod acMethod = discharging.RefPAACClassMethod.ACMethod;
+
+                    string preConfigACUrl = rootWF.ConfigACUrl + "\\";
+                    string configACUrl = string.Format("{0}\\{1}\\Destination", discharging.ConfigACUrl, acMethod.ACIdentifier);
+
+                    IACConfig targetConfig = picking.ConfigurationEntries.FirstOrDefault(c => c.PreConfigACUrl == preConfigACUrl && c.LocalConfigACUrl == configACUrl);
+
+                    if (targetConfig == null)
+                    {
+                        ACConfigParam param = new ACConfigParam()
+                        {
+                            ACIdentifier = "Destination",
+                            ACCaption = acMethod.GetACCaptionForACIdentifier("Destination"),
+                            ValueTypeACClassID = DatabaseApp.ContextIPlus.GetACType("Int16").ACClassID,
+                            ACClassWF = discharging
+                        };
+
+                        targetConfig = ConfigManagerIPlus.ACConfigFactory(picking, param, preConfigACUrl, configACUrl, null);
+                        param.ConfigurationList.Insert(0, targetConfig);
+
+                        picking.ConfigurationEntries.Append(targetConfig);
+                    }
+                    targetConfig.Value = 999; //TODO from config
+
+                    Msg msg = DatabaseApp.ACSaveChanges();
+                    if (msg != null)
+                    {
+                        Messages.Msg(msg);
+                        return false;
+                    }
+                }
+            }
+
             return true;
         }
 
