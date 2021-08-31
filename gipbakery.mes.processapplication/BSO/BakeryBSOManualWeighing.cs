@@ -438,18 +438,13 @@ namespace gipbakery.mes.processapplication
                 else if (CoverFlourBtnMode == CoverFlourButtonEnum.FlourDischargeVisible)
                 {
                     IsCoverUpDown.ValueT = true;
-                    
-                    //MessageItem msgItem = MessagesList.FirstOrDefault(c => c.UserAckPWNodeType != null && _BakeryAckFlourDischarge.IsAssignableFrom(c.UserAckPWNodeType));
-                    //if (msgItem)
-                    
                 }
-
             }
         }
 
         public bool IsEnabledRecvPointCoverUpDown()
         {
-            return IsCoverUpDown != null && CoverFlourBtnMode > CoverFlourButtonEnum.None;
+            return ParentBSOWCS != null && ParentBSOWCS.IsCurrentUserConfigured && IsCoverUpDown != null && CoverFlourBtnMode > CoverFlourButtonEnum.None;
         }
 
         #region Methods => Temperature dialog
@@ -663,7 +658,8 @@ namespace gipbakery.mes.processapplication
             if (configItem != null)
             {
                 gip.core.datamodel.ACClassWF discharging = configItem.PWGroup.ACClassWF_ParentACClassWF
-                                                                             .FirstOrDefault(c => c.PWACClass.ACIdentifier.Contains("PWBakeryDischargingSingleDos"));
+                                                                     .FirstOrDefault(c => c.PWACClass.ACIdentifier
+                                                                                           .Contains(PWBakeryDischargingSingleDos.PWClassName));
 
                 if (discharging != null)
                 {
@@ -689,7 +685,22 @@ namespace gipbakery.mes.processapplication
 
                         picking.ConfigurationEntries.Append(targetConfig);
                     }
-                    targetConfig.Value = 999; //TODO from config
+
+                    ACClass compClass = CurrentProcessModule?.ComponentClass.FromIPlusContext<gip.core.datamodel.ACClass>(DatabaseApp.ContextIPlus);
+                    if (compClass == null)
+                    {
+                        //TODO:error
+                        return false;
+                    }
+
+                    var config = compClass.ACClassConfig_ACClass.FirstOrDefault(c => c.ConfigACUrl == "HoseDestination");
+                    if (config == null)
+                    {
+                        //TODO: error
+                        return false;
+                    }
+
+                    targetConfig.Value = config.Value;
 
                     Msg msg = DatabaseApp.ACSaveChanges();
                     if (msg != null)

@@ -20,6 +20,8 @@ namespace gipbakery.mes.processapplication
         {
         }
 
+        public new const string PWClassName = "PWBakeryDischargingSingleDos";
+
         private short? _DischargingDestination = null;
 
         public override bool GetConfigForACMethod(ACMethod paramMethod, bool isForPAF, params object[] acParameter)
