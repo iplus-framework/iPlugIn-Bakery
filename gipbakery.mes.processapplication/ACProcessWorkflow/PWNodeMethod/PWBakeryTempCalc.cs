@@ -51,6 +51,9 @@ namespace gipbakery.mes.processapplication
             method.ParameterValueList.Add(new ACValue("MeltingHeatInfluence", typeof(double), 100, Global.ParamOption.Required));
             paramTranslation.Add("MeltingHeatInfluence", "en{'Melting heat influence[%]'}de{'SchmelzwaermeEinfluss[%]'}");
 
+            method.ParameterValueList.Add(new ACValue("AskUserIsWaterNeeded", typeof(bool), false, Global.ParamOption.Optional));
+            paramTranslation.Add("AskUserIsWaterNeeded", "en{'Ask user if is water needed'}de{'Ask user if is water needed'}");
+
             var wrapper = new ACMethodWrapper(method, "en{'User Acknowledge'}de{'Benutzerbestätigung'}", typeof(PWBakeryTempCalc), paramTranslation, null);
             ACMethod.RegisterVirtualMethod(typeof(PWBakeryTempCalc), ACStateConst.SMStarting, wrapper);
 
@@ -137,7 +140,7 @@ namespace gipbakery.mes.processapplication
             get;
             set;
         }
-            
+
 
         private Type _PWManualWeighingType = typeof(PWManualWeighing);
         private Type _PWDosingType = typeof(PWDosing);
@@ -168,6 +171,8 @@ namespace gipbakery.mes.processapplication
         private TempCalcMode _CalculatorMode = TempCalcMode.Calcuate;
 
         private bool _RecalculateTemperatures = true;
+
+        private bool? _UserResponse = null;
 
         private string _CityWaterMaterialNo;
         private string _ColdWaterMaterialNo;
@@ -311,6 +316,23 @@ namespace gipbakery.mes.processapplication
             }
         }
 
+        internal bool AskUserIsWaterNeeded
+        {
+            get
+            {
+                var method = MyConfiguration;
+                if (method != null)
+                {
+                    var acValue = method.ParameterValueList.GetACValue("AskUserIsWaterNeeded");
+                    if (acValue != null)
+                    {
+                        return acValue.ParamAsBoolean;
+                    }
+                }
+                return false;
+            }
+        }
+
         #endregion
 
         #endregion
@@ -344,9 +366,24 @@ namespace gipbakery.mes.processapplication
 
         public override void SMRunning()
         {
-            RefreshNodeInfoOnModule();
             if (Root.Initialized)
             {
+                RefreshNodeInfoOnModule();
+                if (AskUserIsWaterNeeded)
+                {
+                    if (_UserResponse == null)
+                    {
+                        UnSubscribeToProjectWorkCycle();
+                        return;
+                    }
+                    else if (!_UserResponse.Value)
+                    {
+                        SetIntermediateComponentsToCompleted();
+                        CurrentACState = ACStateEnum.SMCompleted;
+                        return;
+                    }
+                }
+
                 BakeryReceivingPoint recvPoint = ParentPWGroup?.AccessedProcessModule as BakeryReceivingPoint;
                 bool? isTempServiceInitialized = recvPoint?.ExecuteMethod("IsTemperatureServiceInitialized") as bool?;
                 if (isTempServiceInitialized.HasValue || isTempServiceInitialized.Value)
@@ -356,7 +393,10 @@ namespace gipbakery.mes.processapplication
                         calcMode = _CalculatorMode;
 
                     if (calcMode == TempCalcMode.Calcuate)
+                    {
                         CalculateTargetTemperature();
+                        UnSubscribeToProjectWorkCycle();
+                    }
                     else if (calcMode == TempCalcMode.AdjustOrder)
                     {
                         AdjustOrder();
@@ -928,7 +968,7 @@ namespace gipbakery.mes.processapplication
             if (CombineWarmCityWater(warmWater, cityWater, targetWaterTemperature, totalWaterQuantity))
             {
                 //The calculated water temperature is {0} °C and the target quantity is {1} {2}.
-                TemperatureCalculationResult.ValueT = Root.Environment.TranslateText(this, "TempCalcResult", targetWaterTemperature.ToString("F2"), 
+                TemperatureCalculationResult.ValueT = Root.Environment.TranslateText(this, "TempCalcResult", targetWaterTemperature.ToString("F2"),
                                                                                                              totalWaterQuantity.ToString("F2"), "kg");
                 WaterCalcResult.ValueT = targetWaterTemperature;
                 return;
@@ -937,7 +977,7 @@ namespace gipbakery.mes.processapplication
             if (CombineColdCityWater(coldWater, cityWater, targetWaterTemperature, totalWaterQuantity))
             {
                 //The calculated water temperature is {0} °C and the target quantity is {1} {2}.
-                TemperatureCalculationResult.ValueT = Root.Environment.TranslateText(this, "TempCalcResult", targetWaterTemperature.ToString("F2"), 
+                TemperatureCalculationResult.ValueT = Root.Environment.TranslateText(this, "TempCalcResult", targetWaterTemperature.ToString("F2"),
                                                                                                              totalWaterQuantity.ToString("F2"), "kg");
                 WaterCalcResult.ValueT = targetWaterTemperature;
                 return;
@@ -953,7 +993,7 @@ namespace gipbakery.mes.processapplication
             }
 
             //The calculated water temperature is {0} °C and the target quantity is {1} {2}.
-            TemperatureCalculationResult.ValueT = Root.Environment.TranslateText(this, "TempCalcResult", targetWaterTemperature.ToString("F2"), 
+            TemperatureCalculationResult.ValueT = Root.Environment.TranslateText(this, "TempCalcResult", targetWaterTemperature.ToString("F2"),
                                                                                                          totalWaterQuantity.ToString("F2"), "kg");
             WaterCalcResult.ValueT = targetWaterTemperature;
         }
@@ -1046,7 +1086,7 @@ namespace gipbakery.mes.processapplication
 
                     if (coldWaterQuantity < coldWater.WaterMinDosingQuantity)
                     {
-                        coldWaterQuantity = 0 ;
+                        coldWaterQuantity = 0;
                         dryIceQuantity = totalWaterQuantity;
                     }
                     else if (dryIceQuantity < coldWater.WaterMinDosingQuantity) // TODO: find manual scale on receiving point and get min weighing quantity
@@ -1670,6 +1710,120 @@ namespace gipbakery.mes.processapplication
             return pos;
         }
 
+        private void SetIntermediateComponentsToCompleted()
+        {
+            PWMethodProduction pwMethodProduction = ParentPWMethod<PWMethodProduction>();
+            // If dosing is not for production, then do nothing
+            if (pwMethodProduction == null)
+                return;
+
+            using (Database db = new gip.core.datamodel.Database())
+            using (DatabaseApp dbApp = new DatabaseApp(db))
+            {
+                ProdOrderPartslistPos endBatchPos = pwMethodProduction.CurrentProdOrderPartslistPos.FromAppContext<ProdOrderPartslistPos>(dbApp);
+
+                if (pwMethodProduction.CurrentProdOrderBatch == null)
+                {
+                    // Error50411: No batch assigned to last intermediate material of this workflow
+                    Msg msg = new Msg(this, eMsgLevel.Error, PWClassName, "AdjustWatersInProdOrderPartslist(30)", 1259, "Error50411");
+
+                    if (IsAlarmActive(ProcessAlarm, msg.Message) == null)
+                        Messages.LogError(this.GetACUrl(), msg.ACIdentifier, msg.InnerMessage);
+                    OnNewAlarmOccurred(ProcessAlarm, msg, false);
+                    return;
+                }
+
+                var contentACClassWFVB = ContentACClassWF.FromAppContext<gip.mes.datamodel.ACClassWF>(dbApp);
+                ProdOrderBatch batch = pwMethodProduction.CurrentProdOrderBatch.FromAppContext<ProdOrderBatch>(dbApp);
+                ProdOrderBatchPlan batchPlan = batch.ProdOrderBatchPlan;
+
+                PartslistACClassMethod plMethod = endBatchPos.ProdOrderPartslist.Partslist.PartslistACClassMethod_Partslist.FirstOrDefault();
+                ProdOrderPartslist currentProdOrderPartslist = endBatchPos.ProdOrderPartslist.FromAppContext<ProdOrderPartslist>(dbApp);
+
+                IEnumerable<MaterialWFConnection> matWFConnections = null;
+                if (batchPlan != null && batchPlan.MaterialWFACClassMethodID.HasValue)
+                {
+                    matWFConnections = dbApp.MaterialWFConnection
+                                            .Where(c => c.MaterialWFACClassMethod.MaterialWFACClassMethodID == batchPlan.MaterialWFACClassMethodID.Value
+                                                    && c.ACClassWFID == contentACClassWFVB.ACClassWFID).ToArray();
+                }
+
+                if (matWFConnections == null || !matWFConnections.Any())
+                {
+                    // Error50415: No relation defined between Workflownode and intermediate material in Materialworkflow
+                    Msg msg1 = new Msg(this, eMsgLevel.Error, PWClassName, "AdjustWatersInProdOrderPartslist(40)", 1285, "Error50415");
+
+                    if (IsAlarmActive(ProcessAlarm, msg1.Message) == null)
+                        Messages.LogError(this.GetACUrl(), msg1.ACIdentifier, msg1.InnerMessage);
+                    OnNewAlarmOccurred(ProcessAlarm, msg1, false);
+                    return;
+                }
+
+                BakeryReceivingPoint recvPoint = ParentPWGroup.AccessedProcessModule as BakeryReceivingPoint;
+
+                ACValueList componentTemperaturesService = recvPoint.GetWaterComponentsFromTempService();
+                if (componentTemperaturesService == null)
+                    return;
+
+                List<MaterialTemperature> tempFromService = componentTemperaturesService.Select(c => c.Value as MaterialTemperature).ToList();
+
+                _ColdWaterMaterialNo = tempFromService.FirstOrDefault(c => c.Water == WaterType.ColdWater)?.MaterialNo;
+                _CityWaterMaterialNo = tempFromService.FirstOrDefault(c => c.Water == WaterType.CityWater)?.MaterialNo;
+                _WarmWaterMaterialNo = tempFromService.FirstOrDefault(c => c.Water == WaterType.WarmWater)?.MaterialNo;
+                string dryIce = DryIceMaterialNo;
+
+                var intermediateAutomatic = matWFConnections.FirstOrDefault(c => c.Material.MaterialWFConnection_Material
+                                                                       .FirstOrDefault(x => _PWDosingType.IsAssignableFrom(x.ACClassWF.PWACClass.FromIPlusContext<gip.core.datamodel.ACClass>(db).ObjectType)) != null)?.Material;
+
+                var intermediateManual = matWFConnections.FirstOrDefault(c => c.Material.MaterialWFConnection_Material
+                                                                                       .FirstOrDefault(x => _PWManualWeighingType.IsAssignableFrom(x.ACClassWF.PWACClass.FromIPlusContext<gip.core.datamodel.ACClass>(db).ObjectType)) != null).Material;
+
+
+                endBatchPos.ProdOrderPartslist.FromAppContext<ProdOrderPartslist>(dbApp);
+                var intermediatePositions = currentProdOrderPartslist.ProdOrderPartslistPos_ProdOrderPartslist
+                    .Where(c => c.MaterialID.HasValue && ((intermediateAutomatic != null && c.MaterialID == intermediateAutomatic.MaterialID)
+                                                      || (intermediateManual != null && c.MaterialID == intermediateManual.MaterialID))
+                        && c.MaterialPosType == GlobalApp.MaterialPosTypes.InwardIntern
+                        && !c.ParentProdOrderPartslistPosID.HasValue);
+
+                var posState = DatabaseApp.s_cQry_GetMDProdOrderPosState(dbApp, MDProdOrderPartslistPosState.ProdOrderPartslistPosStates.Completed).FirstOrDefault();
+
+                foreach (var intermediatePos in intermediatePositions)
+                {
+                    var intermediateChildPos = intermediatePos.ProdOrderPartslistPos_ParentProdOrderPartslistPos
+                            .Where(c => c.ProdOrderBatchID.HasValue
+                                        && c.ProdOrderBatchID.Value == pwMethodProduction.CurrentProdOrderBatch.ProdOrderBatchID)
+                            .FirstOrDefault();
+
+                    ProdOrderPartslistPosRelation[] query = dbApp.ProdOrderPartslistPosRelation.Include(c => c.SourceProdOrderPartslistPos)
+                                                                 .Include(c => c.SourceProdOrderPartslistPos.Material)
+                                                                 .Include(c => c.SourceProdOrderPartslistPos.Material.BaseMDUnit)
+                                                                 .Where(c => c.TargetProdOrderPartslistPosID == intermediateChildPos.ProdOrderPartslistPosID)
+                                                                 .ToArray();
+
+                    foreach (var rel in query)
+                    {
+                        Material sMaterial = rel.SourceProdOrderPartslistPos.Material;
+
+                        if (sMaterial.UsageACProgram && (sMaterial.MaterialNo == _CityWaterMaterialNo || sMaterial.MaterialNo == _ColdWaterMaterialNo
+                                                                                                      || sMaterial.MaterialNo == _WarmWaterMaterialNo))
+                        {
+                            rel.MDProdOrderPartslistPosState = posState;
+                        }
+                    }
+
+                }
+
+                Msg result = dbApp.ACSaveChanges();
+                if (result != null)
+                {
+                    if (IsAlarmActive(ProcessAlarm, result.Message) == null)
+                        Messages.LogError(this.GetACUrl(), result.ACIdentifier, result.InnerMessage);
+                    OnNewAlarmOccurred(ProcessAlarm, result, false);
+                }
+            }
+        }
+
         #endregion
 
         #region Methods => Components temperature
@@ -2031,7 +2185,7 @@ namespace gipbakery.mes.processapplication
             return null;
         }
 
-        [ACMethodInfo("","",9999,true)]
+        [ACMethodInfo("", "", 9999, true)]
         public ACValueList GetTemperaturesUsedInCalc()
         {
             return WaterTemperaturesUsedInCalc;
@@ -2040,6 +2194,20 @@ namespace gipbakery.mes.processapplication
         #endregion
 
         #region Methods => Other
+
+        [ACMethodInfo("", "", 9999)]
+        public void UserResponseYes()
+        {
+            _UserResponse = true;
+            SubscribeToProjectWorkCycle();
+        }
+
+        [ACMethodInfo("", "", 9999)]
+        public void UserResponseNo()
+        {
+            _UserResponse = false;
+            SubscribeToProjectWorkCycle();
+        }
 
         //TODO: dump
         protected override void DumpPropertyList(XmlDocument doc, XmlElement xmlACPropertyList)
@@ -2077,6 +2245,7 @@ namespace gipbakery.mes.processapplication
                 DryIceQuantity.ValueT = 0;
                 WaterTotalQuantity.ValueT = 0;
                 _CalculatorMode = TempCalcMode.Calcuate;
+                _UserResponse = null;
             }
         }
 

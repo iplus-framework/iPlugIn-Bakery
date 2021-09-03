@@ -53,6 +53,8 @@ namespace gipbakery.mes.processapplication
             set;
         }
 
+        private short _BakeryTempCalcACState;
+
         private IACContainerTNet<string> TempCalcResultMessage
         {
             get;
@@ -294,19 +296,31 @@ namespace gipbakery.mes.processapplication
 
             TempCalcResultMessage = pwNode.GetPropertyNet("TemperatureCalculationResult") as IACContainerTNet<string>;
 
-            HandleTempCalcResultMsg(TempCalcResultMessage.ValueT);
             if (TempCalcResultMessage != null)
             {
+                HandleTempCalcResultMsg(TempCalcResultMessage.ValueT);
                 TempCalcResultMessage.PropertyChanged += TempCalcResultMessage_PropertyChanged;
+            }
+
+
+            if (BakeryTempCalcACState != null)
+            {
+                HandleTempCalcACState(BakeryTempCalcACState.ValueT);
+                _BakeryTempCalcACState = (short)BakeryTempCalcACState.ValueT;
+                BakeryTempCalcACState.PropertyChanged += BakeryTempCalcACState_PropertyChanged;
             }
 
             GetTemperaturesFromPWBakeryTempCalc(pwNode);
         }
 
+
         public override void UnloadWFNode()
         {
             if (BakeryTempCalcACState != null)
+            {
+                BakeryTempCalcACState.PropertyChanged -= BakeryTempCalcACState_PropertyChanged;
                 BakeryTempCalcACState = null;
+            }
 
             if (TempCalcResultMessage != null)
             {
@@ -315,6 +329,20 @@ namespace gipbakery.mes.processapplication
             }
 
             base.UnloadWFNode();
+        }
+
+        private void BakeryTempCalcACState_PropertyChanged(object sender, System.ComponentModel.PropertyChangedEventArgs e)
+        {
+            if (e.PropertyName == Const.ValueT)
+            {
+                var senderProp = sender as IACContainerTNet<ACStateEnum>;
+                ACStateEnum acState = senderProp.ValueT;
+                if (senderProp != null)
+                {
+                    _BakeryTempCalcACState = (short)acState;
+                    ParentBSOWCS.ApplicationQueue.Add(() => HandleTempCalcACState(acState));
+                }
+            }
         }
 
         private void TempCalcResultMessage_PropertyChanged(object sender, System.ComponentModel.PropertyChangedEventArgs e)
@@ -327,9 +355,54 @@ namespace gipbakery.mes.processapplication
             }
         }
 
+        private void HandleTempCalcACState(ACStateEnum acState)
+        {
+            if (acState != ACStateEnum.SMRunning)
+                return; //TODO: check if list contains this message
+
+            IACComponentPWNode tempCalc = null;
+            using (ACMonitor.Lock(_71100_TempCalcLock))
+            {
+                tempCalc = CurrentBakeryTempCalc;
+            }
+
+            if (tempCalc == null)
+            {
+                //TODO: error
+            }
+
+            ACMethod acMethod = tempCalc?.ACUrlCommand("MyConfiguration") as ACMethod;
+            if (acMethod == null)
+            {
+                //Error50288: The configuration(ACMethod) for the workflow node cannot be found!
+                // Die Konfiguration (ACMethod) für den Workflow-Knoten kann nicht gefunden werden!
+                Messages.Error(this, "Error50288");
+                return;
+            }
+
+            ACValue param = acMethod.ParameterValueList.GetACValue("AskUserIsWaterNeeded");
+            if (param != null && param.ParamAsBoolean)
+            {
+                var existingMessageItems = _MessagesListSafe.Where(c => c.UserAckPWNode.ValueT == tempCalc).ToArray();
+                if (existingMessageItems != null)
+                {
+                    foreach (MessageItem mItem in existingMessageItems)
+                    {
+                        RemoveFromMessageList(mItem);
+                    }
+                }
+
+                MessageItem msgItem = new MessageItem(tempCalc, this, eMsgLevel.Question);
+                msgItem.Message = "Is water needed?";
+
+                AddToMessageList(msgItem);
+                RefreshMessageList();
+            }
+        }
+
         private void HandleTempCalcResultMsg(string msg)
         {
-            if (BakeryTempCalcACState != null && BakeryTempCalcACState.ValueT == ACStateEnum.SMRunning)
+            if (_BakeryTempCalcACState == (short)ACStateEnum.SMRunning)
             {
                 IACComponentPWNode tempCalc = null;
                 using (ACMonitor.Lock(_71100_TempCalcLock))
@@ -398,7 +471,10 @@ namespace gipbakery.mes.processapplication
         private void UnloadBakeryTempCalc()
         {
             if (BakeryTempCalcACState != null)
+            {
+                BakeryTempCalcACState.PropertyChanged -= BakeryTempCalcACState_PropertyChanged;
                 BakeryTempCalcACState = null;
+            }
 
             if (TempCalcResultMessage != null)
             {
