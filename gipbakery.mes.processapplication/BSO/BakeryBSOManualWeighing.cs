@@ -221,9 +221,10 @@ namespace gipbakery.mes.processapplication
 
             ACClass recvPointClass = null;
 
-            using(ACMonitor.Lock(gip.core.datamodel.Database.GlobalDatabase.QueryLock_1X000))
+            var contextIplus = Database.ContextIPlus;
+            using (ACMonitor.Lock(contextIplus.QueryLock_1X000))
             {
-                recvPointClass = selectedProcessModule?.ComponentClass.FromIPlusContext<ACClass>(Database.ContextIPlus);
+                recvPointClass = selectedProcessModule?.ComponentClass.FromIPlusContext<ACClass>(contextIplus);
             }
 
             if (recvPointClass != null && _BakeryRecvPointType.IsAssignableFrom(recvPointClass.ObjectType))
