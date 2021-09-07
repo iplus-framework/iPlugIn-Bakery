@@ -29,12 +29,9 @@ namespace gipbakery.mes.processapplication
         private Type _BakeryRecvPointType = typeof(BakeryReceivingPoint);
         private ACMonitorObject _71100_TempCalcLock = new ACMonitorObject(71100);
 
-        [ACPropertyInfo(9999)]
-        public ACRef<IACComponentPWNode> BakeryTempCalculator
-        {
-            get;
-            set;
-        }
+
+        public ACRef<IACComponentPWNode> _BakeryTempCalculator;
+
 
         private bool _IsTempCalcNotNull;
 
@@ -43,7 +40,10 @@ namespace gipbakery.mes.processapplication
         {
             get
             {
-                return BakeryTempCalculator?.ValueT;
+                using (ACMonitor.Lock(_71100_TempCalcLock))
+                {
+                    return _BakeryTempCalculator?.ValueT;
+                }
             }
         }
 
@@ -289,7 +289,7 @@ namespace gipbakery.mes.processapplication
 
             using (ACMonitor.Lock(_71100_TempCalcLock))
             {
-                BakeryTempCalculator = new ACRef<IACComponentPWNode>(pwNode, this);
+                _BakeryTempCalculator = new ACRef<IACComponentPWNode>(pwNode, this);
                 _IsTempCalcNotNull = true;
             }
 
@@ -361,12 +361,7 @@ namespace gipbakery.mes.processapplication
             if (acState != ACStateEnum.SMRunning)
                 return; //TODO: check if list contains this message
 
-            IACComponentPWNode tempCalc = null;
-            using (ACMonitor.Lock(_71100_TempCalcLock))
-            {
-                tempCalc = CurrentBakeryTempCalc;
-            }
-
+            IACComponentPWNode tempCalc = CurrentBakeryTempCalc;
             if (tempCalc == null)
             {
                 //TODO: error
@@ -405,12 +400,7 @@ namespace gipbakery.mes.processapplication
         {
             if (_BakeryTempCalcACState == (short)ACStateEnum.SMRunning)
             {
-                IACComponentPWNode tempCalc = null;
-                using (ACMonitor.Lock(_71100_TempCalcLock))
-                {
-                    tempCalc = CurrentBakeryTempCalc;
-                }
-
+                IACComponentPWNode tempCalc = CurrentBakeryTempCalc;
                 if (tempCalc == null)
                 {
                     //TODO: error
@@ -485,10 +475,10 @@ namespace gipbakery.mes.processapplication
 
             using (ACMonitor.Lock(_71100_TempCalcLock))
             {
-                if (BakeryTempCalculator != null)
+                if (_BakeryTempCalculator != null)
                 {
-                    BakeryTempCalculator.Detach();
-                    BakeryTempCalculator = null;
+                    _BakeryTempCalculator.Detach();
+                    _BakeryTempCalculator = null;
                     _IsTempCalcNotNull = false;
                 }
             }
@@ -533,11 +523,7 @@ namespace gipbakery.mes.processapplication
             if (corrTemp.HasValue)
                 DoughCorrTemperature = corrTemp.Value;
 
-            IACComponentPWNode tempCalc = null;
-            using (ACMonitor.Lock(_71100_TempCalcLock))
-            {
-                tempCalc = CurrentBakeryTempCalc;
-            }
+            IACComponentPWNode tempCalc = CurrentBakeryTempCalc;
 
             ACValueList watersTempInCalc = tempCalc?.ExecuteMethod("GetTemperaturesUsedInCalc") as ACValueList;
             if (watersTempInCalc != null)
@@ -612,12 +598,7 @@ namespace gipbakery.mes.processapplication
         {
             if (_ParamChanged)
             {
-                IACComponentPWNode tempCalc = null;
-                using (ACMonitor.Lock(_71100_TempCalcLock))
-                {
-                    tempCalc = CurrentBakeryTempCalc;
-                }
-
+                IACComponentPWNode tempCalc = CurrentBakeryTempCalc;
                 if (tempCalc == null)
                 {
                     //TODO: error
@@ -638,12 +619,7 @@ namespace gipbakery.mes.processapplication
         [ACMethodInfo("", "en{'Recalculate'}de{'Neu berechnen'}", 801)]
         public void RecalcTemperatures()
         {
-            IACComponentPWNode tempCalc = null;
-            using (ACMonitor.Lock(_71100_TempCalcLock))
-            {
-                tempCalc = CurrentBakeryTempCalc;
-            }
-
+            IACComponentPWNode tempCalc = CurrentBakeryTempCalc;
             if (tempCalc == null)
             {
                 //TODO: error
