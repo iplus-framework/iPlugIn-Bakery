@@ -294,6 +294,10 @@ namespace gipbakery.mes.processapplication
             }
 
             BakeryTempCalcACState = pwNode.GetPropertyNet(Const.ACState) as IACContainerTNet<ACStateEnum>;
+            if (BakeryTempCalcACState != null)
+            {
+                _BakeryTempCalcACState = (short)BakeryTempCalcACState.ValueT;
+            }
 
             TempCalcResultMessage = pwNode.GetPropertyNet("TemperatureCalculationResult") as IACContainerTNet<string>;
 
@@ -303,11 +307,9 @@ namespace gipbakery.mes.processapplication
                 TempCalcResultMessage.PropertyChanged += TempCalcResultMessage_PropertyChanged;
             }
 
-
             if (BakeryTempCalcACState != null)
             {
                 HandleTempCalcACState(BakeryTempCalcACState.ValueT);
-                _BakeryTempCalcACState = (short)BakeryTempCalcACState.ValueT;
                 BakeryTempCalcACState.PropertyChanged += BakeryTempCalcACState_PropertyChanged;
             }
 
