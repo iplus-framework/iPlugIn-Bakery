@@ -390,7 +390,9 @@ namespace gipbakery.mes.processapplication
                 {
                     TempCalcMode calcMode = TempCalcMode.Calcuate;
                     using (ACMonitor.Lock(_20015_LockValue))
+                    {
                         calcMode = _CalculatorMode;
+                    }
 
                     if (calcMode == TempCalcMode.Calcuate)
                     {
@@ -452,14 +454,11 @@ namespace gipbakery.mes.processapplication
             if (!recalc)
                 return;
 
-            using (ACMonitor.Lock(_20015_LockValue))
-            {
-                WarmWaterQuantity.ValueT = 0;
-                CityWaterQuantity.ValueT = 0;
-                ColdWaterQuantity.ValueT = 0;
-                DryIceQuantity.ValueT = 0;
-                WaterTotalQuantity.ValueT = 0;
-            }
+            WarmWaterQuantity.ValueT = 0;
+            CityWaterQuantity.ValueT = 0;
+            ColdWaterQuantity.ValueT = 0;
+            DryIceQuantity.ValueT = 0;
+            WaterTotalQuantity.ValueT = 0;
 
             BakeryReceivingPoint recvPoint = ParentPWGroup.AccessedProcessModule as BakeryReceivingPoint;
             if (recvPoint == null)
@@ -952,11 +951,7 @@ namespace gipbakery.mes.processapplication
             //check warm water 
             if (targetWaterTemperature > warmWater.AverageTemperature)
             {
-                using (ACMonitor.Lock(_20015_LockValue))
-                {
-                    WarmWaterQuantity.ValueT = totalWaterQuantity;
-                }
-
+                WarmWaterQuantity.ValueT = totalWaterQuantity;
                 // The calculated water temperature of {0} °C can not be reached, the maximum water temperature is {1} °C and the target quantity is {2} {3}. 
                 TemperatureCalculationResult.ValueT = Root.Environment.TranslateText(this, "TempCalcResultMax", targetWaterTemperature.ToString("F2"), warmWater.AverageTemperature,
                                                                                                                 totalWaterQuantity.ToString("F2"), "kg");
@@ -1022,11 +1017,8 @@ namespace gipbakery.mes.processapplication
                     cityWaterQuantity = totalWaterQuantity;
                 }
 
-                using (ACMonitor.Lock(_20015_LockValue))
-                {
-                    WarmWaterQuantity.ValueT = warmWaterQuantity;
-                    CityWaterQuantity.ValueT = cityWaterQuantity;
-                }
+                WarmWaterQuantity.ValueT = warmWaterQuantity;
+                CityWaterQuantity.ValueT = cityWaterQuantity;
 
                 return true;
             }
@@ -1058,11 +1050,8 @@ namespace gipbakery.mes.processapplication
                     cityWaterQuantity = 0;
                 }
 
-                using (ACMonitor.Lock(_20015_LockValue))
-                {
-                    ColdWaterQuantity.ValueT = coldWaterQuantity;
-                    CityWaterQuantity.ValueT = cityWaterQuantity;
-                }
+                ColdWaterQuantity.ValueT = coldWaterQuantity;
+                CityWaterQuantity.ValueT = cityWaterQuantity;
 
                 return true;
             }
@@ -1095,21 +1084,15 @@ namespace gipbakery.mes.processapplication
                         dryIceQuantity = 0;
                     }
 
-                    using (ACMonitor.Lock(_20015_LockValue))
-                    {
-                        ColdWaterQuantity.ValueT = coldWaterQuantity;
-                        DryIceQuantity.ValueT = dryIceQuantity;
-                    }
+                    ColdWaterQuantity.ValueT = coldWaterQuantity;
+                    DryIceQuantity.ValueT = dryIceQuantity;
 
                     return true;
                 }
                 else
                 {
-                    using (ACMonitor.Lock(_20015_LockValue))
-                    {
-                        ColdWaterQuantity.ValueT = 0;
-                        DryIceQuantity.ValueT = totalWaterQuantity;
-                    }
+                    ColdWaterQuantity.ValueT = 0;
+                    DryIceQuantity.ValueT = totalWaterQuantity;
                     return false;
                 }
             }
@@ -1160,11 +1143,8 @@ namespace gipbakery.mes.processapplication
                         }
                     }
 
-                    using (ACMonitor.Lock(_20015_LockValue))
-                    {
-                        ColdWaterQuantity.ValueT = coldWaterQuantity;
-                        DryIceQuantity.ValueT = iceQuantity;
-                    }
+                    ColdWaterQuantity.ValueT = coldWaterQuantity;
+                    DryIceQuantity.ValueT = iceQuantity;
                 }
                 else
                 {
@@ -1214,11 +1194,8 @@ namespace gipbakery.mes.processapplication
                                 }
                             }
 
-                            using (ACMonitor.Lock(_20015_LockValue))
-                            {
-                                DryIceQuantity.ValueT = iceQuantity;
-                                ColdWaterQuantity.ValueT = coldWaterQuantity;
-                            }
+                            DryIceQuantity.ValueT = iceQuantity;
+                            ColdWaterQuantity.ValueT = coldWaterQuantity;
                         }
                         else
                         {
@@ -1237,11 +1214,8 @@ namespace gipbakery.mes.processapplication
                                 iceQuantity = totalWaterQuantity;
                             }
 
-                            using (ACMonitor.Lock(_20015_LockValue))
-                            {
-                                DryIceQuantity.ValueT = iceQuantity;
-                                ColdWaterQuantity.ValueT = coldWaterQuantity;
-                            }
+                            DryIceQuantity.ValueT = iceQuantity;
+                            ColdWaterQuantity.ValueT = coldWaterQuantity;
                         }
                     }
                     else
@@ -1289,13 +1263,10 @@ namespace gipbakery.mes.processapplication
         {
             double cityWaterQ = 0, coldWaterQ = 0, warmWaterQ = 0, dryIceQ = 0;
 
-            using (ACMonitor.Lock(_20015_LockValue))
-            {
-                cityWaterQ = Math.Round(CityWaterQuantity.ValueT, 2);
-                coldWaterQ = Math.Round(ColdWaterQuantity.ValueT, 2);
-                warmWaterQ = Math.Round(WarmWaterQuantity.ValueT, 2);
-                dryIceQ = Math.Round(DryIceQuantity.ValueT, 2);
-            }
+            cityWaterQ = Math.Round(CityWaterQuantity.ValueT, 2);
+            coldWaterQ = Math.Round(ColdWaterQuantity.ValueT, 2);
+            warmWaterQ = Math.Round(WarmWaterQuantity.ValueT, 2);
+            dryIceQ = Math.Round(DryIceQuantity.ValueT, 2);
 
             if (cityWaterQ < 0.0001 && coldWaterQ < 0.0001 && warmWaterQ < 0.0001 && dryIceQ < 0.0001)
             {
@@ -1569,13 +1540,10 @@ namespace gipbakery.mes.processapplication
         {
             double cityWaterQ = 0, coldWaterQ = 0, warmWaterQ = 0, dryIceQ = 0;
 
-            using (ACMonitor.Lock(_20015_LockValue))
-            {
-                cityWaterQ = Math.Round(CityWaterQuantity.ValueT, 2);
-                coldWaterQ = Math.Round(ColdWaterQuantity.ValueT, 2);
-                warmWaterQ = Math.Round(WarmWaterQuantity.ValueT, 2);
-                dryIceQ = Math.Round(DryIceQuantity.ValueT, 2);
-            }
+            cityWaterQ = Math.Round(CityWaterQuantity.ValueT, 2);
+            coldWaterQ = Math.Round(ColdWaterQuantity.ValueT, 2);
+            warmWaterQ = Math.Round(WarmWaterQuantity.ValueT, 2);
+            dryIceQ = Math.Round(DryIceQuantity.ValueT, 2);
 
             if (cityWaterQ < 0.0001 && coldWaterQ < 0.0001 && warmWaterQ < 0.0001 && dryIceQ < 0.0001)
             {
@@ -2235,15 +2203,15 @@ namespace gipbakery.mes.processapplication
 
         private void ResetMembers()
         {
+            TemperatureCalculationResult.ValueT = null;
+            ColdWaterQuantity.ValueT = 0;
+            CityWaterQuantity.ValueT = 0;
+            WarmWaterQuantity.ValueT = 0;
+            DryIceQuantity.ValueT = 0;
+            WaterTotalQuantity.ValueT = 0;
             using (ACMonitor.Lock(_20015_LockValue))
             {
                 _RecalculateTemperatures = true;
-                TemperatureCalculationResult.ValueT = null;
-                ColdWaterQuantity.ValueT = 0;
-                CityWaterQuantity.ValueT = 0;
-                WarmWaterQuantity.ValueT = 0;
-                DryIceQuantity.ValueT = 0;
-                WaterTotalQuantity.ValueT = 0;
                 _CalculatorMode = TempCalcMode.Calcuate;
                 _UserResponse = null;
             }
