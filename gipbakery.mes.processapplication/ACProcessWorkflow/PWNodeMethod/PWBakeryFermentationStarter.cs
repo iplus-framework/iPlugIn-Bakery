@@ -122,7 +122,7 @@ namespace gipbakery.mes.processapplication
 
         private double _ScaleActualValue;
 
-        PAEScaleBase _FermentationStarterScale = null;
+        //PAEScaleBase _FermentationStarterScale = null;
 
         public T ParentPWMethod<T>() where T : PWMethodVBBase
         {
@@ -146,16 +146,17 @@ namespace gipbakery.mes.processapplication
 
         public override void SMIdle()
         {
+            FSTargetQuantity.ValueT = null;
+            _ScaleActualValue = 0;
+
             using (ACMonitor.Lock(_20015_LockValue))
             {
-                FSTargetQuantity.ValueT = null;
-                _ScaleActualValue = 0;
                 _IsUserAck = false;
             }
             base.SMIdle();
         }
 
-        public void StartFermentationStarter()
+        private void StartFermentationStarter()
         {
             PWMethodProduction pwMethodProduction = ParentPWMethod<PWMethodProduction>();
             // If dosing is not for production, then do nothing
@@ -185,11 +186,13 @@ namespace gipbakery.mes.processapplication
                 return;
             }
 
-            using (ACMonitor.Lock(_20015_LockValue))
-            {
-                _FermentationStarterScale = scale;
-                _ScaleActualValue = scale.ActualValue.ValueT;
-            }
+            _ScaleActualValue = scale.ActualValue.ValueT;
+
+            //using (ACMonitor.Lock(_20015_LockValue))
+            //{
+            //    _FermentationStarterScale = scale;
+                
+            //}
 
 
             using (var dbIPlus = new Database())
@@ -334,10 +337,7 @@ namespace gipbakery.mes.processapplication
                         return;
                     }
 
-                    using (ACMonitor.Lock(_20015_LockValue))
-                    {
-                        FSTargetQuantity.ValueT = prodRelation.TargetQuantityUOM;
-                    }
+                    FSTargetQuantity.ValueT = prodRelation.TargetQuantityUOM;
 
                     if (AutoDetectTolerance != null)
                     {
@@ -354,7 +354,7 @@ namespace gipbakery.mes.processapplication
                             isUserAck = _IsUserAck;
                         }
 
-                        if (_IsUserAck)
+                        if (isUserAck)
                         {
                             TryCompleteFermentationStarter(dbApp, scale, prodRelation.TargetQuantityUOM, sourceFacility, prodRelation);
                         }

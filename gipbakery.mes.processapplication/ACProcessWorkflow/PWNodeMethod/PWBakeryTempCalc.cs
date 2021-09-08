@@ -371,12 +371,18 @@ namespace gipbakery.mes.processapplication
                 RefreshNodeInfoOnModule();
                 if (AskUserIsWaterNeeded)
                 {
-                    if (_UserResponse == null)
+                    bool? userResponse = null;
+                    using (ACMonitor.Lock(_20015_LockValue))
+                    {
+                        userResponse = _UserResponse;
+                    }
+
+                    if (userResponse == null)
                     {
                         UnSubscribeToProjectWorkCycle();
                         return;
                     }
-                    else if (!_UserResponse.Value)
+                    else if (!userResponse.Value)
                     {
                         SetIntermediateComponentsToCompleted();
                         CurrentACState = ACStateEnum.SMCompleted;
@@ -2166,14 +2172,20 @@ namespace gipbakery.mes.processapplication
         [ACMethodInfo("", "", 9999)]
         public void UserResponseYes()
         {
-            _UserResponse = true;
+            using (ACMonitor.Lock(_20015_LockValue))
+            {
+                _UserResponse = true;
+            }
             SubscribeToProjectWorkCycle();
         }
 
         [ACMethodInfo("", "", 9999)]
         public void UserResponseNo()
         {
-            _UserResponse = false;
+            using (ACMonitor.Lock(_20015_LockValue))
+            {
+                _UserResponse = false;
+            }
             SubscribeToProjectWorkCycle();
         }
 

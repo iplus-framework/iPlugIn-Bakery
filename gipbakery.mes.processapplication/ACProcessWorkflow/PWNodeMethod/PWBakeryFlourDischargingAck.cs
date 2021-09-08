@@ -40,7 +40,6 @@ namespace gipbakery.mes.processapplication
         }
         #endregion
 
-
         #region Properties
         protected bool SkipIfNoComp
         {
@@ -154,7 +153,7 @@ namespace gipbakery.mes.processapplication
                 return;
             }
 
-            _BoundCoverDownProperty.PropertyChanged += _IsCoverDown_PropertyChanged;
+            _BoundCoverDownProperty.PropertyChanged += IsCoverDown_PropertyChanged;
             base.SMRunning();
         }
 
@@ -170,7 +169,7 @@ namespace gipbakery.mes.processapplication
             base.Recycle(content, parentACObject, parameter, acIdentifier);
         }
 
-        private void _IsCoverDown_PropertyChanged(object sender, System.ComponentModel.PropertyChangedEventArgs e)
+        private void IsCoverDown_PropertyChanged(object sender, System.ComponentModel.PropertyChangedEventArgs e)
         {
             if (e.PropertyName == Const.ValueT)
             {
@@ -192,7 +191,7 @@ namespace gipbakery.mes.processapplication
         {
             if (_BoundCoverDownProperty != null)
             {
-                _BoundCoverDownProperty.PropertyChanged -= _IsCoverDown_PropertyChanged;
+                _BoundCoverDownProperty.PropertyChanged -= IsCoverDown_PropertyChanged;
                 _BoundCoverDownProperty = null;
             }
             HasRunSomeDosings = null;
@@ -229,6 +228,5 @@ namespace gipbakery.mes.processapplication
             }
         }
         #endregion
-
     }
 }
