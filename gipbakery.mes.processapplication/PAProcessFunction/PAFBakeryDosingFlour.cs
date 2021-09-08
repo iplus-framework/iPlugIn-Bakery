@@ -14,6 +14,8 @@ namespace gipbakery.mes.processapplication
     [ACClassInfo(Const.PackName_VarioAutomation, "en{'Dosing flour in sour dough'}de{'Dosierung von Mehl in Sauerteig'}", Global.ACKinds.TPAProcessFunction, Global.ACStorableTypes.Required, false, PWBakeryDosing.PWClassName, true)]
     public class PAFBakeryDosingFlour : PAFDosing
     {
+        #region c'tors
+
         public PAFBakeryDosingFlour(ACClass acType, IACObject content, IACObject parentACObject, ACValueList parameter, string acIdentifier = "") : 
             base(acType, content, parentACObject, parameter, acIdentifier)
         {
@@ -46,6 +48,10 @@ namespace gipbakery.mes.processapplication
             return base.ACDeInit(deleteACClassTask);
         }
 
+        #endregion
+
+        #region Properties
+
         private IACContainerTNet<double> ActualWeightProp
         {
             get;
@@ -57,6 +63,52 @@ namespace gipbakery.mes.processapplication
             get;
             set;
         }
+
+        [ACPropertyBindingTarget(800, "", "en{'Dosing time flour [s/kg]'}de{'Dosierzeit Mehl [s/kg]'}", "", true, true)]
+        public IACContainerTNet<double> DosTimeFlour
+        {
+            get;
+            set;
+        }
+
+        [ACPropertyBindingTarget]
+        public IACContainerTNet<double> FlourDiffQuantity
+        {
+            get;
+            set;
+        }
+
+        [ACPropertyInfo(801, "", "en{'Dosing time flour [s/kg]'}de{'Dosierzeit Mehl [s/kg]'}", IsPersistable = true)]
+        public double DosTimeFlourCorrected
+        {
+            get;
+            set;
+        }
+
+        [ACPropertyInfo(801, "", "en{'Max dosing time flour [s/kg]'}de{'Max. Dosierzeit für Mehl [s/kg]'}", IsPersistable = true, DefaultValue = 2000.0)]
+        public double DosTimeFlourMax
+        {
+            get;
+            set;
+        }
+
+        [ACPropertyInfo(802, "", "en{'Min dosing time flour [s/kg]'}de{'Min. Dosierzeit Mehl [s/kg]'}", IsPersistable = true, DefaultValue = 0.5)]
+        public double DosTimeFlourMin
+        {
+            get;
+            set;
+        }
+
+        [ACPropertyInfo(803, "", "en{'Dosing time flour correction factor [0 - 1]'}de{'Dosierzeit Mehl-Korrekturfaktor [0 - 1]'}", IsPersistable = true, DefaultValue = 0.5)]
+        public double DosTimeFlourCorrectionFactor
+        {
+            get;
+            set;
+        }
+
+        #endregion
+
+        #region Methods
 
         public override void SMStarting()
         {
@@ -108,48 +160,6 @@ namespace gipbakery.mes.processapplication
             }
         }
 
-        [ACPropertyBindingTarget(800, "", "en{'Dosing time flour [s/kg]'}de{'Dosierzeit Mehl [s/kg]'}", "", true, true)]
-        public IACContainerTNet<double> DosTimeFlour
-        {
-            get;
-            set;
-        }
-
-        [ACPropertyBindingTarget]
-        public IACContainerTNet<double> FlourDiffQuantity
-        {
-            get;
-            set;
-        }
-
-        [ACPropertyInfo(801, "", "en{'Dosing time flour [s/kg]'}de{'Dosierzeit Mehl [s/kg]'}", IsPersistable = true)]
-        public double DosTimeFlourCorrected
-        {
-            get;
-            set;
-        }
-
-        [ACPropertyInfo(801, "", "en{'Max dosing time flour [s/kg]'}de{'Max. Dosierzeit für Mehl [s/kg]'}", IsPersistable = true, DefaultValue = 2000.0)]
-        public double DosTimeFlourMax
-        {
-            get;
-            set;
-        }
-
-        [ACPropertyInfo(802, "", "en{'Min dosing time flour [s/kg]'}de{'Min. Dosierzeit Mehl [s/kg]'}", IsPersistable = true, DefaultValue = 0.5)]
-        public double DosTimeFlourMin
-        {
-            get;
-            set;
-        }
-
-        [ACPropertyInfo(803, "", "en{'Dosing time flour correction factor [0 - 1]'}de{'Dosierzeit Mehl-Korrekturfaktor [0 - 1]'}", IsPersistable = true, DefaultValue = 0.5)]
-        public double DosTimeFlourCorrectionFactor
-        {
-            get;
-            set;
-        }
-
         public double GetFlourDosingTime()
         {
             if (DosTimeFlourCorrected > DosTimeFlourMax)
@@ -160,11 +170,15 @@ namespace gipbakery.mes.processapplication
             return DosTimeFlourCorrected;
         }
 
-        [ACMethodInfo("","",9999)]
-        public string  GetFlourDosingScale()
+        [ACMethodInfo("", "", 9999)]
+        public string GetFlourDosingScale()
         {
             return CurrentScaleForWeighing?.ACUrl;
         }
+
+
+
+        #endregion
 
     }
 }

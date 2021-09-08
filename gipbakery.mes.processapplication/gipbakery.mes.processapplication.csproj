@@ -63,6 +63,7 @@
     <Compile Include="ACProcessWorkflow\PWNodeMethod\PWBakeryDischargingPreProd.cs" />
     <Compile Include="ACProcessWorkflow\PWNodeMethod\PWBakeryDischargingSingleDos.cs" />
     <Compile Include="ACProcessWorkflow\PWNodeMethod\PWBakeryDosing.cs" />
+    <Compile Include="ACProcessWorkflow\PWNodeMethod\PWBakeryDosingPreProd.cs" />
     <Compile Include="ACProcessWorkflow\PWNodeMethod\PWBakeryFermentationStarter.cs" />
     <Compile Include="ACProcessWorkflow\PWNodeMethod\PWBakeryManualWeighing.cs" />
     <Compile Include="ACProcessWorkflow\PWNodeMethod\PWBakeryMixingPreProd.cs" />
