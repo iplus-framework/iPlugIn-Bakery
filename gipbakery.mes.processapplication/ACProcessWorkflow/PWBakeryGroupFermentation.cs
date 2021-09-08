@@ -336,7 +336,7 @@ namespace gipbakery.mes.processapplication
 
                 IEnumerable<ACComponent> parallelNodes = FindParallelNodes(prevEndOnTime);
 
-                List<PWBakeryDosing> pwDosings = FindVariableDurationNodes(currentNode, prevEndOnTime, parallelNodes);
+                List<PWBakeryDosingPreProd> pwDosings = FindVariableDurationNodes(currentNode, prevEndOnTime, parallelNodes);
                 List<PWBaseNodeProcess> fixDurationNodes = FindFixedDurationNodes(currentNode, prevEndOnTime, parallelNodes);
                 if (currentNode == lastNode)
                 {
@@ -388,15 +388,15 @@ namespace gipbakery.mes.processapplication
             return null;
         }
 
-        public virtual List<PWBakeryDosing> FindVariableDurationNodes(PWBakeryEndOnTime currentEndNode, PWBakeryEndOnTime prevEndNode, IEnumerable<ACComponent> parallelNodes)
+        public virtual List<PWBakeryDosingPreProd> FindVariableDurationNodes(PWBakeryEndOnTime currentEndNode, PWBakeryEndOnTime prevEndNode, IEnumerable<ACComponent> parallelNodes)
         {
             // PWNodeEndOnTime has parallel workflow nodes
             if (parallelNodes.Count() > 1)
             {
-                return currentEndNode.FindPredecessors<PWBakeryDosing>(true, c => c is PWBakeryDosing, d => d == prevEndNode || parallelNodes.Contains(d), 0);
+                return currentEndNode.FindPredecessors<PWBakeryDosingPreProd>(true, c => c is PWBakeryDosingPreProd, d => d == prevEndNode || parallelNodes.Contains(d), 0);
             }
 
-            return currentEndNode.FindPredecessors<PWBakeryDosing>(true, c => c is PWBakeryDosing, d => d == prevEndNode, 0);
+            return currentEndNode.FindPredecessors<PWBakeryDosingPreProd>(true, c => c is PWBakeryDosingPreProd, d => d == prevEndNode, 0);
 
         }
 
@@ -411,7 +411,7 @@ namespace gipbakery.mes.processapplication
             return currentEndNode.FindPredecessors<PWBaseNodeProcess>(true, c => c is PWMixing || c is PWNodeWait, d => d is PWBakeryEndOnTime, 0);
         }
 
-        public virtual TimeSpan CalculateVariableDuration(List<PWBakeryDosing> dosingNodes, int stage)
+        public virtual TimeSpan CalculateVariableDuration(List<PWBakeryDosingPreProd> dosingNodes, int stage)
         {
             PAProcessModule processModule = AccessedProcessModule;
             bool doseSim = DoseInSourProdSimultaneously;
@@ -422,7 +422,7 @@ namespace gipbakery.mes.processapplication
 
 
             //SourProdDosingUnit(Auslastung) => FlowRate1
-            foreach (PWBakeryDosing dosingNode in dosingNodes)
+            foreach (PWBakeryDosingPreProd dosingNode in dosingNodes)
             {
                 TimeSpan result = dosingNode.CalculateDuration(doseSim, processModule, out waterFunc);
                 if (result > TimeSpan.Zero)
