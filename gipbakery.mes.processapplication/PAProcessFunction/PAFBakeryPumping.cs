@@ -1,12 +1,7 @@
 ﻿using gip.core.autocomponent;
 using gip.core.datamodel;
-using gip.mes.datamodel;
-using gip.mes.processapplication;
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace gipbakery.mes.processapplication
 {
@@ -56,16 +51,11 @@ namespace gipbakery.mes.processapplication
             method.ParameterValueList.Add(new ACValue("TargetQuantity", typeof(Double), (Double)0.0, Global.ParamOption.Optional));
             paramTranslation.Add("TargetQuantity", "en{'Target quantity'}de{'Sollmenge'}");
 
-
             Dictionary<string, string> resultTranslation = new Dictionary<string, string>();
             method.ResultValueList.Add(new ACValue("ActualQuantity", typeof(Double), (Double)0.0, Global.ParamOption.Optional));
             resultTranslation.Add("ActualQuantity", "en{'Actual quantity'}de{'Istmenge'}");
 
-
             return new ACMethodWrapper(method, captionTranslation, pwClass, paramTranslation, resultTranslation);
         }
-
-        
-
     }
 }

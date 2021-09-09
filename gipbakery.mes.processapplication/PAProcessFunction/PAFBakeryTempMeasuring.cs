@@ -186,10 +186,8 @@ namespace gipbakery.mes.processapplication
             changedItems.Add(measureItem);
 
             bool notificationsOff = false;
-            using (ACMonitor.Lock(_20015_LockValue))
-            {
-                ChangedTemperatureMeasureItems.ValueT = changedItems;
-            }
+
+            ChangedTemperatureMeasureItems.ValueT = changedItems;
 
             using (ACMonitor.Lock(_30010_LockNotificationsOff))
             {
@@ -248,14 +246,17 @@ namespace gipbakery.mes.processapplication
             MaterialTempMeasureList changedItems = new MaterialTempMeasureList();
             changedItems.Add(measureItem);
 
+            bool anyTempItem;
             using (ACMonitor.Lock(_20015_LockValue))
             {
                 MaterialTemperatureMeasureItems.Remove(measureItem);
-                ChangedTemperatureMeasureItems.ValueT = changedItems;
-
-                if (!MaterialTemperatureMeasureItems.Any())
-                    NeedWork.ValueT = false;
+                anyTempItem = MaterialTemperatureMeasureItems.Any();
             }
+
+            ChangedTemperatureMeasureItems.ValueT = changedItems;
+
+            if (!anyTempItem)
+                NeedWork.ValueT = false;
         }
 
         [ACMethodInfo("", "", 804)]
@@ -310,7 +311,7 @@ namespace gipbakery.mes.processapplication
                 {
                     if (ApplicationManager != null)
                     {
-                        PeriodicalTempMeasureCheck();
+                        ApplicationManager.ApplicationQueue.Add(() => PeriodicalTempMeasureCheck());
                         ApplicationManager.ProjectWorkCycleR1min += ApplicationManager_ProjectWorkCycleR1min;
                         using (ACMonitor.Lock(_20015_LockValue))
                             _IsTemperatureMeasurementActive = true;
@@ -375,8 +376,9 @@ namespace gipbakery.mes.processapplication
                 using (ACMonitor.Lock(_20015_LockValue))
                 {
                     MaterialTemperatureMeasureItems = new MaterialTempMeasureList(measurableItems);
-                    ChangedTemperatureMeasureItems.ValueT = changedItems;
                 }
+
+                ChangedTemperatureMeasureItems.ValueT = changedItems;
 
                 using (ACMonitor.Lock(_30010_LockNotificationsOff))
                 {

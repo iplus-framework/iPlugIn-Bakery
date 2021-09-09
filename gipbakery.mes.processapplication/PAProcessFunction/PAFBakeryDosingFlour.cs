@@ -136,12 +136,19 @@ namespace gipbakery.mes.processapplication
         {
             if (e.PropertyName == Const.ValueT)
             {
-                using (ACMonitor.Lock(_20015_LockValue))
+                IACContainerTNet<double> senderProp = sender as IACContainerTNet<double>;
+                if (senderProp != null)
                 {
-                    if (TargetQuantity == null || ActualWeightProp == null)
+                    double? targetQuantity = null;
+                    using (ACMonitor.Lock(_20015_LockValue))
+                    {
+                        targetQuantity = TargetQuantity;
+                    }
+
+                    if (targetQuantity == null)
                         return;
 
-                    FlourDiffQuantity.ValueT = ActualWeightProp.ValueT - TargetQuantity.Value;
+                    FlourDiffQuantity.ValueT = senderProp.ValueT - targetQuantity.Value;
                 }
             }
         }
@@ -175,8 +182,6 @@ namespace gipbakery.mes.processapplication
         {
             return CurrentScaleForWeighing?.ACUrl;
         }
-
-
 
         #endregion
 

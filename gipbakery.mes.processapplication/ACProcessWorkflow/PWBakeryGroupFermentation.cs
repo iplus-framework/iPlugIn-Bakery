@@ -321,7 +321,7 @@ namespace gipbakery.mes.processapplication
 
             endOnTimeNodes.Remove(lastNode);
 
-            ReadyForDosingTime.ValueT = lastNode.EndOnTime.ValueT;
+            ReadyForDosingTime.ValueT = plannedEndTime;
 
             PWBakeryEndOnTime currentNode = lastNode;
 

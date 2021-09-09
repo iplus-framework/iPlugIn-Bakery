@@ -74,7 +74,11 @@ namespace gipbakery.mes.processapplication
                 module.OrderInfo.PropertyChanged -= OrderInfo_PropertyChanged;
             }
 
-            VirtualTargetStore = null;
+            using (ACMonitor.Lock(_20015_LockValue))
+            {
+                VirtualSourceStore = null;
+                VirtualTargetStore = null;
+            }
             return base.ACDeInit(deleteACClassTask);
         }
 
@@ -226,24 +230,25 @@ namespace gipbakery.mes.processapplication
             return scale;
         }
 
-
-        //TODO: get store from PWBakeryGroupFermentation
-        public void FindStores()
+        private void FindStores()
         {
             PAMParkingspace source;
             PAMSilo target;
 
             FindVirtualStores(ParentACComponent as PAProcessModule, out source, out target);
 
-            VirtualSourceStore = source;
-            VirtualTargetStore = target;
+            using (ACMonitor.Lock(_20015_LockValue))
+            {
+                VirtualSourceStore = source;
+                VirtualTargetStore = target;
+            }
 
-            if (VirtualSourceStore == null)
+            if (source == null)
             {
                 //TODO:error
             }
 
-            if (VirtualTargetStore == null)
+            if (target == null)
             {
                 //TODO:error
             }
@@ -252,7 +257,13 @@ namespace gipbakery.mes.processapplication
         [ACMethodInfo("","",9999)]
         public Guid? GetSourceVirtualStoreID()
         {
-            return VirtualSourceStore?.ComponentClass.ACClassID;
+            PAMParkingspace parkingSpace = null;
+            using (ACMonitor.Lock(_20015_LockValue))
+            {
+                parkingSpace = VirtualSourceStore;
+            }
+
+            return parkingSpace?.ComponentClass.ACClassID;
         }
 
         public static void FindVirtualStores(PAProcessModule module, out PAMParkingspace source, out PAMSilo target)
@@ -279,16 +290,29 @@ namespace gipbakery.mes.processapplication
         [ACMethodInfo("", "", 800)]
         public string GetVirtualStoreACUrl()
         {
-            return VirtualTargetStore?.ACUrl;
+            PAMSilo silo = null;
+            using (ACMonitor.Lock(_20015_LockValue))
+            {
+                silo = VirtualTargetStore;
+            }
+
+            return silo?.ACUrl;
         }
 
         [ACMethodInfo("", "", 800)]
         public void SwitchVirtualStoreOutwardEnabled()
         {
-            if (VirtualTargetStore == null)
+            PAMSilo virtualTargetStore = null;
+
+            using (ACMonitor.Lock(_20015_LockValue))
+            {
+                virtualTargetStore = VirtualTargetStore;
+            }
+
+            if (virtualTargetStore == null)
                 return;
 
-            Facility facility = VirtualTargetStore.Facility?.ValueT?.ValueT;
+            Facility facility = virtualTargetStore.Facility?.ValueT?.ValueT;
 
             if (facility == null)
                 return;
@@ -305,8 +329,6 @@ namespace gipbakery.mes.processapplication
                 }
             }
         }
-
-
 
         [ACMethodInfo("", "en{'Clean pre prod container'}de{'Reinigen Vorproduktionsbehälter'}", 821)]
         public Msg Clean(short program)
@@ -369,12 +391,7 @@ namespace gipbakery.mes.processapplication
         {
             using (Database db = new gip.core.datamodel.Database())
             {
-                gip.core.datamodel.ACClass compClass = null;
-
-                using (ACMonitor.Lock(gip.core.datamodel.Database.GlobalDatabase.QueryLock_1X000))
-                {
-                    compClass = ParentACComponent?.ComponentClass.FromIPlusContext<gip.core.datamodel.ACClass>(db);
-                }
+                gip.core.datamodel.ACClass compClass = ParentACComponent?.ComponentClass.FromIPlusContext<gip.core.datamodel.ACClass>(db);
 
                 if (compClass == null)
                     return null;
@@ -426,7 +443,6 @@ namespace gipbakery.mes.processapplication
                             continue;
 
                         ACValue acValue = new ACValue(ps.ACCaption, facility.FacilityID);
-
                         result.Add(acValue);
                     }
                 }
@@ -436,7 +452,6 @@ namespace gipbakery.mes.processapplication
         }
 
         #endregion
-
     }
 
     [DataContract]
