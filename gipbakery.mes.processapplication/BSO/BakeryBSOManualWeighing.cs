@@ -381,7 +381,7 @@ namespace gipbakery.mes.processapplication
             ACValue param = acMethod.ParameterValueList.GetACValue("AskUserIsWaterNeeded");
             if (param != null && param.ParamAsBoolean)
             {
-                var existingMessageItems = _MessagesListSafe.Where(c => c.UserAckPWNode.ValueT == tempCalc).ToArray();
+                var existingMessageItems = MessagesListSafe.Where(c => c.UserAckPWNode.ValueT == tempCalc).ToArray();
                 if (existingMessageItems != null)
                 {
                     foreach (MessageItem mItem in existingMessageItems)
@@ -408,7 +408,7 @@ namespace gipbakery.mes.processapplication
                     //TODO: error
                 }
 
-                var existingMessageItems = _MessagesListSafe.Where(c => c.UserAckPWNode.ValueT == tempCalc).ToArray();
+                var existingMessageItems = MessagesListSafe.Where(c => c.UserAckPWNode.ValueT == tempCalc).ToArray();
                 if (existingMessageItems != null)
                 {
                     foreach (MessageItem mItem in existingMessageItems)
@@ -521,7 +521,16 @@ namespace gipbakery.mes.processapplication
         [ACMethodInfo("", "", 800)]
         public void ShowTemperaturesDialog()
         {
-            var corrTemp = CurrentProcessModule.ACUrlCommand("DoughCorrTemp") as double?;
+            ACComponent currentProcessModule = CurrentProcessModule;
+            if (currentProcessModule == null)
+            {
+                //Error50283: The manual weighing module can not be initialized. The property CurrentProcessModule is null.
+                // Die Handverwiegungsstation konnte nicht initialisiert werden. Die Eigenschaft CurrentProcessModule ist null.
+                Messages.Error(this, "Error50283");
+                return;
+            }
+
+            var corrTemp = currentProcessModule.ACUrlCommand("DoughCorrTemp") as double?;
             if (corrTemp.HasValue)
                 DoughCorrTemperature = corrTemp.Value;
 
@@ -568,7 +577,7 @@ namespace gipbakery.mes.processapplication
 
         public bool IsEnabledShowTemperaturesDialog()
         {
-            return CurrentProcessModule != null;
+            return !IsCurrentProcessModuleNull;
         }
 
         [ACMethodInfo("", "", 880, true)]
@@ -606,7 +615,16 @@ namespace gipbakery.mes.processapplication
                     //TODO: error
                 }
 
-                CurrentProcessModule.ACUrlCommand("DoughCorrTemp", DoughCorrTemperature); //Save dough correct temperature on bakery recieving point
+                ACComponent currentProcessModule = CurrentProcessModule;
+                if (currentProcessModule == null)
+                {
+                    //Error50283: The manual weighing module can not be initialized. The property CurrentProcessModule is null.
+                    // Die Handverwiegungsstation konnte nicht initialisiert werden. Die Eigenschaft CurrentProcessModule ist null.
+                    Messages.Error(this, "Error50283");
+                    return;
+                }
+
+                currentProcessModule.ACUrlCommand("DoughCorrTemp", DoughCorrTemperature); //Save dough correct temperature on bakery recieving point
                 tempCalc.ExecuteMethod("SaveWorkplaceTemperatureSettings", WaterTargetTemperature, IsOnlyWaterTemperatureCalculation);//TODO parameters
             }
             CloseTopDialog();
@@ -615,7 +633,7 @@ namespace gipbakery.mes.processapplication
 
         public bool IsEnabledApplyTemperatures()
         {
-            return _IsTempCalcNotNull && CurrentProcessModule != null;
+            return _IsTempCalcNotNull && !IsCurrentProcessModuleNull;
         }
 
         [ACMethodInfo("", "en{'Recalculate'}de{'Neu berechnen'}", 801)]
@@ -625,16 +643,26 @@ namespace gipbakery.mes.processapplication
             if (tempCalc == null)
             {
                 //TODO: error
+                return;
             }
 
-            CurrentProcessModule.ACUrlCommand("DoughCorrTemp", DoughCorrTemperature); //Save dough correct temperature on bakery recieving point
+            ACComponent currentProcessModule = CurrentProcessModule;
+            if (currentProcessModule == null)
+            {
+                //Error50283: The manual weighing module can not be initialized. The property CurrentProcessModule is null.
+                // Die Handverwiegungsstation konnte nicht initialisiert werden. Die Eigenschaft CurrentProcessModule ist null.
+                Messages.Error(this, "Error50283");
+                return;
+            }
+
+            currentProcessModule.ACUrlCommand("DoughCorrTemp", DoughCorrTemperature); //Save dough correct temperature on bakery recieving point
             tempCalc.ExecuteMethod("SaveWorkplaceTemperatureSettings", WaterTargetTemperature, IsOnlyWaterTemperatureCalculation);//TODO parameters
             _ParamChanged = false;
         }
 
         public bool IsEnabledRecalcTemperatures()
         {
-            return _IsTempCalcNotNull && CurrentProcessModule != null && _ParamChanged;
+            return _IsTempCalcNotNull && !IsCurrentProcessModuleNull && _ParamChanged;
         }
 
         #endregion
@@ -741,7 +769,16 @@ namespace gipbakery.mes.processapplication
                         picking.ConfigurationEntries.Append(targetConfig);
                     }
 
-                    ACClass compClass = CurrentProcessModule?.ComponentClass.FromIPlusContext<gip.core.datamodel.ACClass>(DatabaseApp.ContextIPlus);
+                    ACComponent currentProcessModule = CurrentProcessModule;
+                    if (currentProcessModule == null)
+                    {
+                        //Error50283: The manual weighing module can not be initialized. The property CurrentProcessModule is null.
+                        // Die Handverwiegungsstation konnte nicht initialisiert werden. Die Eigenschaft CurrentProcessModule ist null.
+                        Messages.Error(this, "Error50283");
+                        return false;
+                    }
+
+                    ACClass compClass = currentProcessModule?.ComponentClass.FromIPlusContext<gip.core.datamodel.ACClass>(DatabaseApp.ContextIPlus);
                     if (compClass == null)
                     {
                         //TODO:error

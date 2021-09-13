@@ -30,23 +30,23 @@ namespace gipbakery.mes.processapplication
 
         public override bool ACDeInit(bool deleteACClassTask = false)
         {
-            if (FermentationStarterRef != null)
-            {
-                FermentationStarterRef.Detach();
-                FermentationStarterRef = null;
-            }
+            //if (FermentationStarterRef != null)
+            //{
+            //    FermentationStarterRef.Detach();
+            //    FermentationStarterRef = null;
+            //}
 
-            if (FermentationQuantityProp != null)
-            {
-                FermentationQuantityProp.PropertyChanged -= FermentationQuantityProp_PropertyChanged;
-                FermentationQuantityProp = null;
-            }
+            //if (FermentationQuantityProp != null)
+            //{
+            //    FermentationQuantityProp.PropertyChanged -= FermentationQuantityProp_PropertyChanged;
+            //    FermentationQuantityProp = null;
+            //}
 
-            if (ProcessModuleOrderInfo != null)
-            {
-                ProcessModuleOrderInfo.PropertyChanged -= ProcessModuleOrderInfo_PropertyChanged;
-                ProcessModuleOrderInfo = null;
-            }
+            //if (ProcessModuleOrderInfo != null)
+            //{
+            //    ProcessModuleOrderInfo.PropertyChanged -= ProcessModuleOrderInfo_PropertyChanged;
+            //    ProcessModuleOrderInfo = null;
+            //}
 
             _PWFermentationStarterType = null;
             _PAFBakerySourDoughProdType = null;
@@ -194,13 +194,13 @@ namespace gipbakery.mes.processapplication
 
         public override void Activate(ACComponent selectedProcessModule)
         {
-            SubscribeToWFNodes();
+            SubscribeToWFNodes(selectedProcessModule);
             InitBSO(selectedProcessModule);
         }
 
         public override void DeActivate()
         {
-            Deactivate();
+            base.DeActivate();
 
             if (_PAFSourDoughProducing != null)
             {
@@ -231,53 +231,29 @@ namespace gipbakery.mes.processapplication
                 WaterDiffQuantityProp.PropertyChanged -= WaterTargetQuantityProp_PropertyChanged;
                 WaterDiffQuantityProp = null;
             }
-
-
-            if (ProcessModuleOrderInfo != null)
-            {
-                ProcessModuleOrderInfo.PropertyChanged -= ProcessModuleOrderInfo_PropertyChanged;
-                ProcessModuleOrderInfo = null;
-            }
-
-            if (_RoutingService != null)
-            {
-                _RoutingService.Detach();
-                _RoutingService = null;
-            }
-
-            if (_ACFacilityManager != null)
-            {
-                _ACFacilityManager.Detach();
-                _ACFacilityManager = null;
-            }
-
-            if (_ACPickingManager != null)
-            {
-                _ACPickingManager.Detach();
-                _ACPickingManager = null;
-            }
-
-            base.DeActivate();
         }
 
         protected override void Deactivate()
         {
-            if (FermentationStarterRef != null)
+            using (ACMonitor.Lock(_70100_MembersLock))
             {
-                FermentationStarterRef.Detach();
-                FermentationStarterRef = null;
-            }
+                if (FermentationStarterRef != null)
+                {
+                    FermentationStarterRef.Detach();
+                    FermentationStarterRef = null;
+                }
 
-            if (FermentationQuantityProp != null)
-            {
-                FermentationQuantityProp.PropertyChanged -= FermentationQuantityProp_PropertyChanged;
-                FermentationQuantityProp = null;
-            }
+                if (FermentationQuantityProp != null)
+                {
+                    FermentationQuantityProp.PropertyChanged -= FermentationQuantityProp_PropertyChanged;
+                    FermentationQuantityProp = null;
+                }
 
-            if (PWGroupFermentation != null)
-            {
-                PWGroupFermentation.Detach();
-                PWGroupFermentation = null;
+                if (PWGroupFermentation != null)
+                {
+                    PWGroupFermentation.Detach();
+                    PWGroupFermentation = null;
+                }
             }
 
             if (NextFermentationStageProp != null)
@@ -298,7 +274,7 @@ namespace gipbakery.mes.processapplication
                 ReadyForDosingProp = null;
             }
 
-            _MessagesListSafe.Clear();
+            MessagesListSafe.Clear();
             RefreshMessageList();
         }
 
@@ -396,53 +372,55 @@ namespace gipbakery.mes.processapplication
             }
         }
 
-        public override void OnHandleOrderInfoPropChanged()
+        public override void OnHandleOrderInfoPropChanged(IACComponentPWNode pwGroup)
         {
-            base.OnHandleOrderInfoPropChanged();
-
-            NextFermentationStageProp = PWGroupFermentation.ValueT.GetPropertyNet(PWBakeryGroupFermentation.PN_NextFermentationStage) as IACContainerTNet<short>;
+            NextFermentationStageProp = pwGroup.GetPropertyNet(PWBakeryGroupFermentation.PN_NextFermentationStage) as IACContainerTNet<short>;
             if (NextFermentationStageProp == null)
             {
                 //TODO:
                 return;
             }
 
-            StartTimeProp = PWGroupFermentation.ValueT.GetPropertyNet(PWBakeryGroupFermentation.PN_StartNextFermentationStageTime) as IACContainerTNet<DateTime>;
+            StartTimeProp = pwGroup.GetPropertyNet(PWBakeryGroupFermentation.PN_StartNextFermentationStageTime) as IACContainerTNet<DateTime>;
             if (StartTimeProp == null)
             {
                 //TODO:
                 return;
             }
 
-            ReadyForDosingProp = PWGroupFermentation.ValueT.GetPropertyNet(PWBakeryGroupFermentation.PN_ReadyForDosingTime) as IACContainerTNet<DateTime>;
+            ReadyForDosingProp = pwGroup.GetPropertyNet(PWBakeryGroupFermentation.PN_ReadyForDosingTime) as IACContainerTNet<DateTime>;
             if (ReadyForDosingProp == null)
             {
-                //TODO:
+                //TODO: 
                 return;
             }
+
+            SetInfoProperties(ReadyForDosingProp.ValueT.ToString(), StartTimeProp.ValueT.ToString(), NextFermentationStageProp.ValueT);
 
             NextFermentationStageProp.PropertyChanged += NextFermentationStageProp_PropertyChanged;
 
             StartTimeProp.PropertyChanged += StartTimeProp_PropertyChanged;
 
             ReadyForDosingProp.PropertyChanged += ReadyForDosingProp_PropertyChanged;
-
-            SetInfoProperties();
         }
 
-        private void SetInfoProperties()
+        private void SetInfoProperties(string readyForDosing, string startDateTime, short nextStage)
         {
-            ReadyForDosing = ReadyForDosingProp.ValueT.ToString();
+            ReadyForDosing = readyForDosing;
             if (DischargingState != (short)ACStateEnum.SMRunning)
-                StartDateTime = StartTimeProp.ValueT.ToString();
-            NextStage = NextFermentationStageProp.ValueT;
+                StartDateTime = startDateTime;
+            NextStage = nextStage;
         }
 
         private void ReadyForDosingProp_PropertyChanged(object sender, PropertyChangedEventArgs e)
         {
             if (e.PropertyName == Const.ValueT)
             {
-                ReadyForDosing = ReadyForDosingProp.ValueT.ToString();
+                IACContainerTNet<DateTime> senderProp = sender as IACContainerTNet<DateTime>;
+                if (senderProp != null)
+                {
+                    ReadyForDosing = senderProp.ValueT.ToString();
+                }
             }
         }
 
@@ -450,7 +428,11 @@ namespace gipbakery.mes.processapplication
         {
             if (e.PropertyName == Const.ValueT)
             {
-                StartDateTime = StartTimeProp.ValueT.ToString();
+                IACContainerTNet<DateTime> senderProp = sender as IACContainerTNet<DateTime>;
+                if (senderProp != null)
+                {
+                    StartDateTime = senderProp.ValueT.ToString();
+                }
             }
         }
 
@@ -458,7 +440,11 @@ namespace gipbakery.mes.processapplication
         {
             if (e.PropertyName == Const.ValueT)
             {
-                NextStage = NextFermentationStageProp.ValueT;
+                IACContainerTNet<short> senderProp = sender as IACContainerTNet<short>;
+                if (senderProp != null)
+                {
+                    NextStage = senderProp.ValueT;
+                }
             }
         }
 
@@ -466,7 +452,11 @@ namespace gipbakery.mes.processapplication
         {
             if (e.PropertyName == Const.ValueT)
             {
-                WaterDiffQuantity = WaterDiffQuantityProp.ValueT;
+                IACContainerTNet<double> senderProp = sender as IACContainerTNet<double>;
+                if (senderProp != null)
+                {
+                    WaterDiffQuantity = senderProp.ValueT;
+                }
             }
         }
 
@@ -474,7 +464,11 @@ namespace gipbakery.mes.processapplication
         {
             if (e.PropertyName == Const.ValueT)
             {
-                FlourDiffQuantity = FlourDiffQuantityProp.ValueT;
+                IACContainerTNet<double> senderProp = sender as IACContainerTNet<double>;
+                if (senderProp != null)
+                {
+                    FlourDiffQuantity = senderProp.ValueT;
+                }
             }
         }
 
@@ -497,17 +491,24 @@ namespace gipbakery.mes.processapplication
         [ACMethodInfo("","en{'Acknowledge - Start'}de{'Quittieren - Start'}",800, true)]
         public override void Acknowledge()
         {
-            if (FermentationStarterRef != null )
+            IACComponentPWNode fermentationStarter = null;
+
+            using (ACMonitor.Lock(_70100_MembersLock))
             {
-                MessageItem msgItem = MessagesList.FirstOrDefault(c => c.UserAckPWNode != null && c.UserAckPWNode.ValueT == FermentationStarterRef.ValueT);
+                fermentationStarter = FermentationStarterRef?.ValueT;
+            }
+
+            if (fermentationStarter != null )
+            {
+                MessageItem msgItem = MessagesList.FirstOrDefault(c => c.UserAckPWNode != null && c.UserAckPWNode.ValueT == fermentationStarter);
                 if (msgItem != null)
                 {
-                    bool? result = FermentationStarterRef.ValueT.ExecuteMethod(PWBakeryFermentationStarter.MN_AckFermentationStarter, false) as bool?;
+                    bool? result = fermentationStarter.ExecuteMethod(PWBakeryFermentationStarter.MN_AckFermentationStarter, false) as bool?;
                     if (result.HasValue && !result.Value)
                     {
                         if (Messages.Question(this, "Question50063") == Global.MsgResult.Yes)
                         {
-                            FermentationStarterRef.ValueT.ExecuteMethod(PWBakeryFermentationStarter.MN_AckFermentationStarter, true);
+                            fermentationStarter.ExecuteMethod(PWBakeryFermentationStarter.MN_AckFermentationStarter, true);
                         }
                     }
                 }

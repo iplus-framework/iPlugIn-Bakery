@@ -36,6 +36,27 @@ namespace gipbakery.mes.processapplication
 
         #region Properties
 
+        private ACMonitorObject _70100_CurrProcessModLock = new ACMonitorObject(70100);
+
+        private ACComponent _CurrentProcessModule;
+        public override ACComponent CurrentProcessModule 
+        {
+            get
+            {
+                using (ACMonitor.Lock(_70100_CurrProcessModLock))
+                {
+                    return _CurrentProcessModule;
+                }
+            }
+            protected set
+            {
+                using (ACMonitor.Lock(_70100_CurrProcessModLock))
+                {
+                    _CurrentProcessModule = value;
+                }
+            }
+        }
+
         [ACPropertySelected(700, "MaterialTemperature")]
         public MaterialTemperature SelectedMaterialTemperature
         {
@@ -123,6 +144,8 @@ namespace gipbakery.mes.processapplication
 
         public override void Activate(ACComponent selectedProcessModule)
         {
+            CurrentProcessModule = selectedProcessModule;
+
             BakeryBSOWorkCenterSelector workCenter = ParentBSOWCS as BakeryBSOWorkCenterSelector;
             if (workCenter != null)
             {
@@ -159,11 +182,10 @@ namespace gipbakery.mes.processapplication
                     }
 
                     MaterialTemperatures = materialTempList;
-
                 }
             }
 
-            ACComponent tempMeasureFunc = ParentBSOWCS.CurrentProcessModule.ACComponentChildsOnServer.FirstOrDefault(c => _BakeryTempMeasuringType.IsAssignableFrom(c.ComponentClass.ObjectType)) as ACComponent;
+            ACComponent tempMeasureFunc = selectedProcessModule.ACComponentChildsOnServer.FirstOrDefault(c => _BakeryTempMeasuringType.IsAssignableFrom(c.ComponentClass.ObjectType)) as ACComponent;
             if (tempMeasureFunc == null)
             {
                 // error;
@@ -208,8 +230,12 @@ namespace gipbakery.mes.processapplication
         {
             if (e.PropertyName == Const.ValueT)
             {
-                var temp = _ChangedItemsProp.ValueT.ToArray();
-                Task.Run(() => RefreshChangedItems(temp));
+                IACContainerTNet<MaterialTempMeasureList> senderProp = sender as IACContainerTNet<MaterialTempMeasureList>;
+                if (senderProp != null)
+                {
+                    var temp = senderProp.ValueT.ToArray();
+                    Task.Run(() => RefreshChangedItems(temp));
+                }
             }
         }
 
@@ -262,8 +288,11 @@ namespace gipbakery.mes.processapplication
                         if (MaterialTemperatures == null || TemperatureServiceProxy == null || TemperatureServiceProxy.ValueT == null)
                             return;
 
-                        MaterialTempBaseList result = TemperatureServiceProxy.ValueT.ExecuteMethod(PABakeryTempService.MN_GetAverageTemperatures, 
-                                                                                                   ParentBSOWCS.CurrentProcessModule.ComponentClass.ACClassID) as MaterialTempBaseList;
+                        Guid? acClassID = CurrentProcessModule?.ComponentClass.ACClassID;
+                        if (!acClassID.HasValue)
+                            return;
+
+                        MaterialTempBaseList result = TemperatureServiceProxy.ValueT.ExecuteMethod(PABakeryTempService.MN_GetAverageTemperatures, acClassID.Value) as MaterialTempBaseList;
                         if (result != null && result.Any())
                         {
                             foreach (MaterialTemperatureBase tempBase in result)
@@ -285,7 +314,11 @@ namespace gipbakery.mes.processapplication
                         if (TemperatureServiceProxy == null || TemperatureServiceProxy.ValueT == null)
                             return;
 
-                        ACValueList result = TemperatureServiceProxy.ValueT.ExecuteMethod(PABakeryTempService.MN_GetTemperaturesInfo, ParentBSOWCS.CurrentProcessModule.ComponentClass.ACClassID) as ACValueList;
+                        Guid? acClassID = CurrentProcessModule?.ComponentClass.ACClassID;
+                        if (!acClassID.HasValue)
+                            return;
+
+                        ACValueList result = TemperatureServiceProxy.ValueT.ExecuteMethod(PABakeryTempService.MN_GetTemperaturesInfo, acClassID.Value) as ACValueList;
                         if (result != null && result.Any())
                         {
                             var materialTempList = result.Select(c => c.Value as MaterialTemperature).ToArray();
@@ -327,6 +360,8 @@ namespace gipbakery.mes.processapplication
                 _ChangedItemsProp.PropertyChanged -= ChangedItemsProp_PropertyChanged;
                 _ChangedItemsProp = null;
             }
+
+            base.DeActivate();
         }
 
         [ACMethodInfo("", "en{'Measure component temperature'}de{'Komponententemperatur messen'}", 701)]
@@ -337,7 +372,7 @@ namespace gipbakery.mes.processapplication
 
         public bool IsEnabledMeasureComponentTemp()
         {
-            return ParentBSOWCS != null && ParentBSOWCS.CurrentProcessModule != null && SelectedTempMeasureItem != null;
+            return ParentBSOWCS != null && TempMeasuringFunc != null && SelectedTempMeasureItem != null;
         }
 
         [ACMethodInfo("", "en{'Delete temperature mesurement'}de{'Temperaturmessung löschen'}", 702)]
@@ -348,7 +383,7 @@ namespace gipbakery.mes.processapplication
 
         public bool IsEnabledDeleteComponentTempMeasurement()
         {
-            return ParentBSOWCS != null && ParentBSOWCS.CurrentProcessModule != null && SelectedTempMeasureItem != null;
+            return ParentBSOWCS != null && TempMeasuringFunc != null && SelectedTempMeasureItem != null;
         }
 
         //TODO
