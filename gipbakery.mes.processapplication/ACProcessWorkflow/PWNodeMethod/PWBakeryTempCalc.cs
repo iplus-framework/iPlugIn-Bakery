@@ -2122,7 +2122,7 @@ namespace gipbakery.mes.processapplication
 
                 RootPW.ReloadConfig();
 
-                ResetMembers();
+                ResetMembers(false);
 
             }
             //ConfigManagerIPlus.ACConfigFactory(CurrentConfigStore, )
@@ -2189,6 +2189,15 @@ namespace gipbakery.mes.processapplication
             SubscribeToProjectWorkCycle();
         }
 
+        [ACMethodInfo("", "", 9999)]
+        public bool? GetUserResponse()
+        {
+            using (ACMonitor.Lock(_20015_LockValue))
+            {
+                return _UserResponse;
+            }
+        }
+
         //TODO: dump
         protected override void DumpPropertyList(XmlDocument doc, XmlElement xmlACPropertyList)
         {
@@ -2213,7 +2222,7 @@ namespace gipbakery.mes.processapplication
             }
         }
 
-        private void ResetMembers()
+        private void ResetMembers(bool resetUserResponse = true)
         {
             TemperatureCalculationResult.ValueT = null;
             ColdWaterQuantity.ValueT = 0;
@@ -2225,7 +2234,8 @@ namespace gipbakery.mes.processapplication
             {
                 _RecalculateTemperatures = true;
                 _CalculatorMode = TempCalcMode.Calcuate;
-                _UserResponse = null;
+                if (resetUserResponse)
+                    _UserResponse = null;
             }
         }
 

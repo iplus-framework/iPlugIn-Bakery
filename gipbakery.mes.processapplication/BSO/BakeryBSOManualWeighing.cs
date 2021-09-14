@@ -381,6 +381,12 @@ namespace gipbakery.mes.processapplication
             ACValue param = acMethod.ParameterValueList.GetACValue("AskUserIsWaterNeeded");
             if (param != null && param.ParamAsBoolean)
             {
+                bool? userResponse = tempCalc.ExecuteMethod("GetUserResponse") as bool?;
+                if (userResponse.HasValue)
+                {
+                    return;
+                }
+
                 var existingMessageItems = MessagesListSafe.Where(c => c.UserAckPWNode.ValueT == tempCalc).ToArray();
                 if (existingMessageItems != null)
                 {
@@ -390,8 +396,9 @@ namespace gipbakery.mes.processapplication
                     }
                 }
 
+                //Question50071: Is water needed?
                 MessageItem msgItem = new MessageItem(tempCalc, this, eMsgLevel.Question);
-                msgItem.Message = "Is water needed?";
+                msgItem.Message = Root.Environment.TranslateMessage(this, "Question50071");
 
                 AddToMessageList(msgItem);
                 RefreshMessageList();

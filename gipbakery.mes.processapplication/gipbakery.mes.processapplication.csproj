@@ -80,6 +80,7 @@
     <Compile Include="ACProcessWorkflow\PWNodeMethod\PWBakeryKneading.cs" />
     <Compile Include="ACProcessWorkflow\PWNodeMethod\PWBakeryRisingTimer.cs" />
     <Compile Include="ACProcessWorkflow\PWNodeMethod\PWBakeryTempCalc.cs" />
+    <Compile Include="BSO\BakeryBSOManualAddition.cs" />
     <Compile Include="BSO\BakeryBSOManualWeighing.cs" />
     <Compile Include="BSO\BakeryBSOMaterial.cs" />
     <Compile Include="BSO\BakeryBSOPartslist.cs" />
@@ -100,6 +101,7 @@
     <Compile Include="PAProcessFunction\PAFBakeryCleaning.cs" />
     <Compile Include="PAProcessFunction\PAFBakeryDosingFlour.cs" />
     <Compile Include="PAProcessFunction\PAFBakeryDosingWater.cs" />
+    <Compile Include="PAProcessFunction\PAFBakeryManualAddition.cs" />
     <Compile Include="PAProcessFunction\PAFBakeryManualWeighing.cs" />
     <Compile Include="PAProcessFunction\PAFBakeryPumping.cs" />
     <Compile Include="PAProcessFunction\PAFBakerySourDoughProducing.cs" />
