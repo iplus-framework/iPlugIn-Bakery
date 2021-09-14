@@ -360,13 +360,25 @@ namespace gipbakery.mes.processapplication
 
         private void HandleTempCalcACState(ACStateEnum acState)
         {
-            if (acState != ACStateEnum.SMRunning)
-                return; //TODO: check if list contains this message
-
             IACComponentPWNode tempCalc = CurrentBakeryTempCalc;
+
             if (tempCalc == null)
             {
                 //TODO: error
+            }
+
+            if (acState != ACStateEnum.SMRunning)
+            {
+                var existingMessageItems = MessagesListSafe.Where(c => c.UserAckPWNode.ValueT == tempCalc).ToArray();
+                if (existingMessageItems != null && existingMessageItems.Any())
+                {
+                    foreach (MessageItem mItem in existingMessageItems)
+                    {
+                        RemoveFromMessageList(mItem);
+                    }
+                    RefreshMessageList();
+                }
+                return;
             }
 
             ACMethod acMethod = tempCalc?.ACUrlCommand("MyConfiguration") as ACMethod;
@@ -897,6 +909,17 @@ namespace gipbakery.mes.processapplication
             }
 
             return base.HandleExecuteACMethod(out result, invocationMode, acMethodName, acClassMethod, acParameter);
+        }
+
+        protected override List<MessageItem> OnHandleWFNodesRemoveMessageItems(List<MessageItem> messageItems)
+        {
+            IACComponentPWNode bakeryTempCalc = CurrentBakeryTempCalc;
+            if (bakeryTempCalc != null)
+            {
+                return messageItems.Where(c => c.UserAckPWNode != null && c.UserAckPWNode.ValueT != bakeryTempCalc).ToList();
+            }
+
+            return base.OnHandleWFNodesRemoveMessageItems(messageItems);
         }
 
         public override bool AddToMessageList(MessageItem messageItem)
