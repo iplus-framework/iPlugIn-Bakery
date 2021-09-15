@@ -92,6 +92,7 @@ namespace gipbakery.mes.processapplication
         public const string PN_CleaningProdACClassWF = "CleaningProdACClassWF";
         public const string PN_FermentationStarterScaleACUrl = "FermentationStarterScaleACUrl";
         public const string PN_PumpOverProcessModuleACUrl = "PumpOverProcessModuleACUrl";
+        public const string PN_TemperatureSensorACUrl = "TemperatureSensorACUrl";
 
         #endregion
 

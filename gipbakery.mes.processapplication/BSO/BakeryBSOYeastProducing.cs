@@ -155,6 +155,21 @@ namespace gipbakery.mes.processapplication
             }
         }
 
+        private double _PreProdTemperature;
+        [ACPropertyInfo(808, "", "en{'Temperature'}de{'Temperatur'}")]
+        public double PreProdTemperature
+        {
+            get
+            {
+                return _PreProdTemperature;
+            }
+            set
+            {
+                _PreProdTemperature = value;
+                OnPropertyChanged("PreProdTemperature");
+            }
+        }
+
         public ACValue _SelectedPumpTarget;
         [ACPropertySelected(850, "PumpTargets")]
         public ACValue SelectedPumpTarget
@@ -236,6 +251,7 @@ namespace gipbakery.mes.processapplication
             }
         }
 
+        private IACContainerTNet<double> _TempSensorActualValue;
 
         public IACContainerTNet<bool> RefreshParkingSpace;
 
@@ -336,6 +352,12 @@ namespace gipbakery.mes.processapplication
             {
                 _PumpOverProcessModule.Detach();
                 _PumpOverProcessModule = null;
+            }
+
+            if (_TempSensorActualValue != null)
+            {
+                _TempSensorActualValue.PropertyChanged -= TempSensorActualValue_PropertyChanged;
+                _TempSensorActualValue = null;
             }
 
             if (_PAFYeastProducing != null)
@@ -464,6 +486,19 @@ namespace gipbakery.mes.processapplication
                 string pumpOverModuleACUrl = GetConfigValue(funcClass, PAFBakeryYeastProducing.PN_PumpOverProcessModuleACUrl) as string;
                 if (!string.IsNullOrEmpty(pumpOverModuleACUrl))
                     PumpOverProcessModule = Root.ACUrlCommand(pumpOverModuleACUrl) as ACComponent;
+
+                string tempSensorACUrl = GetConfigValue(funcClass, PAFBakeryYeastProducing.PN_TemperatureSensorACUrl) as string;
+                if (!string.IsNullOrEmpty(tempSensorACUrl))
+                {
+                    ACComponent tempSensor = Root.ACUrlCommand(tempSensorACUrl) as ACComponent;
+                    _TempSensorActualValue = tempSensor?.GetPropertyNet("ActualValue") as IACContainerTNet<double>;
+
+                    if (_TempSensorActualValue != null)
+                    {
+                        _TempSensorActualValue.PropertyChanged += TempSensorActualValue_PropertyChanged;
+                    }
+                }
+
             }
 
             ACChildInstanceInfo dischFunc = childInstances.FirstOrDefault(c => _PAFDischargingType.IsAssignableFrom(c.ACType.ValueT.ObjectType));
@@ -546,7 +581,7 @@ namespace gipbakery.mes.processapplication
             if (acClass == null || string.IsNullOrEmpty(configName))
                 return null;
 
-            var config = acClass.ACClassConfig_ACClass.FirstOrDefault(c => c.ConfigACUrl == configName);
+            var config = acClass.ConfigurationEntries.FirstOrDefault(c => c.ConfigACUrl == configName);
             if (config == null)
                 return null;
 
@@ -598,6 +633,18 @@ namespace gipbakery.mes.processapplication
                 {
                     string orderInfo = senderProp.ValueT;
                     ParentBSOWCS.ApplicationQueue.Add(() => HandleOrderInfoPropChanged(orderInfo));
+                }
+            }
+        }
+
+        private void TempSensorActualValue_PropertyChanged(object sender, PropertyChangedEventArgs e)
+        {
+            if (e.PropertyName == Const.ValueT)
+            {
+                IACContainerTNet<double> senderProp = sender as IACContainerTNet<double>;
+                if (senderProp != null)
+                {
+                    PreProdTemperature = senderProp.ValueT;
                 }
             }
         }

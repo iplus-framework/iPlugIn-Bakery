@@ -39,8 +39,11 @@ namespace gipbakery.mes.processapplication
             method.ParameterValueList.Add(new ACValue("MaxBatchWeight", typeof(double), false, Global.ParamOption.Optional));
             paramTranslation.Add("MaxBatchWeight", "en{'Max. batch weight [kg]'}de{'Maximales Batchgewicht [kg]'}");
 
-            method.ParameterValueList.Add(new ACValue("DoseInSourProdSimultaneously ", typeof(bool), false, Global.ParamOption.Optional));
+            method.ParameterValueList.Add(new ACValue("DoseInSourProdSimultaneously", typeof(bool), false, Global.ParamOption.Optional));
             paramTranslation.Add("DoseInSourProdSimultaneously", "en{'Dose in sour dough production simultaneously'}de{'Dosiere in der Sauerteigproduktion gleichzeitig'}");
+
+            method.ParameterValueList.Add(new ACValue("DSTSwitchInTimeCalculation", typeof(bool), false, Global.ParamOption.Optional));
+            paramTranslation.Add("DSTSwitchInTimeCalculation", "en{'Include daylight savings time switch in time calculation'}de{'Sommerzeitumstellung in die Zeitberechnung einbeziehen'}");
             //method.ParameterValueList.Add(new ACValue("SourProdDosingUnit", typeof(double), 10.0, Global.ParamOption.Optional));
             //paramTranslation.Add("SourProdDosingUnit", "en{'Sour dough production dosing unit [kg]'}de{'SauerteigDosiereinheit [kg]'}");
             //method.ParameterValueList.Add(new ACValue("SourProdDosingPause", typeof(int), 2, Global.ParamOption.Optional));
@@ -108,6 +111,24 @@ namespace gipbakery.mes.processapplication
                 return false;
             }
         }
+
+        public bool UseDSTSwitch
+        {
+            get
+            {
+                var method = MyConfiguration;
+                if (method != null)
+                {
+                    var acValue = method.ParameterValueList.GetACValue("DSTSwitchInTimeCalculation");
+                    if (acValue != null)
+                    {
+                        return acValue.ParamAsBoolean;
+                    }
+                }
+                return false;
+            }
+        }
+
 
         #endregion
 
@@ -319,6 +340,9 @@ namespace gipbakery.mes.processapplication
             }
             lastNode.EndOnTime.ValueT = plannedEndTime;
 
+            bool isEndTimeDST = TimeZoneInfo.Local.IsDaylightSavingTime(plannedEndTime);
+            bool useDSTSwitch = UseDSTSwitch;
+
             endOnTimeNodes.Remove(lastNode);
 
             ReadyForDosingTime.ValueT = plannedEndTime;
@@ -343,12 +367,36 @@ namespace gipbakery.mes.processapplication
                     fixDurationNodes.Add(currentNode);
                 }
 
-                TimeSpan fixedDuration = CalcualteFixedDuration(fixDurationNodes, stages);
+                TimeSpan fixedDuration = CalculateFixedDuration(fixDurationNodes, stages);
                 TimeSpan variableDuration = CalculateVariableDuration(pwDosings, stages);
 
                 TimeSpan durationPerStage = fixedDuration + variableDuration;
 
-                prevEndOnTime.EndOnTime.ValueT = currentNode.EndOnTime.ValueT - durationPerStage;
+                DateTime prevTime = currentNode.EndOnTime.ValueT - durationPerStage;
+
+                if (useDSTSwitch)
+                {
+                    bool isCurrentTimeDST = TimeZoneInfo.Local.IsDaylightSavingTime(prevTime);
+
+                    if (isEndTimeDST != isCurrentTimeDST)
+                    {
+                        if (isEndTimeDST)
+                        {
+                            // switch summer to winter
+                            prevTime = prevTime.AddHours(-1);
+                        }
+                        else
+                        {
+                            // switch winter to summer
+                            prevTime = prevTime.AddHours(1);
+                        }
+
+                        //change time only once, all predecessors will be calcualted on this changed node end time
+                        useDSTSwitch = false;
+                    }
+                }
+
+                prevEndOnTime.EndOnTime.ValueT = prevTime;
 
                 currentNode = prevEndOnTime;
 
@@ -446,7 +494,7 @@ namespace gipbakery.mes.processapplication
             }
         }
 
-        public virtual TimeSpan CalcualteFixedDuration(List<PWBaseNodeProcess> pwNodes, int stage)
+        public virtual TimeSpan CalculateFixedDuration(List<PWBaseNodeProcess> pwNodes, int stage)
         {
             TimeSpan result = TimeSpan.Zero;
 
@@ -602,6 +650,5 @@ namespace gipbakery.mes.processapplication
         {
             return HandleExecuteACMethod_PWGroupVB(out result, acComponent, acMethodName, acClassMethod, acParameter);
         }
-
     }
 }
