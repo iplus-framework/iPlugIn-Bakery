@@ -301,7 +301,7 @@ namespace gipbakery.mes.processapplication
         }
 
         [ACMethodInfo("", "", 800)]
-        public void SwitchVirtualStoreOutwardEnabled()
+        public Msg SwitchVirtualStoreOutwardEnabled()
         {
             PAMSilo virtualTargetStore = null;
 
@@ -311,12 +311,12 @@ namespace gipbakery.mes.processapplication
             }
 
             if (virtualTargetStore == null)
-                return;
+                return null;
 
             Facility facility = virtualTargetStore.Facility?.ValueT?.ValueT;
 
             if (facility == null)
-                return;
+                return null;
 
             using (DatabaseApp dbApp = new DatabaseApp())
             {
@@ -325,10 +325,10 @@ namespace gipbakery.mes.processapplication
                 {
                     store.OutwardEnabled = !store.OutwardEnabled;
                     Msg msg = dbApp.ACSaveChanges();
-
-                    //TODO alarm 
+                    return msg;
                 }
             }
+            return null;
         }
 
         [ACMethodInfo("", "en{'Clean pre prod container'}de{'Reinigen Vorproduktionsbehälter'}", 821)]

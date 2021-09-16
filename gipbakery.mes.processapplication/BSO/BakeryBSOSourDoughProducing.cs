@@ -134,10 +134,22 @@ namespace gipbakery.mes.processapplication
         public ACComponent FlourScale
         {
             get => _FlourScale?.ValueT;
-            set
+            private set
             {
                 _FlourScale = new ACRef<ACComponent>(value, this);
                 OnPropertyChanged("FlourScale");
+            }
+        }
+
+        private double _FlourScaleActualValue;
+        [ACPropertyInfo(808, "", "en{'Flour actual q.'}de{'Mehl Ist'}")]
+        public double FlourScaleActualValue
+        {
+            get => _FlourScaleActualValue;
+            set 
+            {
+                _FlourScaleActualValue = value;
+                OnPropertyChanged("FlourScaleActualValue");
             }
         }
 
@@ -147,16 +159,31 @@ namespace gipbakery.mes.processapplication
             set;
         }
 
-        [ACPropertyInfo(807)]
+        [ACPropertyInfo(809)]
         public ACComponent WaterScale
         {
             get => _WaterScale?.ValueT;
-            set
+            private set
             {
                 _WaterScale = new ACRef<ACComponent>(value, this);
                 OnPropertyChanged("WaterScale");
             }
         }
+
+        private double _WaterScaleActualValue;
+        [ACPropertyInfo(810, "", "en{'Water actual q.'}de{'Wasser Ist'}")]
+        public double WaterScaleActualValue
+        {
+            get => _WaterScaleActualValue;
+            set
+            {
+                _WaterScaleActualValue = value;
+                OnPropertyChanged("WaterScaleActualValue");
+            }
+        }
+
+        private IACContainerTNet<double> _WaterScaleActValue;
+        private IACContainerTNet<double> _FlourScaleActValue;
 
         private IACContainerTNet<short> NextFermentationStageProp
         {
@@ -206,6 +233,12 @@ namespace gipbakery.mes.processapplication
             {
                 _PAFSourDoughProducing.Detach();
                 _PAFSourDoughProducing = null;
+            }
+
+            if (_FlourScaleActValue != null)
+            {
+                _FlourScaleActValue.PropertyChanged -= _FlourScaleActValue_PropertyChanged;
+                _FlourScaleActValue = null;
             }
 
             if (_FlourScale != null)
@@ -282,6 +315,7 @@ namespace gipbakery.mes.processapplication
         {
             StartDateTime = null;
             ReadyForDosing = null;
+            NextStage = 0;
 
             base.InitBSO(processModule);
 
@@ -304,6 +338,12 @@ namespace gipbakery.mes.processapplication
                 if (scale != null)
                 {
                     FlourScale = scale;
+                    _FlourScaleActValue = scale.GetPropertyNet("ActualValue") as IACContainerTNet<double>;
+                    if (_FlourScaleActValue != null)
+                    {
+                        FlourScaleActualValue = _FlourScaleActValue.ValueT;
+                        _FlourScaleActValue.PropertyChanged += _FlourScaleActValue_PropertyChanged;
+                    }
                 }
                 else
                 {
@@ -340,6 +380,12 @@ namespace gipbakery.mes.processapplication
                 if (scale != null)
                 {
                     WaterScale = scale;
+                    _WaterScaleActValue = scale.GetPropertyNet("ActualValue") as IACContainerTNet<double>;
+                    if (_WaterScaleActValue != null)
+                    {
+                        WaterScaleActualValue = _WaterScaleActValue.ValueT;
+                        _WaterScaleActValue.PropertyChanged += _WaterScaleActValue_PropertyChanged;
+                    }
                 }
                 else
                 {
@@ -361,6 +407,8 @@ namespace gipbakery.mes.processapplication
                 tempRef = null;
             }
         }
+
+
 
         public override void InitPreProdFunction(ACComponent processModule, IEnumerable<ACChildInstanceInfo> childInstances)
         {
@@ -471,6 +519,30 @@ namespace gipbakery.mes.processapplication
                 if (senderProp != null)
                 {
                     FlourDiffQuantity = senderProp.ValueT;
+                }
+            }
+        }
+
+        private void _WaterScaleActValue_PropertyChanged(object sender, PropertyChangedEventArgs e)
+        {
+            if (e.PropertyName == Const.ValueT)
+            {
+                IACContainerTNet<double> senderProp = sender as IACContainerTNet<double>;
+                if (senderProp != null)
+                {
+                    WaterScaleActualValue = senderProp.ValueT;
+                }
+            }
+        }
+
+        private void _FlourScaleActValue_PropertyChanged(object sender, PropertyChangedEventArgs e)
+        {
+            if (e.PropertyName == Const.ValueT)
+            {
+                IACContainerTNet<double> senderProp = sender as IACContainerTNet<double>;
+                if (senderProp != null)
+                {
+                    FlourScaleActualValue = senderProp.ValueT;
                 }
             }
         }

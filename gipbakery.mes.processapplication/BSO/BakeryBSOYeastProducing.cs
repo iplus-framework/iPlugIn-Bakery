@@ -226,6 +226,20 @@ namespace gipbakery.mes.processapplication
             }
         }
 
+        private IACContainerTNet<double> _PreProdScaleActValue;
+
+        private double _PreProdScaleActualValue;
+        [ACPropertyInfo(809, "", "")]
+        public double PreProdScaleActualValue
+        {
+            get => _PreProdScaleActualValue;
+            set
+            {
+                _PreProdScaleActualValue = value;
+                OnPropertyChanged("PreProdScaleActualValue");
+            }
+        }
+
         private ACRef<ACComponent> _VirtualStore;
 
         [ACPropertyInfo(808)]
@@ -236,6 +250,19 @@ namespace gipbakery.mes.processapplication
             {
                 _VirtualStore = new ACRef<ACComponent>(value, this);
                 OnPropertyChanged("VirtualStore");
+            }
+        }
+
+        private IACContainerTNet<bool> _VirtStoreOutEnabled;
+
+        private bool _VirutalStoreOutwardEnabled;
+        public bool VirutalStoreOutwardEnabled
+        {
+            get => _VirutalStoreOutwardEnabled;
+            private set
+            {
+                _VirutalStoreOutwardEnabled = value;
+                OnPropertyChanged("VirutalStoreOutwardEnabled");
             }
         }
 
@@ -336,10 +363,22 @@ namespace gipbakery.mes.processapplication
         {
             Deactivate();
 
+            if (_PreProdScaleActValue != null)
+            {
+                _PreProdScaleActValue.PropertyChanged -= _PreProdScaleActValue_PropertyChanged;
+                _PreProdScaleActValue = null;
+            }
+
             if (_PreProdScale != null)
             {
                 _PreProdScale.Detach();
                 _PreProdScale = null;
+            }
+
+            if (_VirtStoreOutEnabled != null)
+            {
+                _VirtStoreOutEnabled.PropertyChanged -= _VirtStoreOutEnabled_PropertyChanged;
+                _VirtStoreOutEnabled = null;
             }
 
             if (_VirtualStore != null)
@@ -466,6 +505,13 @@ namespace gipbakery.mes.processapplication
                 if (scale != null)
                 {
                     PreProdScale = scale;
+
+                    _PreProdScaleActValue = scale.GetPropertyNet("ActualValue") as IACContainerTNet<double>;
+                    if (_PreProdScaleActValue != null)
+                    {
+                        PreProdScaleActualValue = _PreProdScaleActValue.ValueT;
+                        _PreProdScaleActValue.PropertyChanged += _PreProdScaleActValue_PropertyChanged;
+                    }
                 }
                 else
                 {
@@ -477,6 +523,13 @@ namespace gipbakery.mes.processapplication
                 if (store != null)
                 {
                     VirtualStore = store;
+
+                    _VirtStoreOutEnabled = store.GetPropertyNet("OutwardEnabled") as IACContainerTNet<bool>;
+                    if (_VirtStoreOutEnabled != null)
+                    {
+                        VirutalStoreOutwardEnabled = _VirtStoreOutEnabled.ValueT;
+                        _VirtStoreOutEnabled.PropertyChanged += _VirtStoreOutEnabled_PropertyChanged;
+                    }
                 }
                 else
                 {
@@ -498,7 +551,6 @@ namespace gipbakery.mes.processapplication
                         _TempSensorActualValue.PropertyChanged += TempSensorActualValue_PropertyChanged;
                     }
                 }
-
             }
 
             ACChildInstanceInfo dischFunc = childInstances.FirstOrDefault(c => _PAFDischargingType.IsAssignableFrom(c.ACType.ValueT.ObjectType));
@@ -674,7 +726,8 @@ namespace gipbakery.mes.processapplication
 
                 if (pwGroup == null)
                 {
-                    //todo: error
+                    //The user does not have access rights for class {0} ({1}). //TODO
+                    Messages.Error(this, "");
                     return;
                 }
 
@@ -695,8 +748,7 @@ namespace gipbakery.mes.processapplication
                     {
                         pwGroupFermentation.Detach();
 
-                        //Error50290: The user does not have access rights for class PWManualWeighing ({0}).
-                        // Der Benutzer hat keine Zugriffsrechte auf Klasse PWManualWeighing ({0}).
+                        //The user does not have access rights for class {0} ({1}). //TODO
                         Messages.Error(this, "Error50290", false, fermentationStarter.ACUrlParent + "\\" + fermentationStarter.ACIdentifier);
                         return;
                     }
@@ -708,6 +760,9 @@ namespace gipbakery.mes.processapplication
                     {
                         pwGroupFermentation.Detach();
                         fermentationStarterRef.Detach();
+
+                        // The property {0} can't get from the class {1}.
+                        // The property PWBakeryFermentationStarter.PN_FSTargetQuantity can't get from PWBakeryFermentationStarter
 
                         //TODO error
                         return;
@@ -778,6 +833,18 @@ namespace gipbakery.mes.processapplication
                 {
                     RemoveFromMessageList(msgItem);
                     RefreshMessageList();
+                }
+            }
+        }
+
+        private void _PreProdScaleActValue_PropertyChanged(object sender, PropertyChangedEventArgs e)
+        {
+            if (e.PropertyName == Const.ValueT)
+            {
+                IACContainerTNet<double> senderProp = sender as IACContainerTNet<double>;
+                if (senderProp != null)
+                {
+                    PreProdScaleActualValue = senderProp.ValueT;
                 }
             }
         }
@@ -963,9 +1030,7 @@ namespace gipbakery.mes.processapplication
                         return;
                 }
 
-
                 PAFPreProducing?.ExecuteMethod(PAFBakeryYeastProducing.MN_SwitchVirtualStoreOutwardEnabled);
-
 
                 if (_IsOrderInfoEmpy)//process module is not mapped
                 {
@@ -1101,6 +1166,18 @@ namespace gipbakery.mes.processapplication
         public bool IsEnabledStoreOutwardEnabledOff()
         {
             return PAFPreProducing != null;
+        }
+
+        private void _VirtStoreOutEnabled_PropertyChanged(object sender, PropertyChangedEventArgs e)
+        {
+            if (e.PropertyName == Const.ValueT)
+            {
+                IACContainerTNet<bool> senderProp = sender as IACContainerTNet<bool>;
+                if (senderProp != null)
+                {
+                    VirutalStoreOutwardEnabled = senderProp.ValueT;
+                }
+            }
         }
 
         [ACMethodInfo("", "", 802, true)]
