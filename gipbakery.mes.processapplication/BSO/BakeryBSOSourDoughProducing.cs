@@ -280,6 +280,9 @@ namespace gipbakery.mes.processapplication
 
         protected override void InitBSO(ACComponent processModule)
         {
+            StartDateTime = null;
+            ReadyForDosing = null;
+
             base.InitBSO(processModule);
 
             var childInstances = processModule.GetChildInstanceInfo(1, false);

@@ -427,7 +427,7 @@ namespace gipbakery.mes.processapplication
                     //TODO: error
                 }
 
-                var existingMessageItems = MessagesListSafe.Where(c => c.UserAckPWNode.ValueT == tempCalc).ToArray();
+                var existingMessageItems = MessagesListSafe.Where(c => c.UserAckPWNode != null && c.UserAckPWNode.ValueT == tempCalc).ToArray();
                 if (existingMessageItems != null)
                 {
                     foreach (MessageItem mItem in existingMessageItems)

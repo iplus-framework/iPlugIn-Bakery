@@ -1819,9 +1819,9 @@ namespace gipbakery.mes.processapplication
             List<MaterialTemperature> componentTemp = partslistPosList.Select(c => new MaterialTemperature()
             {
                 Material = c.Material,
-                AverageTemperature = c.Material.MaterialConfig_Material
-                                      .FirstOrDefault(x => x.KeyACUrl == PABakeryTempService.MaterialTempertureConfigKeyACUrl
-                                                        && x.VBiACClassID == recvPointID)?.Value as double?
+                AverageTemperature = c.Material.ConfigurationEntries
+                                               .FirstOrDefault(x => x.KeyACUrl == PABakeryTempService.MaterialTempertureConfigKeyACUrl
+                                                                 && x.VBiACClassID == recvPointID)?.Value as double?
             }).ToList();
 
             var cityWater = componentTemp.FirstOrDefault(c => c.Material.MaterialNo == matNoCityWater);
@@ -1835,7 +1835,7 @@ namespace gipbakery.mes.processapplication
                 MaterialTemperature mt = new MaterialTemperature()
                 {
                     Material = mat,
-                    AverageTemperature = mat.MaterialConfig_Material
+                    AverageTemperature = mat.ConfigurationEntries
                                             .FirstOrDefault(x => x.KeyACUrl == PABakeryTempService.MaterialTempertureConfigKeyACUrl
                                                               && x.VBiACClassID == recvPointID)?.Value as double?
                 };
@@ -1853,7 +1853,7 @@ namespace gipbakery.mes.processapplication
                 MaterialTemperature mt = new MaterialTemperature()
                 {
                     Material = mat,
-                    AverageTemperature = mat.MaterialConfig_Material
+                    AverageTemperature = mat.ConfigurationEntries
                                             .FirstOrDefault(x => x.KeyACUrl == PABakeryTempService.MaterialTempertureConfigKeyACUrl
                                                               && x.VBiACClassID == recvPointID)?.Value as double?
                 };
@@ -1864,27 +1864,36 @@ namespace gipbakery.mes.processapplication
             if (warmWater != null)
                 warmWater.Water = WaterType.WarmWater;
 
-            var dryIceMaterial = componentTemp.FirstOrDefault(c => c.Material.MaterialNo == matNoDryIce);
-            if (dryIceMaterial != null)
-                dryIceMaterial.Water = WaterType.DryIce;
+            MaterialTemperature dryIceTemp = componentTemp.FirstOrDefault(c => c.Material.MaterialNo == matNoDryIce);
+            if (dryIceTemp != null)
+            {
+                dryIceTemp.Water = WaterType.DryIce;
+            }
 
-            DetermineCompTempFromPartslistOrMaterial(componentTemp, partslistPosList, recvPoint.RoomTemperature.ValueT);
-
-            SetRoomTemp(componentTemp, recvPoint.RoomTemperature.ValueT);
-
-            if (!componentTemp.Any(c => c.Material.MaterialNo == matNoDryIce))
+            if (dryIceTemp == null)
             {
                 Material dryIce = dbApp.Material.FirstOrDefault(c => c.MaterialNo == matNoDryIce);
                 if (dryIce != null)
                 {
-                    MaterialTemperature mt = new MaterialTemperature() { Material = dryIce, AverageTemperature = -5, Water = WaterType.DryIce }; //TODO get temp from material, if is not set error
-                    componentTemp.Add(mt);
-                }
-                else
-                {
-                    // TODO: error 
+                    double? iceTemp = dryIce.ConfigurationEntries.FirstOrDefault(x => x.KeyACUrl == PABakeryTempService.MaterialTempertureConfigKeyACUrl
+                                                                                   && x.VBiACClassID == recvPointID)?.Value as double?;
+
+                    dryIceTemp = new MaterialTemperature() { Material = dryIce, AverageTemperature = iceTemp, Water = WaterType.DryIce }; 
+                    componentTemp.Add(dryIceTemp);
                 }
             }
+
+            DetermineCompTempFromPartslistOrMaterial(componentTemp, partslistPosList, recvPoint.RoomTemperature.ValueT);
+
+            if (dryIceTemp != null && !dryIceTemp.AverageTemperature.HasValue)
+            {
+                dryIceTemp.AverageTemperature = -1;
+
+                Msg msg = new Msg(eMsgLevel.Info, "The temperature of ICE for calcuation is now -1 °C. Please configure default ICE temperature in the Material master or in the Bill of material.");
+                OnNewAlarmOccurred(ProcessAlarm, msg);
+            }
+
+            SetRoomTemp(componentTemp, recvPoint.RoomTemperature.ValueT, matNoDryIce);
 
             return componentTemp;
         }
@@ -1949,27 +1958,36 @@ namespace gipbakery.mes.processapplication
             if (warmWater != null)
                 warmWater.Water = WaterType.WarmWater;
 
-            var dryIceMaterial = componentTemp.FirstOrDefault(c => c.Material.MaterialNo == matNoDryIce);
-            if (dryIceMaterial != null)
-                dryIceMaterial.Water = WaterType.DryIce;
+            MaterialTemperature dryIceTemp = componentTemp.FirstOrDefault(c => c.Material.MaterialNo == matNoDryIce);
+            if (dryIceTemp != null)
+            {
+                dryIceTemp.Water = WaterType.DryIce;
+            }
 
-            DetermineCompTempFromMaterial(componentTemp, picking, recvPoint.RoomTemperature.ValueT);
-
-            SetRoomTemp(componentTemp, recvPoint.RoomTemperature.ValueT);
-
-            if (!componentTemp.Any(c => c.Material.MaterialNo == matNoDryIce))
+            if (dryIceTemp == null)
             {
                 Material dryIce = dbApp.Material.FirstOrDefault(c => c.MaterialNo == matNoDryIce);
                 if (dryIce != null)
                 {
-                    MaterialTemperature mt = new MaterialTemperature() { Material = dryIce, AverageTemperature = -5, Water = WaterType.DryIce }; //TODO get temp from material, if is not set error
-                    componentTemp.Add(mt);
-                }
-                else
-                {
-                    // TODO: error 
+                    double? iceTemp = dryIce.ConfigurationEntries.FirstOrDefault(x => x.KeyACUrl == PABakeryTempService.MaterialTempertureConfigKeyACUrl
+                                                                                   && x.VBiACClassID == recvPointID)?.Value as double?;
+
+                    dryIceTemp = new MaterialTemperature() { Material = dryIce, AverageTemperature = iceTemp, Water = WaterType.DryIce };
+                    componentTemp.Add(dryIceTemp);
                 }
             }
+
+            DetermineCompTempFromMaterial(componentTemp, picking, recvPoint.RoomTemperature.ValueT);
+
+            if (dryIceTemp != null && !dryIceTemp.AverageTemperature.HasValue)
+            {
+                dryIceTemp.AverageTemperature = -1;
+
+                Msg msg = new Msg(eMsgLevel.Info, "The temperature of ICE for calcuation is now -1 °C. Please configure default ICE temperature in the Material master.");
+                OnNewAlarmOccurred(ProcessAlarm, msg);
+            }
+
+            SetRoomTemp(componentTemp, recvPoint.RoomTemperature.ValueT, matNoDryIce);
 
             return componentTemp;
         }
@@ -2031,9 +2049,9 @@ namespace gipbakery.mes.processapplication
             }
         }
 
-        private void SetRoomTemp(List<MaterialTemperature> componentTempList, double roomTemp)
+        private void SetRoomTemp(List<MaterialTemperature> componentTempList, double roomTemp, string matNoDryIce)
         {
-            foreach (var compTemp in componentTempList.Where(c => !c.AverageTemperature.HasValue))
+            foreach (var compTemp in componentTempList.Where(c => !c.AverageTemperature.HasValue && c.Material.MaterialNo != matNoDryIce))
             {
                 compTemp.AverageTemperature = roomTemp;
             }

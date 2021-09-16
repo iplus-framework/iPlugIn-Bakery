@@ -42,7 +42,7 @@ namespace gipbakery.mes.processapplication
 
                     isTempMeasurementConfigured = IsTempMeasurementConfigured(partslistPos?.Material);
 
-                    if (isTempMeasurementConfigured)
+                    if (isTempMeasurementConfigured && partslistPos != null)
                     {
                         InsertOrModifyConfig(partslistPos.Material.MaterialConfig_Material, dbApp, partslistPos.Material, null, isTempMeasurementConfigured);
                         anyConfig = true;
@@ -56,9 +56,16 @@ namespace gipbakery.mes.processapplication
                         continue;
                     }
 
-                    if (IsTemperatureConfigured(partslistPos?.Material))
+                    Material material = partslistPos?.Material;
+                    if (material == null)
                     {
-                        InsertOrModifyConfig(partslistPos.Material.MaterialConfig_Material, dbApp, partslistPos.Material, null, isTempMeasurementConfigured);
+                        material = rel.SourceProdOrderPartslistPos?.Material;
+                        isTempMeasurementConfigured = IsTempMeasurementConfigured(material);
+                    }
+
+                    if (IsTemperatureConfigured(material))
+                    {
+                        InsertOrModifyConfig(material.MaterialConfig_Material, dbApp, material, null, isTempMeasurementConfigured);
                         anyConfig = true;
                     }
                 }
