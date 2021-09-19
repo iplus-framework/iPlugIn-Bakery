@@ -514,6 +514,7 @@ namespace gipbakery.mes.processapplication
             catch (Exception e)
             {
                 //TODO:error
+                Messages.LogException(GetACUrl(), "BookFermentationStarter()", e);
                 return false;
             }
 

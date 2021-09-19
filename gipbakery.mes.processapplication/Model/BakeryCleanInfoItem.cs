@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 namespace gipbakery.mes.processapplication
 {
     [ACClassInfo(Const.PackName_VarioSystem, "en{'BakeryCleanInfoItem'}de{'BakeryCleanInfoItem'}", Global.ACKinds.TACSimpleClass)]
-    public class BakeryCleanInfoItem : INotifyPropertyChanged
+    public class BakeryCleanInfoItem : EntityBase
     {
         public string ACCaption
         {
@@ -23,6 +23,6 @@ namespace gipbakery.mes.processapplication
             set;
         }
 
-        public event PropertyChangedEventHandler PropertyChanged;
+        //public event PropertyChangedEventHandler PropertyChanged;
     }
 }
