@@ -911,16 +911,16 @@ namespace gipbakery.mes.processapplication
             return base.HandleExecuteACMethod(out result, invocationMode, acMethodName, acClassMethod, acParameter);
         }
 
-        //protected override List<MessageItem> OnHandleWFNodesRemoveMessageItems(List<MessageItem> messageItems)
-        //{
-        //    IACComponentPWNode bakeryTempCalc = CurrentBakeryTempCalc;
-        //    if (bakeryTempCalc != null)
-        //    {
-        //        return messageItems.Where(c => c.UserAckPWNode != null && c.UserAckPWNode.ValueT != bakeryTempCalc).ToList();
-        //    }
+        protected override List<MessageItem> OnHandleWFNodesRemoveMessageItems(List<MessageItem> messageItems)
+        {
+            IACComponentPWNode bakeryTempCalc = CurrentBakeryTempCalc;
+            if (bakeryTempCalc != null)
+            {
+                return messageItems.Where(c => c.UserAckPWNode != null && c.UserAckPWNode.ValueT != bakeryTempCalc).ToList();
+            }
 
-        //    return base.OnHandleWFNodesRemoveMessageItems(messageItems);
-        //}
+            return base.OnHandleWFNodesRemoveMessageItems(messageItems);
+        }
 
         public override bool AddToMessageList(MessageItem messageItem)
         {
