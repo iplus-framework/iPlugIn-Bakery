@@ -1,5 +1,6 @@
 ﻿using gip.core.autocomponent;
 using gip.core.datamodel;
+using gip.core.processapplication;
 using gip.mes.datamodel;
 using gip.mes.facility;
 using gip.mes.processapplication;
@@ -14,6 +15,8 @@ namespace gipbakery.mes.processapplication
     [ACClassInfo(Const.PackName_VarioAutomation, "en{'PWDischargingPreProd'}de{'PWDischargingPreProd'}", Global.ACKinds.TPWNodeMethod, Global.ACStorableTypes.Optional, false, PWMethodVBBase.PWClassName, true)]
     public class PWBakeryDischargingPreProd : PWDischarging
     {
+        #region c'tors
+
         static PWBakeryDischargingPreProd()
         {
             ACMethod method;
@@ -37,14 +40,37 @@ namespace gipbakery.mes.processapplication
             RegisterExecuteHandler(typeof(PWBakeryDischargingPreProd), HandleExecuteACMethod_PWBakeryDischargingPreProd);
         }
 
-
-
         public PWBakeryDischargingPreProd(gip.core.datamodel.ACClass acType, IACObject content, IACObject parentACObject, ACValueList parameter, string acIdentifier = "") :
             base(acType, content, parentACObject, parameter, acIdentifier)
         {
         }
 
+        public override bool ACInit(Global.ACStartTypes startChildMode = Global.ACStartTypes.Automatic)
+        {
+            return base.ACInit(startChildMode);
+        }
+
+        public override bool ACDeInit(bool deleteACClassTask = false)
+        {
+            StopMonitorSourceStore();
+            return base.ACDeInit(deleteACClassTask);
+        }
+
+        public override void Recycle(IACObject content, IACObject parentACObject, ACValueList parameter, string acIdentifier = "")
+        {
+            StopMonitorSourceStore();
+            base.Recycle(content, parentACObject, parameter, acIdentifier);
+        }
+
+        #endregion
+
+        #region Properties
+
         private bool _BookingProcessed = false;
+        private bool _SourceStoreMonitored = false;
+
+        private PAMParkingspace _SourceStore;
+        private PAMSilo _TargetStore;
 
         public bool UseScaleWeightOnPost
         {
@@ -61,64 +87,9 @@ namespace gipbakery.mes.processapplication
             }
         }
 
-        public override Msg DoInwardBooking(double actualQuantity, DatabaseApp dbApp, RouteItem dischargingDest, Picking picking, PickingPos pickingPos, ACEventArgs e, bool isDischargingEnd)
-        {
-            if (NoPostingOnRelocation)
-            {
-                MDDelivPosLoadState loadToTruck = DatabaseApp.s_cQry_GetMDDelivPosLoadState(dbApp, MDDelivPosLoadState.DelivPosLoadStates.LoadToTruck).FirstOrDefault();
-                MDDelivPosState completed = DatabaseApp.s_cQry_GetMDDelivPosState(dbApp, MDDelivPosState.DelivPosStates.CompletelyAssigned).FirstOrDefault();
+        #endregion
 
-                if (loadToTruck != null)
-                {
-                    pickingPos.MDDelivPosLoadState = loadToTruck;
-
-                    if (pickingPos.OutOrderPos != null)
-                        pickingPos.OutOrderPos.MDDelivPosState = completed;
-
-                    if (pickingPos.InOrderPos != null)
-                        pickingPos.InOrderPos.MDDelivPosState = completed;
-
-                    return dbApp.ACSaveChanges();
-                }
-            }
-            return base.DoInwardBooking(actualQuantity, dbApp, dischargingDest, picking, pickingPos, e, isDischargingEnd);
-        }
-
-        //public override StartDisResult CheckCachedModuleDestinations(ref ACComponent dischargeToModule, ref Msg msg)
-        //{
-        //    if (!NoPostingOnProd)
-        //    {
-        //        return base.CheckCachedModuleDestinations(ref dischargeToModule, ref msg);
-        //    }
-        //    else
-        //    {
-        //        using (Database db = new gip.core.datamodel.Database())
-        //        {
-        //            RoutingResult rResult = ACRoutingService.FindSuccessors(RoutingService, db, RoutingService != null && RoutingService.IsProxy,
-        //                                ParentPWGroup.AccessedProcessModule, PAProcessModule.SelRuleID_ProcessModule, RouteDirections.Forwards, new object[] { },
-        //                                (c, p, r) => c.ACKind == Global.ACKinds.TPAProcessModule,
-        //                                null,
-        //                                0, true, true, false, false);
-
-        //            if (rResult != null && rResult.Routes.Any())
-        //            {
-        //                dischargeToModule = rResult.Routes.FirstOrDefault()?.GetRouteTarget()?.TargetACComponent as ACComponent;
-        //            }
-
-        //        }
-
-        //        return StartDisResult.WaitForCallback;
-        //    }
-        //}
-
-        public override void SMIdle()
-        {
-            using (ACMonitor.Lock(_20015_LockValue))
-            {
-                _BookingProcessed = false;
-            }
-            base.SMIdle();
-        }
+        #region Methods
 
         [ACMethodState("en{'Executing'}de{'Ausführend'}", 20, true)]
         public override void SMStarting()
@@ -126,9 +97,26 @@ namespace gipbakery.mes.processapplication
             base.SMStarting();
         }
 
-        private static bool HandleExecuteACMethod_PWBakeryDischargingPreProd(out object result, IACComponent acComponent, string acMethodName, gip.core.datamodel.ACClassMethod acClassMethod, object[] acParameter)
+        public override void SMRunning()
         {
-            return HandleExecuteACMethod_PWDischarging(out result, acComponent, acMethodName, acClassMethod, acParameter);
+            base.SMRunning();
+
+            StartMonitorSourceStore();
+            TryRelocateFromSourceStore();
+
+            UnSubscribeToProjectWorkCycle();
+        }
+
+        public override void SMIdle()
+        {
+            using (ACMonitor.Lock(_20015_LockValue))
+            {
+                _BookingProcessed = false;
+            }
+
+            StopMonitorSourceStore();
+
+            base.SMIdle();
         }
 
         public override void TaskCallback(IACPointNetBase sender, ACEventArgs e, IACObject wrapObject)
@@ -172,12 +160,20 @@ namespace gipbakery.mes.processapplication
 
                             if (UseScaleWeightOnPost && actualQuantity <= 0.000001)
                             {
-                                PAFBakeryDosingFlour flourDosing = discharging.ParentACComponent.FindChildComponents<PAFBakeryDosingFlour>(c => c is PAFBakeryDosingFlour).FirstOrDefault();
-                                if (flourDosing != null)
+                                PAFBakeryYeastProducing preProdFunc = discharging.ParentACComponent.FindChildComponents<PAFBakeryYeastProducing>(c => c is PAFBakeryYeastProducing)
+                                                                                                   .FirstOrDefault();
+                                if (preProdFunc != null)
                                 {
-                                    double? actValue = flourDosing.CurrentScaleForWeighing?.ActualValue.ValueT;
-                                    if (actValue.HasValue)
-                                        actualQuantity = actValue.Value;
+                                    PAEScaleBase scaleBase = preProdFunc.GetFermentationStarterScale();
+                                    if (scaleBase != null)
+                                    {
+                                        double actValue = scaleBase.ActualValue.ValueT;
+                                        PAEScaleTotalizing scaleTotal = scaleBase as PAEScaleTotalizing;
+                                        if (scaleTotal != null)
+                                            actValue = scaleTotal.TotalActualWeight.ValueT;
+
+                                        actualQuantity = actValue;
+                                    }
                                 }
                             }
 
@@ -299,19 +295,19 @@ namespace gipbakery.mes.processapplication
                                                     PickingPos pickingPos = pwMethod.CurrentPickingPos != null ? pwMethod.CurrentPickingPos.FromAppContext<PickingPos>(dbApp) : null;
                                                     if (picking != null)
                                                     {
-                                                        if (NoPostingOnRelocation)
+                                                        //if (NoPostingOnRelocation)
+                                                        //{
+                                                        if (pickingPos != null)
                                                         {
-                                                            if (pickingPos != null)
+                                                            MDDelivPosLoadState loadToTruck = DatabaseApp.s_cQry_GetMDDelivPosLoadState(dbApp, MDDelivPosLoadState.DelivPosLoadStates.LoadToTruck).FirstOrDefault();
+                                                            if (loadToTruck != null)
                                                             {
-                                                                MDDelivPosLoadState loadToTruck = DatabaseApp.s_cQry_GetMDDelivPosLoadState(dbApp, MDDelivPosLoadState.DelivPosLoadStates.LoadToTruck).FirstOrDefault();
-                                                                if (loadToTruck != null)
-                                                                {
-                                                                    pickingPos.MDDelivPosLoadState = loadToTruck;
-                                                                    Msg msg = dbApp.ACSaveChanges();
-                                                                    //TODO alarm
-                                                                }
+                                                                pickingPos.MDDelivPosLoadState = loadToTruck;
+                                                                Msg msg = dbApp.ACSaveChanges();
+                                                                //TODO alarm
                                                             }
                                                         }
+                                                        //}
 
                                                         if (this.IsSimulationOn && actualQuantity <= 0.000001 && pickingPos != null)
                                                             actualQuantity = pickingPos.TargetQuantityUOM;
@@ -375,26 +371,27 @@ namespace gipbakery.mes.processapplication
                     }
                     else if (taskEntry.State == PointProcessingState.Deleted && CurrentACState != ACStateEnum.SMIdle)
                     {
-                        if (NoPostingOnRelocation)
+                        //if (NoPostingOnRelocation)
+                        //{
+                        using (DatabaseApp dbApp = new DatabaseApp())
                         {
-                            using (DatabaseApp dbApp = new DatabaseApp())
+                            var pwMethod = ParentPWMethod<PWMethodRelocation>();
+                            PickingPos pickingPos = pwMethod.CurrentPickingPos != null ? pwMethod.CurrentPickingPos.FromAppContext<PickingPos>(dbApp) : null;
+
+
+                            if (pickingPos != null)
                             {
-                                var pwMethod = ParentPWMethod<PWMethodRelocation>();
-                                PickingPos pickingPos = pwMethod.CurrentPickingPos != null ? pwMethod.CurrentPickingPos.FromAppContext<PickingPos>(dbApp) : null;
-
-
-                                if (pickingPos != null)
+                                MDDelivPosLoadState loadToTruck = DatabaseApp.s_cQry_GetMDDelivPosLoadState(dbApp, MDDelivPosLoadState.DelivPosLoadStates.LoadToTruck).FirstOrDefault();
+                                if (loadToTruck != null)
                                 {
-                                    MDDelivPosLoadState loadToTruck = DatabaseApp.s_cQry_GetMDDelivPosLoadState(dbApp, MDDelivPosLoadState.DelivPosLoadStates.LoadToTruck).FirstOrDefault();
-                                    if (loadToTruck != null)
-                                    {
-                                        pickingPos.MDDelivPosLoadState = loadToTruck;
-                                        Msg msg = dbApp.ACSaveChanges();
-                                        //TODO alarm
-                                    }
+                                    pickingPos.MDDelivPosLoadState = loadToTruck;
+                                    Msg msg = dbApp.ACSaveChanges();
+                                    //TODO alarm
                                 }
+                                _BookingProcessed = true;
                             }
                         }
+                        //}
 
                         UnSubscribeToProjectWorkCycle();
                         _LastCallbackResult = e;
@@ -415,5 +412,162 @@ namespace gipbakery.mes.processapplication
                 _InCallback = false;
             }
         }
+
+        public override Msg DoInwardBooking(double actualQuantity, DatabaseApp dbApp, RouteItem dischargingDest, Picking picking, PickingPos pickingPos, ACEventArgs e, bool isDischargingEnd)
+        {
+            //if (NoPostingOnRelocation)
+            //{
+            MDDelivPosLoadState loadToTruck = DatabaseApp.s_cQry_GetMDDelivPosLoadState(dbApp, MDDelivPosLoadState.DelivPosLoadStates.LoadToTruck).FirstOrDefault();
+            MDDelivPosState completed = DatabaseApp.s_cQry_GetMDDelivPosState(dbApp, MDDelivPosState.DelivPosStates.CompletelyAssigned).FirstOrDefault();
+
+            if (loadToTruck != null)
+            {
+                pickingPos.MDDelivPosLoadState = loadToTruck;
+
+                if (pickingPos.OutOrderPos != null)
+                    pickingPos.OutOrderPos.MDDelivPosState = completed;
+
+                if (pickingPos.InOrderPos != null)
+                    pickingPos.InOrderPos.MDDelivPosState = completed;
+
+                return dbApp.ACSaveChanges();
+            }
+            //}
+            return base.DoInwardBooking(actualQuantity, dbApp, dischargingDest, picking, pickingPos, e, isDischargingEnd);
+        }
+
+        private void StartMonitorSourceStore()
+        {
+            if (_SourceStoreMonitored)
+                return;
+
+            PAProcessModule module = ParentPWGroup?.AccessedProcessModule;
+
+            PAMParkingspace sourceStore;
+            PAMSilo targetStore;
+
+            PAFBakeryYeastProducing.FindVirtualStores(module, out sourceStore, out targetStore);
+
+            if (sourceStore == null || targetStore == null)
+            {
+                return;
+            }
+
+            sourceStore.RefreshParkingSpace.PropertyChanged += RefreshParkingSpace_PropertyChanged;
+
+            _SourceStore = sourceStore;
+            _TargetStore = targetStore;
+
+            _SourceStoreMonitored = true;
+
+            UnSubscribeToProjectWorkCycle();
+        }
+
+        private void StopMonitorSourceStore()
+        {
+            _SourceStoreMonitored = false;
+            if (_SourceStore != null)
+            {
+                _SourceStore.RefreshParkingSpace.PropertyChanged -= RefreshParkingSpace_PropertyChanged;
+                _SourceStore = null;
+            }
+            _TargetStore = null;
+        }
+
+        private void TryRelocateFromSourceStore()
+        {
+            if (_SourceStore == null || _TargetStore == null)
+                return;
+
+            using (DatabaseApp dbApp = new DatabaseApp())
+            {
+                Facility sourceFacility = dbApp.Facility.FirstOrDefault(c => c.VBiFacilityACClassID == _SourceStore.ComponentClass.ACClassID);
+                Facility targetFacility = _TargetStore.Facility?.ValueT?.ValueT?.FromAppContext<Facility>(dbApp);
+
+                if (sourceFacility == null || targetFacility == null)
+                    return;
+
+                FacilityCharge[] quantsInSource = sourceFacility.FacilityCharge_Facility.Where(c => !c.NotAvailable && c.MaterialID == targetFacility.MaterialID).ToArray();
+
+                foreach (FacilityCharge quant in quantsInSource)
+                {
+                    RelocateFromSourceStoreToTarget(dbApp, quant, sourceFacility, targetFacility, quant.AvailableQuantity);
+                }
+            }
+        }
+
+        private void RelocateFromSourceStoreToTarget(DatabaseApp dbApp, FacilityCharge quant, Facility source, Facility target, double actualQuantity)
+        {
+            if (ACFacilityManager == null)
+            {
+                //TODO:Error;
+                return;
+            }
+
+            bool outwardEnabled = source.OutwardEnabled;
+
+            if (!source.OutwardEnabled)
+                source.OutwardEnabled = true;
+
+
+            ACMethodBooking bookParamRelocationClone = ACFacilityManager.ACUrlACTypeSignature("!" + GlobalApp.FBT_Relocation_Facility_BulkMaterial, gip.core.datamodel.Database.GlobalDatabase) as ACMethodBooking; // Immer Globalen context um Deadlock zu vermeiden 
+            var bookingParam = bookParamRelocationClone.Clone() as ACMethodBooking;
+
+            bookingParam.InwardFacility = target;
+            bookingParam.OutwardFacility = source;
+
+            //bookingParam.InwardFacilityCharge = quant;
+            bookingParam.OutwardFacilityCharge = quant;
+
+            bookingParam.InwardQuantity = actualQuantity;
+            bookingParam.OutwardQuantity = actualQuantity;
+
+            //bookingParam.InwardMaterial = quant.Material;
+            //bookingParam.OutwardMaterial = quant.Material;
+
+            //bookingParam.InwardFacilityLot = quant.FacilityLot;
+            bookingParam.OutwardFacilityLot = quant.FacilityLot;
+
+            //bookingParam.InwardFacilityLocation = source;
+
+            ACMethodEventArgs resultBooking = ACFacilityManager.BookFacility(bookingParam, dbApp);
+            Msg msg;
+
+            if (resultBooking.ResultState == Global.ACMethodResultState.Failed || resultBooking.ResultState == Global.ACMethodResultState.Notpossible)
+            {
+                msg = new Msg(bookingParam.ValidMessage.InnerMessage, this, eMsgLevel.Error, PWClassName, "DoManualWeighingBooking(60)", 2045);
+                ActivateProcessAlarm(msg, false);
+                return;
+            }
+            else
+            {
+                if (!bookingParam.ValidMessage.IsSucceded() || bookingParam.ValidMessage.HasWarnings())
+                {
+                    //collectedMessages.AddDetailMessage(resultBooking.ValidMessage);
+                    msg = new Msg(bookingParam.ValidMessage.InnerMessage, this, eMsgLevel.Error, PWClassName, "DoManualWeighingBooking(70)", 2053);
+                    ActivateProcessAlarmWithLog(msg, false);
+                }
+            }
+
+            msg = dbApp.ACSaveChanges();
+
+            source.OutwardEnabled = outwardEnabled;
+            dbApp.ACSaveChanges();
+        }
+
+        private void RefreshParkingSpace_PropertyChanged(object sender, System.ComponentModel.PropertyChangedEventArgs e)
+        {
+            if (e.PropertyName == Const.ValueT)
+            {
+                SubscribeToProjectWorkCycle();
+            }
+        }
+
+        private static bool HandleExecuteACMethod_PWBakeryDischargingPreProd(out object result, IACComponent acComponent, string acMethodName, gip.core.datamodel.ACClassMethod acClassMethod, object[] acParameter)
+        {
+            return HandleExecuteACMethod_PWDischarging(out result, acComponent, acMethodName, acClassMethod, acParameter);
+        }
+
+        #endregion
     }
 }

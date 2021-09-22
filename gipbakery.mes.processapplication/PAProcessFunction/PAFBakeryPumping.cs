@@ -8,6 +8,8 @@ namespace gipbakery.mes.processapplication
     [ACClassInfo(Const.PackName_VarioAutomation, "en{'Pump over'}de{'Umpumpen'}", Global.ACKinds.TPAProcessFunction, Global.ACStorableTypes.Required, false, PWBakeryPumping.PWClassName, true)]
     public class PAFBakeryPumping : PAProcessFunction
     {
+        #region c'tors
+
         static PAFBakeryPumping()
         {
             ACMethod.RegisterVirtualMethod(typeof(PAFBakeryPumping), ACStateConst.TMStart, CreateVirtualMethod("BakeryPumping", "en{'Pump over'}de{'Umpumpen'}", typeof(PWBakeryPumping)));
@@ -20,6 +22,10 @@ namespace gipbakery.mes.processapplication
         }
 
         public const string ClassName = "PAFBakeryPumping";
+
+        #endregion
+
+        #region Methods
 
         [ACMethodAsync("Process", "en{'Start'}de{'Start'}", (short)MISort.Start, false)]
         public override ACMethodEventArgs Start(ACMethod acMethod)
@@ -50,6 +56,8 @@ namespace gipbakery.mes.processapplication
             paramTranslation.Add("Destination", "en{'Destination'}de{'Ziel'}");
             method.ParameterValueList.Add(new ACValue("TargetQuantity", typeof(Double), (Double)0.0, Global.ParamOption.Optional));
             paramTranslation.Add("TargetQuantity", "en{'Target quantity'}de{'Sollmenge'}");
+            method.ParameterValueList.Add(new ACValue("ScaleACUrl", typeof(string), "", Global.ParamOption.Optional));
+            paramTranslation.Add("ScaleACUrl", "en{'Scale ACUrl'}de{'Waage ACUrl'}");
 
             Dictionary<string, string> resultTranslation = new Dictionary<string, string>();
             method.ResultValueList.Add(new ACValue("ActualQuantity", typeof(Double), (Double)0.0, Global.ParamOption.Optional));
@@ -57,5 +65,7 @@ namespace gipbakery.mes.processapplication
 
             return new ACMethodWrapper(method, captionTranslation, pwClass, paramTranslation, resultTranslation);
         }
+
+        #endregion
     }
 }

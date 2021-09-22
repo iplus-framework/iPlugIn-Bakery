@@ -13,10 +13,16 @@ namespace gipbakery.mes.processapplication
     [ACClassInfo(Const.PackName_VarioAutomation, "en{'PWManualWeighing Bakery'}de{'PWManualWeighing Bakery'}", Global.ACKinds.TPWNodeMethod, Global.ACStorableTypes.Optional, false, PWMethodVBBase.PWClassName, true)]
     public class PWBakeryManualWeighing : PWManualWeighing
     {
-        public PWBakeryManualWeighing(gip.core.datamodel.ACClass acType, IACObject content, IACObject parentACObject, ACValueList parameter, string acIdentifier = "") : 
+        #region c'tors
+
+        public PWBakeryManualWeighing(gip.core.datamodel.ACClass acType, IACObject content, IACObject parentACObject, ACValueList parameter, string acIdentifier = "") :
             base(acType, content, parentACObject, parameter, acIdentifier)
         {
         }
+
+        #endregion
+
+        #region Methods
 
         protected override gip.mes.datamodel.ProdOrderPartslistPosRelation[] OnGetAllMaterials(Database dbIPlus, gip.mes.datamodel.DatabaseApp dbApp, gip.mes.datamodel.ProdOrderPartslistPos intermediateChildPos)
         {
@@ -148,5 +154,7 @@ namespace gipbakery.mes.processapplication
             else if (partslistPosID.HasValue && materialConfig.Comment != partslistPosID.ToString())
                 materialConfig.Comment = partslistPosID.ToString();
         }
+
+        #endregion
     }
 }

@@ -15,14 +15,24 @@ namespace gipbakery.mes.processapplication
     [ACClassInfo(Const.PackName_VarioAutomation, "en{'PWDischarging Single dos.water'}de{'PWDischarging Single dos.water'}", Global.ACKinds.TPWNodeMethod, Global.ACStorableTypes.Optional, false, PWMethodVBBase.PWClassName, true)]
     public class PWBakeryDischargingSingleDos : PWDischarging
     {
-        public PWBakeryDischargingSingleDos(ACClass acType, IACObject content, IACObject parentACObject, ACValueList parameter, string acIdentifier = "") : 
+        #region c'tors
+
+        public PWBakeryDischargingSingleDos(ACClass acType, IACObject content, IACObject parentACObject, ACValueList parameter, string acIdentifier = "") :
             base(acType, content, parentACObject, parameter, acIdentifier)
         {
         }
 
         public new const string PWClassName = "PWBakeryDischargingSingleDos";
 
+        #endregion
+
+        #region Properties
+
         private short? _DischargingDestination = null;
+
+        #endregion
+
+        #region Methods
 
         public override bool GetConfigForACMethod(ACMethod paramMethod, bool isForPAF, params object[] acParameter)
         {
@@ -64,5 +74,7 @@ namespace gipbakery.mes.processapplication
             _DischargingDestination = null;
             return true;
         }
+
+        #endregion
     }
 }

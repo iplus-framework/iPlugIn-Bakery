@@ -11,13 +11,13 @@ namespace gipbakery.mes.processapplication
     [ACClassInfo(Const.PackName_VarioAutomation, "en{'Cleaning'}de{'Reinigen'}", Global.ACKinds.TPAProcessFunction, Global.ACStorableTypes.Required, false, PWBakeryCleaning.PWClassName, true)]
     public class PAFBakeryCleaning : PAProcessFunction
     {
+        #region c'tors
+
         static PAFBakeryCleaning()
         {
             ACMethod.RegisterVirtualMethod(typeof(PAFBakeryCleaning), ACStateConst.TMStart, CreateVirtualMethod("BakeryCleaning", "en{'Cleaning'}de{'Reinigen'}", typeof(PWBakeryCleaning)));
             RegisterExecuteHandler(typeof(PAFBakeryCleaning), HandleExecuteACMethod_PAFBakeryCleaning);
         }
-
-
 
         public PAFBakeryCleaning(ACClass acType, IACObject content, IACObject parentACObject, ACValueList parameter, string acIdentifier = "") : 
             base(acType, content, parentACObject, parameter, acIdentifier)
@@ -25,6 +25,10 @@ namespace gipbakery.mes.processapplication
         }
 
         public const string ClassName = "PAFBakeryCleaning";
+
+        #endregion
+
+        #region Methods
 
         [ACMethodAsync("Process", "en{'Start'}de{'Start'}", (short)MISort.Start, false)]
         public override ACMethodEventArgs Start(ACMethod acMethod)
@@ -50,5 +54,7 @@ namespace gipbakery.mes.processapplication
         {
             return HandleExecuteACMethod_PAProcessFunction(out result, acComponent, acMethodName, acClassMethod, acParameter);
         }
+
+        #endregion
     }
 }

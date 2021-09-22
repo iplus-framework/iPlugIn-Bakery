@@ -15,6 +15,8 @@ namespace gipbakery.mes.processapplication
     [ACClassInfo(Const.PackName_VarioAutomation, "en{'Workflowclass Dosing bakery in preproduction'}de{'Workflowklasse Dosieren Backerei in Vorproduktion'}", Global.ACKinds.TPWNodeMethod, Global.ACStorableTypes.Optional, false, PWMethodVBBase.PWClassName, true)]
     public class PWBakeryDosingPreProd : PWDosing
     {
+        #region c'tors
+
         static PWBakeryDosingPreProd()
         {
             ACMethod method;
@@ -59,6 +61,7 @@ namespace gipbakery.mes.processapplication
 
         public new const string PWClassName = "PWBakeryDosingPreProd";
 
+        #endregion
 
         #region Properties
 

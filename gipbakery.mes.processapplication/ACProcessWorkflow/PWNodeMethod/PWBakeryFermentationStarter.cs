@@ -15,6 +15,7 @@ namespace gipbakery.mes.processapplication
     [ACClassInfo(Const.PackName_VarioAutomation, "en{'Fermentation starter'}de{'Anstellgut'}", Global.ACKinds.TPWNodeStatic, Global.ACStorableTypes.Optional, false, "PWProcessFunction", true, "", "", 9999)]
     public class PWBakeryFermentationStarter : PWNodeProcessMethod
     {
+        #region c'tors
 
         static PWBakeryFermentationStarter()
         {
@@ -30,9 +31,7 @@ namespace gipbakery.mes.processapplication
             RegisterExecuteHandler(typeof(PWBakeryFermentationStarter), HandleExecuteACMethod_PWBakeryFermentationStarter);
         }
 
-
-
-        public PWBakeryFermentationStarter(gip.core.datamodel.ACClass acType, IACObject content, IACObject parentACObject, ACValueList parameter, string acIdentifier = "") : 
+        public PWBakeryFermentationStarter(gip.core.datamodel.ACClass acType, IACObject content, IACObject parentACObject, ACValueList parameter, string acIdentifier = "") :
             base(acType, content, parentACObject, parameter, acIdentifier)
         {
         }
@@ -42,6 +41,9 @@ namespace gipbakery.mes.processapplication
         public const string PN_FSTargetQuantity = "FSTargetQuantity";
         public const string MN_AckFermentationStarter = "AckFermentationStarter";
 
+        #endregion
+
+        #region Properties
 
         private ACMethod _MyConfiguration;
         [ACPropertyInfo(9999)]
@@ -63,7 +65,6 @@ namespace gipbakery.mes.processapplication
                 return myNewConfig;
             }
         }
-
 
         public int? AutoDetectTolerance
         {
@@ -110,7 +111,6 @@ namespace gipbakery.mes.processapplication
             }
         }
 
-
         [ACPropertyBindingSource]
         public IACContainerTNet<double?> FSTargetQuantity
         {
@@ -119,17 +119,12 @@ namespace gipbakery.mes.processapplication
         }
 
         private bool _IsUserAck = false;
-
+        private ACMethodBooking _BookParamNotAvailableClone;
         private double _ScaleActualValue;
 
-        //PAEScaleBase _FermentationStarterScale = null;
+        #endregion
 
-        public T ParentPWMethod<T>() where T : PWMethodVBBase
-        {
-            if (ParentRootWFNode == null)
-                return null;
-            return ParentRootWFNode as T;
-        }
+        #region Methods
 
         [ACMethodState("en{'Executing'}de{'Ausführend'}", 20, true)]
         public override void SMStarting()
@@ -140,7 +135,7 @@ namespace gipbakery.mes.processapplication
         public override void SMRunning()
         {
             StartFermentationStarter();
-            
+
             base.SMRunning();
         }
 
@@ -154,6 +149,13 @@ namespace gipbakery.mes.processapplication
                 _IsUserAck = false;
             }
             base.SMIdle();
+        }
+
+        public T ParentPWMethod<T>() where T : PWMethodVBBase
+        {
+            if (ParentRootWFNode == null)
+                return null;
+            return ParentRootWFNode as T;
         }
 
         private void StartFermentationStarter()
@@ -187,13 +189,6 @@ namespace gipbakery.mes.processapplication
             }
 
             _ScaleActualValue = scale.ActualValue.ValueT;
-
-            //using (ACMonitor.Lock(_20015_LockValue))
-            //{
-            //    _FermentationStarterScale = scale;
-                
-            //}
-
 
             using (var dbIPlus = new Database())
             {
@@ -288,14 +283,7 @@ namespace gipbakery.mes.processapplication
                         return;
                     }
 
-
                     var relations = intermediateChildPos.ProdOrderPartslistPosRelation_TargetProdOrderPartslistPos.ToArray();
-
-                    if (relations.Count() > 2)
-                    {
-                        //TODO: error
-                        return;
-                    }
 
                     var prodRelation = relations.FirstOrDefault(c => c.SourceProdOrderPartslistPos.MaterialID == endBatchPos.BookingMaterial.MaterialID);
 
@@ -328,11 +316,55 @@ namespace gipbakery.mes.processapplication
 
                     RelocateFromTargetToSourceFacility(dbApp, sourceFacility, targetFacility, scale);
 
+                    Guid prodMaterialID = endBatchPos.BookingMaterial.MaterialID;
+
+                    bool anyQuantWithProdMaterial = sourceFacility.FacilityCharge_Facility.Any(c => !c.NotAvailable && c.MaterialID == prodMaterialID);
+
+                    if (prodRelation == null && anyQuantWithProdMaterial)
+                    {
+                        var components = currentProdOrderPartslist.ProdOrderPartslistPos_ProdOrderPartslist.Where(c => c.MaterialID.HasValue
+                                                                                                                    && c.MaterialPosType == GlobalApp.MaterialPosTypes.OutwardRoot);
+
+                        ProdOrderPartslistPos component = components.FirstOrDefault(c => c.MaterialID == endBatchPos.BookingMaterial.MaterialID);
+                        if (component == null)
+                        {
+                            Material material = dbApp.Material.FirstOrDefault(c => c.MaterialID == prodMaterialID);
+                            if (material == null)
+                            {
+                                // Error50416: The production order can not be adjusted by temperature calculator. The material with material No {0} can not be found in the database.
+                                msg = new Msg(this, eMsgLevel.Error, PWClassName, "AddProdOrderPartslistPos(10)", 1397, "Error50416", prodMaterialID);
+                                if (IsAlarmActive(ProcessAlarm, msg.Message) == null)
+                                {
+                                    OnNewAlarmOccurred(ProcessAlarm, msg);
+                                    Root.Messages.LogMessageMsg(msg);
+                                }
+
+                                return;
+                            }
+
+                            component = ProdOrderPartslistPos.NewACObject(dbApp, currentProdOrderPartslist);
+                            component.Material = material;
+                            component.MaterialPosTypeIndex = (short)GlobalApp.MaterialPosTypes.OutwardRoot;
+                            component.Sequence = 1;
+                            if (components.Any())
+                            {
+                                component.Sequence = components.Max(x => x.Sequence) + 1;
+                            }
+                            component.MDUnit = material.BaseMDUnit;
+
+                            dbApp.ProdOrderPartslistPos.AddObject(component);
+
+                            msg = dbApp.ACSaveChanges();
+
+                        }
+
+                        prodRelation = AdjustBatchPosInProdOrderPartslist(dbApp, currentProdOrderPartslist, intermediateChildPos.Material, component, batch, 0, 0);
+
+                        msg = dbApp.ACSaveChanges();
+                    }
+
                     if (prodRelation == null)
                     {
-                        //todo
-                        // if on source facility exists quant with material which is same like production material, error because prodRelation is null
-
                         CurrentACState = ACStateEnum.SMCompleted;
                         return;
                     }
@@ -349,7 +381,7 @@ namespace gipbakery.mes.processapplication
                     else
                     {
                         bool isUserAck = false;
-                        using(ACMonitor.Lock(_20015_LockValue))
+                        using (ACMonitor.Lock(_20015_LockValue))
                         {
                             isUserAck = _IsUserAck;
                         }
@@ -365,28 +397,34 @@ namespace gipbakery.mes.processapplication
 
         public virtual bool RelocateFromTargetToSourceFacility(DatabaseApp dbApp, Facility source, Facility target, PAEScaleBase scale)
         {
-            var quants = target.FacilityCharge_Facility.Where(c => !c.NotAvailable);
+            var quants = target.FacilityCharge_Facility.Where(c => !c.NotAvailable).ToArray();
             if (quants.Any())
             {
-                if (quants.Count() > 1)
+                if (ACFacilityManager == null)
                 {
-                    //todo error
+                    //TODO:Error;
                     return false;
                 }
-                else
+
+                bool outwardEnabled = target.OutwardEnabled;
+
+                if (!target.OutwardEnabled)
+                    target.OutwardEnabled = true;
+
+                double actualQuantity = scale.ActualValue.ValueT;
+
+                PAEScaleTotalizing scaleTotal = scale as PAEScaleTotalizing;
+                if (scaleTotal != null)
                 {
-                    FacilityCharge quant = quants.FirstOrDefault();
+                    actualQuantity = scaleTotal.TotalActualWeight.ValueT;
+                }
 
-                    if (ACFacilityManager == null)
-                    {
-                        //TODO:Error;
-                        return false;
-                    }
+                double quantsTotalQuantity = quants.Sum(c => c.AvailableQuantity);
 
-                    bool outwardEnabled = target.OutwardEnabled;
-
-                    if (!target.OutwardEnabled)
-                        target.OutwardEnabled = true;
+                foreach (FacilityCharge quant in quants)
+                {
+                    double calcFactor = quant.AvailableQuantity / quantsTotalQuantity;
+                    double calcQuantity = actualQuantity * calcFactor;
 
                     ACMethodBooking bookParamRelocationClone = ACFacilityManager.ACUrlACTypeSignature("!" + GlobalApp.FBT_Relocation_Facility_BulkMaterial, gip.core.datamodel.Database.GlobalDatabase) as ACMethodBooking; // Immer Globalen context um Deadlock zu vermeiden 
                     var bookingParam = bookParamRelocationClone.Clone() as ACMethodBooking;
@@ -394,13 +432,11 @@ namespace gipbakery.mes.processapplication
                     bookingParam.InwardFacility = source;
                     bookingParam.OutwardFacility = target;
 
-                    
-
                     //bookingParam.InwardFacilityCharge = quant;
                     bookingParam.OutwardFacilityCharge = quant;
 
-                    bookingParam.InwardQuantity = scale.ActualValue.ValueT;
-                    bookingParam.OutwardQuantity = scale.ActualValue.ValueT;
+                    bookingParam.InwardQuantity = calcQuantity;
+                    bookingParam.OutwardQuantity = calcQuantity;
 
                     //bookingParam.InwardMaterial = quant.Material;
                     //bookingParam.OutwardMaterial = quant.Material;
@@ -412,8 +448,6 @@ namespace gipbakery.mes.processapplication
 
                     ACMethodEventArgs resultBooking = ACFacilityManager.BookFacility(bookingParam, dbApp);
                     Msg msg;
-
-                    target.OutwardEnabled = outwardEnabled;
 
                     if (resultBooking.ResultState == Global.ACMethodResultState.Failed || resultBooking.ResultState == Global.ACMethodResultState.Notpossible)
                     {
@@ -433,10 +467,110 @@ namespace gipbakery.mes.processapplication
 
                     msg = dbApp.ACSaveChanges();
                 }
+
+                target.OutwardEnabled = outwardEnabled;
+                dbApp.ACSaveChanges();
+
+                quants = target.FacilityCharge_Facility.Where(c => !c.NotAvailable).ToArray();
+                if (quants.Any())
+                {
+                    if (_BookParamNotAvailableClone == null)
+                        _BookParamNotAvailableClone = ACFacilityManager.ACUrlACTypeSignature("!" + GlobalApp.FBT_ZeroStock_Facility_BulkMaterial, gip.core.datamodel.Database.GlobalDatabase) as ACMethodBooking; // Immer Globalen context um Deadlock zu vermeiden 
+                    ACMethodBooking clone = _BookParamNotAvailableClone.Clone() as ACMethodBooking;
+                    if (target != null)
+                    {
+                        clone.InwardFacility = target;
+                    }
+
+                    clone.MDZeroStockState = MDZeroStockState.DefaultMDZeroStockState(dbApp, MDZeroStockState.ZeroStockStates.SetNotAvailable);
+
+                    ACMethodEventArgs result = ACFacilityManager.BookFacility(clone, dbApp) as ACMethodEventArgs;
+                    if (!clone.ValidMessage.IsSucceded() || clone.ValidMessage.HasWarnings())
+                        Messages.Msg(clone.ValidMessage);
+                    else if (result.ResultState == Global.ACMethodResultState.Failed || result.ResultState == Global.ACMethodResultState.Notpossible)
+                    {
+                        if (String.IsNullOrEmpty(result.ValidMessage.Message))
+                            result.ValidMessage.Message = result.ResultState.ToString();
+                        Messages.Msg(result.ValidMessage);
+                    }
+
+                }
+
             }
             return true;
         }
 
+        private ProdOrderPartslistPosRelation AdjustBatchPosInProdOrderPartslist(DatabaseApp dbApp, ProdOrderPartslist poPartslist, Material intermediateMaterial, ProdOrderPartslistPos sourcePos, ProdOrderBatch batch,
+                                                 double quantity, double totalWatersQuantity)
+        {
+            ProdOrderPartslistPos targetPos = poPartslist.ProdOrderPartslistPos_ProdOrderPartslist
+                                                             .FirstOrDefault(c => c.MaterialID == intermediateMaterial.MaterialID
+                                                                               && c.MaterialPosType == GlobalApp.MaterialPosTypes.InwardIntern);
+
+            if (targetPos == null)
+            {
+                targetPos = ProdOrderPartslistPos.NewACObject(dbApp, null);
+                targetPos.Sequence = 1;
+                targetPos.MaterialPosTypeIndex = (short)GlobalApp.MaterialPosTypes.InwardIntern;
+                dbApp.ProdOrderPartslistPos.AddObject(targetPos);
+            }
+
+            ProdOrderPartslistPosRelation topRelation = sourcePos.ProdOrderPartslistPosRelation_SourceProdOrderPartslistPos
+                                                           .FirstOrDefault(c => c.TargetProdOrderPartslistPos.MaterialID == targetPos.MaterialID
+                                                                             && c.TargetProdOrderPartslistPos.MaterialPosType == GlobalApp.MaterialPosTypes.InwardIntern);
+
+            if (topRelation == null)
+            {
+                topRelation = ProdOrderPartslistPosRelation.NewACObject(dbApp, null);
+                topRelation.SourceProdOrderPartslistPos = sourcePos;
+                topRelation.TargetProdOrderPartslistPos = targetPos;
+                topRelation.Sequence = targetPos.ProdOrderPartslistPosRelation_TargetProdOrderPartslistPos
+                                                .Where(c => c.TargetProdOrderPartslistPos.MaterialID == targetPos.MaterialID
+                                                         && c.TargetProdOrderPartslistPos.MaterialPosType == GlobalApp.MaterialPosTypes.InwardIntern)
+                                                .Max(x => x.Sequence) + 1;
+
+                dbApp.ProdOrderPartslistPosRelation.AddObject(topRelation);
+            }
+
+            ProdOrderPartslistPosRelation batchRelation = batch.ProdOrderPartslistPosRelation_ProdOrderBatch
+                                                               .FirstOrDefault(c => c.ParentProdOrderPartslistPosRelationID == topRelation.ProdOrderPartslistPosRelationID);
+
+            ProdOrderPartslistPos batchPos = batch.ProdOrderPartslistPos_ProdOrderBatch.FirstOrDefault(c => c.MaterialID == intermediateMaterial.MaterialID
+                                                                                     && c.MaterialPosType == GlobalApp.MaterialPosTypes.InwardPartIntern);
+
+            if (batchPos == null)
+            {
+                batchPos = ProdOrderPartslistPos.NewACObject(dbApp, targetPos);
+                batchPos.Sequence = 1;
+                var existingBatchPos = batch.ProdOrderPartslistPos_ProdOrderBatch.Where(c => c.MaterialID == intermediateMaterial.MaterialID
+                                                                                     && c.MaterialPosType == GlobalApp.MaterialPosTypes.InwardPartIntern);
+
+                if (existingBatchPos != null && existingBatchPos.Any())
+                    batchPos.Sequence = existingBatchPos.Max(c => c.Sequence) + 1;
+
+                batchPos.TargetQuantityUOM = totalWatersQuantity;
+                batchPos.ProdOrderBatch = batch;
+                batchPos.MDUnit = targetPos.MDUnit;
+                targetPos.ProdOrderPartslistPos_ParentProdOrderPartslistPos.Add(batchPos);
+            }
+
+            targetPos.CalledUpQuantityUOM += quantity;
+
+            if (batchRelation == null)
+            {
+                batchRelation = ProdOrderPartslistPosRelation.NewACObject(dbApp, topRelation);
+                batchRelation.Sequence = topRelation.Sequence;
+                batchRelation.TargetProdOrderPartslistPos = batchPos;
+                batchRelation.SourceProdOrderPartslistPos = topRelation.SourceProdOrderPartslistPos;
+                batchRelation.ProdOrderBatch = batch;
+            }
+
+            batchRelation.TargetQuantityUOM = quantity;
+
+            return batchRelation;
+        }
+
+        //TODO: book scale quantity averege on every quant, if quant has still available quantity then zero book quant
         public virtual bool BookFermentationStarter(DatabaseApp dbApp, ProdOrderPartslistPosRelation prodRelation, FacilityCharge facilityCharge, Facility facility)
         {
             try
@@ -522,12 +656,19 @@ namespace gipbakery.mes.processapplication
             return true;
         }
 
-        public Msg TryCompleteFermentationStarter(DatabaseApp dbApp, PAEScaleBase scale, double targetQuantity, Facility sourceFacility, 
+        public Msg TryCompleteFermentationStarter(DatabaseApp dbApp, PAEScaleBase scale, double targetQuantity, Facility sourceFacility,
                                                    ProdOrderPartslistPosRelation prodRelation)
         {
             Msg msg = null;
 
-            if (scale.ActualValue.ValueT >= targetQuantity)
+            double scaleWeight = scale.ActualValue.ValueT;
+            PAEScaleTotalizing totalScale = scale as PAEScaleTotalizing;
+            if (totalScale != null)
+            {
+                scaleWeight = totalScale.TotalActualWeight.ValueT;
+            }
+
+            if (scaleWeight >= targetQuantity) //TODO: scale weight on start 
             {
 
                 var availableQuants = sourceFacility.FacilityCharge_Facility.Where(c => c.MaterialID == prodRelation.SourceProdOrderPartslistPos.MaterialID && !c.NotAvailable);
@@ -582,8 +723,7 @@ namespace gipbakery.mes.processapplication
             return msg;
         }
 
-
-        [ACMethodInfo("","",700)]
+        [ACMethodInfo("", "", 700)]
         public void AckFermentationStarter(bool force)
         {
             using (ACMonitor.Lock(_20015_LockValue))
@@ -597,5 +737,6 @@ namespace gipbakery.mes.processapplication
             return HandleExecuteACMethod_PWNodeProcessMethod(out result, acComponent, acMethodName, acClassMethod, acParameter);
         }
 
+        #endregion
     }
 }

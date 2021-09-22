@@ -338,7 +338,7 @@ namespace gipbakery.mes.processapplication
                 if (scale != null)
                 {
                     FlourScale = scale;
-                    _FlourScaleActValue = scale.GetPropertyNet("ActualValue") as IACContainerTNet<double>;
+                    _FlourScaleActValue = scale.GetPropertyNet("ActualWeight") as IACContainerTNet<double>;
                     if (_FlourScaleActValue != null)
                     {
                         FlourScaleActualValue = _FlourScaleActValue.ValueT;
@@ -347,7 +347,7 @@ namespace gipbakery.mes.processapplication
                 }
                 else
                 {
-                    //Error
+                    Messages.LogError(this.GetACUrl(), "InitBSO(10)", "Can't find the flour scale.");
                 }
 
                 FlourDiffQuantityProp = tempRef.ValueT.GetPropertyNet("FlourDiffQuantity") as IACContainerTNet<double>;
@@ -358,7 +358,7 @@ namespace gipbakery.mes.processapplication
                 }
                 else
                 {
-                    //TODO: error
+                    Messages.LogError(this.GetACUrl(), "InitBSO(15)", "Can't find the property FlourDiffQuantity.");
                 }    
 
                 tempRef.Detach();
@@ -380,7 +380,7 @@ namespace gipbakery.mes.processapplication
                 if (scale != null)
                 {
                     WaterScale = scale;
-                    _WaterScaleActValue = scale.GetPropertyNet("ActualValue") as IACContainerTNet<double>;
+                    _WaterScaleActValue = scale.GetPropertyNet("ActualWeight") as IACContainerTNet<double>;
                     if (_WaterScaleActValue != null)
                     {
                         WaterScaleActualValue = _WaterScaleActValue.ValueT;
@@ -389,7 +389,7 @@ namespace gipbakery.mes.processapplication
                 }
                 else
                 {
-                    //Error
+                    Messages.LogError(this.GetACUrl(), "InitBSO(20)", "Can't find the water scale.");
                 }
 
                 WaterDiffQuantityProp = tempRef.ValueT.GetPropertyNet("WaterDiffQuantity") as IACContainerTNet<double>;
@@ -400,7 +400,7 @@ namespace gipbakery.mes.processapplication
                 }
                 else
                 {
-                    //TODO: error
+                    Messages.LogError(this.GetACUrl(), "InitBSO(25)", "Can't find the property WaterDiffQuantity.");
                 }
 
                 tempRef.Detach();
@@ -428,21 +428,21 @@ namespace gipbakery.mes.processapplication
             NextFermentationStageProp = pwGroup.GetPropertyNet(PWBakeryGroupFermentation.PN_NextFermentationStage) as IACContainerTNet<short>;
             if (NextFermentationStageProp == null)
             {
-                //TODO:
                 return;
             }
 
             StartTimeProp = pwGroup.GetPropertyNet(PWBakeryGroupFermentation.PN_StartNextFermentationStageTime) as IACContainerTNet<DateTime>;
             if (StartTimeProp == null)
             {
-                //TODO:
+                NextFermentationStageProp = null;
                 return;
             }
 
             ReadyForDosingProp = pwGroup.GetPropertyNet(PWBakeryGroupFermentation.PN_ReadyForDosingTime) as IACContainerTNet<DateTime>;
             if (ReadyForDosingProp == null)
             {
-                //TODO: 
+                NextFermentationStageProp = null;
+                StartTimeProp = null;
                 return;
             }
 

@@ -20,7 +20,5 @@ namespace gipbakery.mes.processapplication
         }
 
         #endregion
-
-        
     }
 }

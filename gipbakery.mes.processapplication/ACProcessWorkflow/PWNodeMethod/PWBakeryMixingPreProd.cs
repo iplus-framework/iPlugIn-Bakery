@@ -12,6 +12,8 @@ namespace gipbakery.mes.processapplication
     [ACClassInfo(Const.PackName_VarioAutomation, "en{'PWBakeryMixingPreProd'}de{'PWBakeryMixingPreProd'}", Global.ACKinds.TPWNodeMethod, Global.ACStorableTypes.Optional, false, PWMethodVBBase.PWClassName, true)]
     public class PWBakeryMixingPreProd : PWMixing
     {
+        #region c'tors
+
         public new const string PWClassName = "PWBakeryPreProdMixing";
 
         static PWBakeryMixingPreProd()
@@ -30,11 +32,14 @@ namespace gipbakery.mes.processapplication
             RegisterExecuteHandler(typeof(PWMixing), HandleExecuteACMethod_PWMixing);
         }
 
-
         public PWBakeryMixingPreProd(ACClass acType, IACObject content, IACObject parentACObject, ACValueList parameter, string acIdentifier = "") : 
             base(acType, content, parentACObject, parameter, acIdentifier)
         {
         }
+
+        #endregion
+
+        #region Properties
 
         public int DosingGroupNo
         {
@@ -53,6 +58,17 @@ namespace gipbakery.mes.processapplication
             }
         }
 
+        [ACPropertyBindingSource]
+        public IACContainerTNet<short?> StartingOrder
+        {
+            get;
+            set;
+        }
+
+        #endregion
+
+        #region Methods
+
         [ACMethodState("en{'Executing'}de{'Ausführend'}", 20, true)]
         public override void SMStarting()
         {
@@ -70,13 +86,6 @@ namespace gipbakery.mes.processapplication
         {
             StartingOrder.ValueT = null;
             base.SMCompleted();
-        }
-
-        [ACPropertyBindingSource]
-        public IACContainerTNet<short?> StartingOrder
-        {
-            get;
-            set;
         }
 
         private bool VerifyCanStart()
@@ -132,5 +141,7 @@ namespace gipbakery.mes.processapplication
         {
             return FindSuccessors<PWBakeryDosing>(true, c => c is PWBakeryDosing, null, 1);
         }
+
+        #endregion
     }
 }

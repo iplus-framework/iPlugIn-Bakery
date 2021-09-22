@@ -14,6 +14,8 @@ namespace gipbakery.mes.processapplication
     [ACClassInfo(Const.PackName_VarioAutomation, "en{'Dosing water in sour dough'}de{'Dosierung von Wasser in Sauerteig'}", Global.ACKinds.TPAProcessFunction, Global.ACStorableTypes.Required, false, PWBakeryDosing.PWClassName, true)]
     public class PAFBakeryDosingWater : PAFDosing
     {
+        #region c'tors
+
         public PAFBakeryDosingWater(ACClass acType, IACObject content, IACObject parentACObject, ACValueList parameter, string acIdentifier = "") :
             base(acType, content, parentACObject, parameter, acIdentifier)
         {
@@ -41,6 +43,10 @@ namespace gipbakery.mes.processapplication
             return base.ACDeInit(deleteACClassTask);
         }
 
+        #endregion
+
+        #region Properties
+
         private IACContainerTNet<double> ActualWeightProp
         {
             get;
@@ -52,6 +58,59 @@ namespace gipbakery.mes.processapplication
             get;
             set;
         }
+
+        [ACPropertyBindingTarget(800, "", "en{'Dosing time water [s/kg]'}de{'Dosierzeit Wasser [s/kg]'}", "", true, true)]
+        public IACContainerTNet<double> DosTimeWater
+        {
+            get;
+            set;
+        }
+
+        [ACPropertyBindingTarget(801, "", "en{'Dosing time water control [sec]'}de{'Dosierzeit Wasser Regelung [sec]'}", "", true, true)]
+        public IACContainerTNet<double> DosTimeWaterControl
+        {
+            get;
+            set;
+        }
+
+        [ACPropertyBindingTarget]
+        public IACContainerTNet<double> WaterDiffQuantity
+        {
+            get;
+            set;
+        }
+
+        [ACPropertyInfo(802, "", "en{'Dosing time water [s/kg]'}de{'Dosierzeit Wasser [s/kg]'}", IsPersistable = true)]
+        public double DosTimeWaterCorrected
+        {
+            get;
+            set;
+        }
+
+        [ACPropertyInfo(803, "", "en{'Max dosing time water [s/kg]'}de{'Max. Dosierzeit Wasser [s/kg]'}", IsPersistable = true, DefaultValue = 2000.0)]
+        public double DosTimeWaterMax
+        {
+            get;
+            set;
+        }
+
+        [ACPropertyInfo(804, "", "en{'Min dosing time water [s/kg]'}de{'Min. Dosierzeit Wasser [s/kg]'}", IsPersistable = true, DefaultValue = 0.5)]
+        public double DosTimeWaterMin
+        {
+            get;
+            set;
+        }
+
+        [ACPropertyInfo(805, "", "en{'Dosing time water correction factor [0 - 1]'}de{'Dosierzeit Wasser Korrekturfaktor [0 - 1]'}", IsPersistable = true, DefaultValue = 0.5)]
+        public double DosTimeWaterCorrectionFactor
+        {
+            get;
+            set;
+        }
+
+        #endregion
+
+        #region Methods
 
         public override void SMStarting()
         {
@@ -110,55 +169,6 @@ namespace gipbakery.mes.processapplication
             }
         }
 
-        [ACPropertyBindingTarget(800, "", "en{'Dosing time water [s/kg]'}de{'Dosierzeit Wasser [s/kg]'}", "", true, true)]
-        public IACContainerTNet<double> DosTimeWater
-        {
-            get;
-            set;
-        }
-
-        [ACPropertyBindingTarget(801, "", "en{'Dosing time water control [sec]'}de{'Dosierzeit Wasser Regelung [sec]'}", "", true, true)]
-        public IACContainerTNet<double> DosTimeWaterControl
-        {
-            get;
-            set;
-        }
-
-        [ACPropertyBindingTarget]
-        public IACContainerTNet<double> WaterDiffQuantity
-        {
-            get;
-            set;
-        }
-
-        [ACPropertyInfo(802, "", "en{'Dosing time water [s/kg]'}de{'Dosierzeit Wasser [s/kg]'}", IsPersistable = true)]
-        public double DosTimeWaterCorrected
-        {
-            get;
-            set;
-        }
-
-        [ACPropertyInfo(803, "", "en{'Max dosing time water [s/kg]'}de{'Max. Dosierzeit Wasser [s/kg]'}", IsPersistable = true, DefaultValue = 2000.0)]
-        public double DosTimeWaterMax
-        {
-            get;
-            set;
-        }
-
-        [ACPropertyInfo(804, "", "en{'Min dosing time water [s/kg]'}de{'Min. Dosierzeit Wasser [s/kg]'}", IsPersistable = true, DefaultValue = 0.5)]
-        public double DosTimeWaterMin
-        {
-            get;
-            set;
-        }
-
-        [ACPropertyInfo(805, "", "en{'Dosing time water correction factor [0 - 1]'}de{'Dosierzeit Wasser Korrekturfaktor [0 - 1]'}", IsPersistable = true, DefaultValue = 0.5)]
-        public double DosTimeWaterCorrectionFactor
-        {
-            get;
-            set;
-        }
-
         public double GetWaterDosingTime()
         {
             if (DosTimeWaterCorrected > DosTimeWaterMax)
@@ -169,11 +179,12 @@ namespace gipbakery.mes.processapplication
             return DosTimeWaterCorrected;
         }
 
-        [ACMethodInfo("","",9999)]
+        [ACMethodInfo("", "", 9999)]
         public string GetWaterDosingScale()
         {
             return CurrentScaleForWeighing?.ACUrl;
         }
 
+        #endregion
     }
 }
