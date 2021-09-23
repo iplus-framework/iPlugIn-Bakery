@@ -3,11 +3,8 @@ using gip.core.datamodel;
 using gip.core.processapplication;
 using gip.mes.datamodel;
 using gip.mes.processapplication;
-using System;
-using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using System.Xml;
 
 namespace gipbakery.mes.processapplication
 {
@@ -205,6 +202,20 @@ namespace gipbakery.mes.processapplication
             }
 
             return msg;
+        }
+
+        protected override void DumpPropertyList(XmlDocument doc, XmlElement xmlACPropertyList)
+        {
+            base.DumpPropertyList(doc, xmlACPropertyList);
+
+            XmlElement xmlChild = xmlACPropertyList["TargetScale"];
+            if (xmlChild == null)
+            {
+                xmlChild = doc.CreateElement("TargetScale");
+                if (xmlChild != null)
+                    xmlChild.InnerText = _TargetScale?.ToString();
+                xmlACPropertyList.AppendChild(xmlChild);
+            }
         }
 
         #endregion

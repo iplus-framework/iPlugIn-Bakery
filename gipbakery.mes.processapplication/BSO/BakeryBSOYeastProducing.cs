@@ -114,6 +114,7 @@ namespace gipbakery.mes.processapplication
         }
 
         ACMethodBooking _BookParamNotAvailableClone = null;
+        ACMethodBooking _BookParamNotAvailableSiloClone = null;
 
         ACMethodBooking _BookParamNotAvailable;
         public ACMethodBooking CurrentBookParamNotAvailable
@@ -126,6 +127,20 @@ namespace gipbakery.mes.processapplication
             {
                 _BookParamNotAvailable = value;
                 OnPropertyChanged("CurrentBookParamNotAvailable");
+            }
+        }
+
+        ACMethodBooking _BookParamNotAvailableSilo;
+        public ACMethodBooking CurrentBookParamNotAvailableSilo
+        {
+            get
+            {
+                return _BookParamNotAvailableSilo;
+            }
+            protected set
+            {
+                _BookParamNotAvailableSilo = value;
+                OnPropertyChanged("CurrentBookParamNotAvailableSilo");
             }
         }
 
@@ -373,6 +388,8 @@ namespace gipbakery.mes.processapplication
         #endregion
 
         #region Methods
+
+        #region Methods => Activation/Deactivation
 
         public override void Activate(ACComponent selectedProcessModule)
         {
@@ -669,25 +686,16 @@ namespace gipbakery.mes.processapplication
             return config.Value;
         }
 
+        #endregion
+
+        #region Methods => Handle PropertyChanged
+
         protected void RefreshParkingSpace_PropertyChanged(object sender, PropertyChangedEventArgs e)
         {
             if (e.PropertyName == Const.ValueT)
             {
                 ParentBSOWCS.ApplicationQueue.Add(() => RefreshVirtualSourceStore());
             }
-        }
-
-        protected void RefreshVirtualSourceStore()
-        {
-            DelegateToMainThread((object state) =>
-            {
-                if (VirtualSourceFacility == null)
-                    return;
-
-                VirtualSourceFacility.FacilityCharge_Facility.AutoLoad();
-                VirtualSourceFacility.FacilityCharge_Facility.AutoRefresh();
-                SourceFCList = VirtualSourceFacility.FacilityCharge_Facility.Where(c => !c.NotAvailable).ToList();
-            });
         }
 
         protected void DischargingACStateProp_PropertyChanged(object sender, PropertyChangedEventArgs e)
@@ -698,11 +706,6 @@ namespace gipbakery.mes.processapplication
                 if (senderProp != null)
                     HandleDischargingACState(senderProp.ValueT);
             }
-        }
-
-        protected virtual void HandleDischargingACState(ACStateEnum acStateEnum)
-        {
-            DischargingState = (short)acStateEnum;
         }
 
         protected void ProcessModuleOrderInfo_PropertyChanged(object sender, PropertyChangedEventArgs e)
@@ -728,6 +731,48 @@ namespace gipbakery.mes.processapplication
                     PreProdTemperature = senderProp.ValueT;
                 }
             }
+        }
+
+        protected void FermentationQuantityProp_PropertyChanged(object sender, System.ComponentModel.PropertyChangedEventArgs e)
+        {
+            if (e.PropertyName == Const.ValueT)
+            {
+                IACContainerTNet<double?> senderProp = sender as IACContainerTNet<double?>;
+                if (senderProp != null)
+                {
+                    double? quantity = senderProp.ValueT;
+                    ParentBSOWCS.ApplicationQueue.Add(() => HandleFermentationQuantity(quantity));
+                }
+            }
+        }
+
+        private void _PreProdScaleActValue_PropertyChanged(object sender, PropertyChangedEventArgs e)
+        {
+            if (e.PropertyName == Const.ValueT)
+            {
+                IACContainerTNet<double> senderProp = sender as IACContainerTNet<double>;
+                if (senderProp != null)
+                {
+                    PreProdScaleActualValue = senderProp.ValueT;
+                }
+            }
+        }
+
+        private void _VirtStoreOutEnabled_PropertyChanged(object sender, PropertyChangedEventArgs e)
+        {
+            if (e.PropertyName == Const.ValueT)
+            {
+                IACContainerTNet<bool> senderProp = sender as IACContainerTNet<bool>;
+                if (senderProp != null)
+                {
+                    VirutalStoreOutwardEnabled = senderProp.ValueT;
+                }
+            }
+        }
+
+        protected virtual void HandleDischargingACState(ACStateEnum acStateEnum)
+        {
+            DischargingState = (short)acStateEnum;
         }
 
         protected void HandleOrderInfoPropChanged(string orderInfo)
@@ -820,19 +865,6 @@ namespace gipbakery.mes.processapplication
 
         }
 
-        protected void FermentationQuantityProp_PropertyChanged(object sender, System.ComponentModel.PropertyChangedEventArgs e)
-        {
-            if (e.PropertyName == Const.ValueT)
-            {
-                IACContainerTNet<double?> senderProp = sender as IACContainerTNet<double?>;
-                if (senderProp != null)
-                {
-                    double? quantity = senderProp.ValueT;
-                    ParentBSOWCS.ApplicationQueue.Add(() => HandleFermentationQuantity(quantity));
-                }
-            }
-        }
-
         protected void HandleFermentationQuantity(double? fermentationQuantity)
         {
             IACComponentPWNode fermentationStarter = null;
@@ -848,7 +880,7 @@ namespace gipbakery.mes.processapplication
 
                 if (msgItem == null)
                 {
-                    string message = Root.Environment.TranslateText(this, "msgFermentationStarter", Math.Round(fermentationQuantity.Value,2));
+                    string message = Root.Environment.TranslateText(this, "msgFermentationStarter", Math.Round(fermentationQuantity.Value, 2));
                     msgItem = new MessageItem(fermentationStarter, this);
                     msgItem.Message = message;
                     AddToMessageList(msgItem);
@@ -866,17 +898,22 @@ namespace gipbakery.mes.processapplication
             }
         }
 
-        private void _PreProdScaleActValue_PropertyChanged(object sender, PropertyChangedEventArgs e)
+        protected void RefreshVirtualSourceStore()
         {
-            if (e.PropertyName == Const.ValueT)
+            DelegateToMainThread((object state) =>
             {
-                IACContainerTNet<double> senderProp = sender as IACContainerTNet<double>;
-                if (senderProp != null)
-                {
-                    PreProdScaleActualValue = senderProp.ValueT;
-                }
-            }
+                if (VirtualSourceFacility == null)
+                    return;
+
+                VirtualSourceFacility.FacilityCharge_Facility.AutoLoad();
+                VirtualSourceFacility.FacilityCharge_Facility.AutoRefresh();
+                SourceFCList = VirtualSourceFacility.FacilityCharge_Facility.Where(c => !c.NotAvailable).ToList();
+            });
         }
+
+        #endregion
+
+        #region Methods => Commands
 
         [ACMethodInfo("", "en{'Acknowledge - Start'}de{'Quittieren - Start'}", 800, true)]
         public virtual void Acknowledge()
@@ -913,7 +950,7 @@ namespace gipbakery.mes.processapplication
         [ACMethodInfo("", "en{'Clean'}de{'Reinigen'}", 801, true)]
         public void Clean()
         {
-            RoutingResult rResult = ACRoutingService.FindSuccessors(RoutingService, DatabaseApp.ContextIPlus, true, CurrentProcessModule.ComponentClass, 
+            RoutingResult rResult = ACRoutingService.FindSuccessors(RoutingService, DatabaseApp.ContextIPlus, true, CurrentProcessModule.ComponentClass,
                                                                     BakeryReceivingPoint.SelRuleID_RecvPoint, RouteDirections.Forwards, null, null, null, 0, true, false);
 
             IEnumerable<IACComponent> possbileDestinations = rResult.Routes.SelectMany(c => c.GetRouteTargets()).Select(x => x.TargetACComponent);
@@ -1039,6 +1076,8 @@ namespace gipbakery.mes.processapplication
 
                 outFacility.OutwardEnabled = outFacilityOutwardEnabled;
                 CloseTopDialog();
+
+                BookNotAvailableFacility(outwardFacility);
             }
         }
 
@@ -1055,7 +1094,7 @@ namespace gipbakery.mes.processapplication
                 if (!_IsOrderInfoEmpy && DischargingState != (short)ACStateEnum.SMRunning && DischargingState != (short)ACStateEnum.SMPaused)
                 {
                     //The product is not yet ready to be dosed.Are you sure that you want to release the container?
-                    if (Messages.Question(this, "Question50069") == Global.MsgResult.No) 
+                    if (Messages.Question(this, "Question50069") == Global.MsgResult.No)
                         return;
                 }
 
@@ -1207,18 +1246,6 @@ namespace gipbakery.mes.processapplication
             return PAFPreProducing != null;
         }
 
-        private void _VirtStoreOutEnabled_PropertyChanged(object sender, PropertyChangedEventArgs e)
-        {
-            if (e.PropertyName == Const.ValueT)
-            {
-                IACContainerTNet<bool> senderProp = sender as IACContainerTNet<bool>;
-                if (senderProp != null)
-                {
-                    VirutalStoreOutwardEnabled = senderProp.ValueT;
-                }
-            }
-        }
-
         [ACMethodInfo("", "", 802, true)]
         public void FinishOrder()
         {
@@ -1228,7 +1255,6 @@ namespace gipbakery.mes.processapplication
                 DischargingState = (short)DischargingACStateProp.ValueT;
             }
         }
-    
 
         [ACMethodInfo("", "en{'Pump over'}de{'Umpumpen'}", 802, true)]
         public void PumpOver()
@@ -1343,6 +1369,98 @@ namespace gipbakery.mes.processapplication
             return PAFPreProducing != null && SelectedPumpTarget != null && PumpOverTargetQuantity > 0;
         }
 
+        #endregion
+
+        #region Methods => Booking
+
+        [ACMethodInfo("", "en{'Quant not available'}de{'Quant nicht verfügbar'}", 880, true)]
+        public void BookNotAvailableFacilityCharge()
+        {
+            CleanNotAvailableBookData();
+
+            CurrentBookParamNotAvailable.InwardFacilityCharge = SelectedSourceFC;
+            CurrentBookParamNotAvailable.MDZeroStockState = MDZeroStockState.DefaultMDZeroStockState(DatabaseApp, MDZeroStockState.ZeroStockStates.SetNotAvailable);
+            ACMethodEventArgs result = ACFacilityManager.BookFacility(CurrentBookParamNotAvailable, this.DatabaseApp) as ACMethodEventArgs;
+            if (!CurrentBookParamNotAvailable.ValidMessage.IsSucceded() || CurrentBookParamNotAvailable.ValidMessage.HasWarnings())
+                Messages.Msg(CurrentBookParamNotAvailable.ValidMessage);
+            else if (result.ResultState == Global.ACMethodResultState.Failed || result.ResultState == Global.ACMethodResultState.Notpossible)
+            {
+                if (String.IsNullOrEmpty(result.ValidMessage.Message))
+                    result.ValidMessage.Message = result.ResultState.ToString();
+                Messages.Msg(result.ValidMessage);
+            }
+        }
+
+        public bool IsEnabledBookNotAvailableFacilityCharge()
+        {
+            return SelectedSourceFC != null;
+        }
+
+        [ACMethodInfo("", "en{'Silo empty'}de{'Silo leer'}", 881, true)]
+        public void BookNotAvailableFacility()
+        {
+            var outwardFacilityRef = VirtualStore.GetPropertyNet("Facility") as IACContainerTNet<ACRef<Facility>>;
+
+            if (outwardFacilityRef == null)
+            {
+                //TODO: error
+                return;
+            }
+
+            Facility outFacility = outwardFacilityRef.ValueT?.ValueT;
+
+            if (outFacility == null)
+            {
+                //TODO: error
+                return;
+            }
+
+            Facility outwardFacility = outFacility.FromAppContext<Facility>(DatabaseApp);
+
+            BookNotAvailableFacility(outwardFacility);
+        }
+
+        public bool IsEnabledBookNotAvailableFacility()
+        {
+            return VirtualStore != null;
+        }
+
+        private void BookNotAvailableFacility(Facility targetFacility)
+        {
+            CleanNotAvailableBookData();
+            CurrentBookParamNotAvailableSilo.InwardFacility = targetFacility;
+            CurrentBookParamNotAvailableSilo.MDZeroStockState = MDZeroStockState.DefaultMDZeroStockState(DatabaseApp, MDZeroStockState.ZeroStockStates.BookToZeroStock);
+            ACMethodEventArgs result = ACFacilityManager.BookFacility(CurrentBookParamNotAvailableSilo, this.DatabaseApp) as ACMethodEventArgs;
+            if (!CurrentBookParamNotAvailableSilo.ValidMessage.IsSucceded() || CurrentBookParamNotAvailableSilo.ValidMessage.HasWarnings())
+                Messages.Msg(CurrentBookParamNotAvailableSilo.ValidMessage);
+            else if (result.ResultState == Global.ACMethodResultState.Failed || result.ResultState == Global.ACMethodResultState.Notpossible)
+            {
+                if (String.IsNullOrEmpty(result.ValidMessage.Message))
+                    result.ValidMessage.Message = result.ResultState.ToString();
+                Messages.Msg(result.ValidMessage);
+            }
+        }
+
+        private void CleanNotAvailableBookData()
+        {
+            CheckAndInitManagers();
+
+            if (_BookParamNotAvailableClone == null)
+                _BookParamNotAvailableClone = ACFacilityManager.ACUrlACTypeSignature("!" + GlobalApp.FBT_ZeroStock_FacilityCharge.ToString(), gip.core.datamodel.Database.GlobalDatabase) as ACMethodBooking; // Immer Globalen context um Deadlock zu vermeiden 
+
+            if (_BookParamNotAvailableSiloClone == null)
+                _BookParamNotAvailableSiloClone = ACFacilityManager.ACUrlACTypeSignature("!" + GlobalApp.FBT_ZeroStock_Facility_BulkMaterial.ToString(), gip.core.datamodel.Database.GlobalDatabase) as ACMethodBooking; // Immer Globalen context um Deadlock zu vermeiden 
+
+            ACMethodBooking clone = _BookParamNotAvailableClone.Clone() as ACMethodBooking;
+            CurrentBookParamNotAvailable = clone;
+            clone = _BookParamNotAvailableSiloClone.Clone() as ACMethodBooking;
+            CurrentBookParamNotAvailableSilo = clone;
+        }
+
+        #endregion
+
+        #region Methods => Misc.
+
         public bool CheckAndInitManagers()
         {
             if (_ACFacilityManager == null)
@@ -1380,7 +1498,7 @@ namespace gipbakery.mes.processapplication
             string configACUrl = string.Format("{0}\\{1}\\CleaningTarget", cleaning.ConfigACUrl, acMethod.ACIdentifier);
 
             IACConfig targetConfig = picking.ConfigurationEntries.FirstOrDefault(c => c.PreConfigACUrl == preConfigACUrl && c.LocalConfigACUrl == configACUrl);
-            
+
             if (targetConfig == null)
             {
                 ACConfigParam param = new ACConfigParam()
@@ -1432,44 +1550,7 @@ namespace gipbakery.mes.processapplication
             return true;
         }
 
-        public override Global.ControlModes OnGetControlModes(IVBContent vbControl)
-        {
-
-            return base.OnGetControlModes(vbControl);
-        }
-
-        [ACMethodInfo("", "en{'Quant not available'}de{'Quant nicht verfügbar'}", 880, true)]
-        public void BookNotAvailableFacilityCharge()
-        {
-            CleanNotAvailableBookData();
-
-            CurrentBookParamNotAvailable.InwardFacilityCharge = SelectedSourceFC;
-            CurrentBookParamNotAvailable.MDZeroStockState = MDZeroStockState.DefaultMDZeroStockState(DatabaseApp, MDZeroStockState.ZeroStockStates.SetNotAvailable);
-            ACMethodEventArgs result = ACFacilityManager.BookFacility(CurrentBookParamNotAvailable, this.DatabaseApp) as ACMethodEventArgs;
-            if (!CurrentBookParamNotAvailable.ValidMessage.IsSucceded() || CurrentBookParamNotAvailable.ValidMessage.HasWarnings())
-                Messages.Msg(CurrentBookParamNotAvailable.ValidMessage);
-            else if (result.ResultState == Global.ACMethodResultState.Failed || result.ResultState == Global.ACMethodResultState.Notpossible)
-            {
-                if (String.IsNullOrEmpty(result.ValidMessage.Message))
-                    result.ValidMessage.Message = result.ResultState.ToString();
-                Messages.Msg(result.ValidMessage);
-            }
-        }
-
-        public bool IsEnabledBookNotAvailableFacilityCharge()
-        {
-            return SelectedSourceFC != null;
-        }
-
-        private void CleanNotAvailableBookData()
-        {
-            CheckAndInitManagers();
-
-            if (_BookParamNotAvailableClone == null)
-                _BookParamNotAvailableClone = ACFacilityManager.ACUrlACTypeSignature("!" + GlobalApp.FBT_ZeroStock_FacilityCharge.ToString(), gip.core.datamodel.Database.GlobalDatabase) as ACMethodBooking; // Immer Globalen context um Deadlock zu vermeiden 
-            ACMethodBooking clone = _BookParamNotAvailableClone.Clone() as ACMethodBooking;
-            CurrentBookParamNotAvailable = clone;
-        }
+        #endregion
 
         #endregion
     }

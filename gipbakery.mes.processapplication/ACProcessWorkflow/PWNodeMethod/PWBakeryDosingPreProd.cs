@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Xml;
 
 namespace gipbakery.mes.processapplication
 {
@@ -657,6 +658,38 @@ namespace gipbakery.mes.processapplication
                     zeroBookSucceeded = true;
 
                 return zeroBookSucceeded;
+            }
+        }
+
+        protected override void DumpPropertyList(XmlDocument doc, XmlElement xmlACPropertyList)
+        {
+            base.DumpPropertyList(doc, xmlACPropertyList);
+
+            XmlElement xmlChild = xmlACPropertyList["SourProdDosingUnit"];
+            if (xmlChild == null)
+            {
+                xmlChild = doc.CreateElement("SourProdDosingUnit");
+                if (xmlChild != null)
+                    xmlChild.InnerText = SourProdDosingUnit.ToString();
+                xmlACPropertyList.AppendChild(xmlChild);
+            }
+
+            xmlChild = xmlACPropertyList["SourProdDosingPause"];
+            if (xmlChild == null)
+            {
+                xmlChild = doc.CreateElement("SourProdDosingPause");
+                if (xmlChild != null)
+                    xmlChild.InnerText = SourProdDosingPause.ToString();
+                xmlACPropertyList.AppendChild(xmlChild);
+            }
+
+            xmlChild = xmlACPropertyList["DosingForFlour"];
+            if (xmlChild == null)
+            {
+                xmlChild = doc.CreateElement("DosingForFlour");
+                if (xmlChild != null)
+                    xmlChild.InnerText = DosingForFlour.ToString();
+                xmlACPropertyList.AppendChild(xmlChild);
             }
         }
 

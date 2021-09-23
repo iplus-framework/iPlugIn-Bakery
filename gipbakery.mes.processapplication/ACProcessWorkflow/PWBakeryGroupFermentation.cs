@@ -7,6 +7,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Xml;
 
 //TODO: time switch summer/winter
 namespace gipbakery.mes.processapplication
@@ -643,6 +644,56 @@ namespace gipbakery.mes.processapplication
 
 
         #endregion
+
+        protected override void DumpPropertyList(XmlDocument doc, XmlElement xmlACPropertyList)
+        {
+            base.DumpPropertyList(doc, xmlACPropertyList);
+
+            XmlElement xmlChild = xmlACPropertyList["_IsTimeCalculated"];
+            if (xmlChild == null)
+            {
+                xmlChild = doc.CreateElement("_IsTimeCalculated");
+                if (xmlChild != null)
+                    xmlChild.InnerText = _IsTimeCalculated.ToString();
+                xmlACPropertyList.AppendChild(xmlChild);
+            }
+
+            xmlChild = xmlACPropertyList["DoseInSourProdSimultaneously"];
+            if (xmlChild == null)
+            {
+                xmlChild = doc.CreateElement("DoseInSourProdSimultaneously");
+                if (xmlChild != null)
+                    xmlChild.InnerText = DoseInSourProdSimultaneously.ToString();
+                xmlACPropertyList.AppendChild(xmlChild);
+            }
+
+            xmlChild = xmlACPropertyList["UseDSTSwitch"];
+            if (xmlChild == null)
+            {
+                xmlChild = doc.CreateElement("UseDSTSwitch");
+                if (xmlChild != null)
+                    xmlChild.InnerText = UseDSTSwitch.ToString();
+                xmlACPropertyList.AppendChild(xmlChild);
+            }
+
+            xmlChild = xmlACPropertyList["SourceFacility"];
+            if (xmlChild == null)
+            {
+                xmlChild = doc.CreateElement("SourceFacility");
+                if (xmlChild != null)
+                    xmlChild.InnerText = SourceFacility?.ToString();
+                xmlACPropertyList.AppendChild(xmlChild);
+            }
+
+            xmlChild = xmlACPropertyList["TargetFacility"];
+            if (xmlChild == null)
+            {
+                xmlChild = doc.CreateElement("TargetFacility");
+                if (xmlChild != null)
+                    xmlChild.InnerText = TargetFacility.ToString();
+                xmlACPropertyList.AppendChild(xmlChild);
+            }
+        }
 
         #endregion
 

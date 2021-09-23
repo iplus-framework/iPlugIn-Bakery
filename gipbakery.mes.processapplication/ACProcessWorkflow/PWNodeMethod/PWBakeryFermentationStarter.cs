@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Xml;
 
 namespace gipbakery.mes.processapplication
 {
@@ -166,14 +167,13 @@ namespace gipbakery.mes.processapplication
                 return;
 
             Msg msg = null;
-
-            PAFBakeryYeastProducing preProdFunction = ParentPWGroup.AccessedProcessModule.FindChildComponents<PAFBakeryYeastProducing>().FirstOrDefault();
+            PAProcessModule processModule = ParentPWGroup.AccessedProcessModule;
+            PAFBakeryYeastProducing preProdFunction = processModule.FindChildComponents<PAFBakeryYeastProducing>().FirstOrDefault();
 
             if (preProdFunction == null)
             {
-                //TODO: add message
-                string error = "The process function PAFBakerySourDoughProducing is not installed on AcessedProcessModule";
-                msg = new Msg(error, this, eMsgLevel.Error, PWClassName, "StartFermentationStarter(10)", 66);
+                //Error50442: The process function PAFBakerySourDoughProducing can not be found on the process module {0}. Please check your configuration.";
+                msg = new Msg(this, eMsgLevel.Error, PWClassName, "StartFermentationStarter(10)", 176, "Error50442", processModule.ACCaption);
                 OnNewAlarmOccurred(ProcessAlarm, msg);
                 return;
             }
@@ -181,9 +181,8 @@ namespace gipbakery.mes.processapplication
             PAEScaleBase scale = preProdFunction.GetFermentationStarterScale();
             if (scale == null)
             {
-                //TODO: add message
-                string error = "The scale object for fermentation starter can not be found! Please configure scale object on the function PAFBakerySourDoughProducing.";
-                msg = new Msg(error, this, eMsgLevel.Error, PWClassName, "StartFermentationStarter(20)", 66);
+                //Error50443: The scale object for fermentation starter can not be found! Please configure scale object on the function PAFBakerySourDoughProducing for {0}.
+                msg = new Msg(this, eMsgLevel.Error, PWClassName, "StartFermentationStarter(20)", 66, "Error50443", processModule.ACCaption);
                 OnNewAlarmOccurred(ProcessAlarm, msg);
                 return;
             }
@@ -197,8 +196,8 @@ namespace gipbakery.mes.processapplication
                     ProdOrderPartslistPos endBatchPos = pwMethodProduction.CurrentProdOrderPartslistPos.FromAppContext<ProdOrderPartslistPos>(dbApp);
                     if (pwMethodProduction.CurrentProdOrderBatch == null)
                     {
-                        // Error50276: No batch assigned to last intermediate material of this workflow
-                        msg = new Msg(this, eMsgLevel.Error, PWClassName, "StartManualWeighingProd(30)", 1010, "Error50276");
+                        // Error50444: No batch assigned to last intermediate material of this workflow
+                        msg = new Msg(this, eMsgLevel.Error, PWClassName, "StartFermentationStarter(30)", 200, "Error50444");
 
                         if (IsAlarmActive(ProcessAlarm, msg.Message) == null)
                             Messages.LogError(this.GetACUrl(), msg.ACIdentifier, msg.InnerMessage);
@@ -238,8 +237,8 @@ namespace gipbakery.mes.processapplication
 
                     if (matWFConnection == null)
                     {
-                        // Error50277: No relation defined between Workflownode and intermediate material in Materialworkflow
-                        msg = new Msg(this, eMsgLevel.Error, PWClassName, "StartManualWeighingProd(40)", 761, "Error50277");
+                        // Error50445: No relation defined between Workflownode and intermediate material in Materialworkflow
+                        msg = new Msg(this, eMsgLevel.Error, PWClassName, "StartFermentationStarter(40)", 241, "Error50445");
 
                         if (IsAlarmActive(ProcessAlarm, msg.Message) == null)
                             Messages.LogError(this.GetACUrl(), msg.ACIdentifier, msg.InnerMessage);
@@ -255,8 +254,8 @@ namespace gipbakery.mes.processapplication
                             && !c.ParentProdOrderPartslistPosID.HasValue).FirstOrDefault();
                     if (intermediatePosition == null)
                     {
-                        // Error50278: Intermediate product line not found which is assigned to this workflownode.
-                        msg = new Msg(this, eMsgLevel.Error, PWClassName, "StartManualWeighingProd(50)", 778, "Error50278");
+                        // Error50446: Intermediate product line not found which is assigned to this workflownode.
+                        msg = new Msg(this, eMsgLevel.Error, PWClassName, "StartFermentationStarter(50)", 258, "Error50446");
 
                         if (IsAlarmActive(ProcessAlarm, msg.Message) == null)
                             Messages.LogError(this.GetACUrl(), msg.ACIdentifier, msg.InnerMessage);
@@ -277,8 +276,8 @@ namespace gipbakery.mes.processapplication
                     }
                     if (intermediateChildPos == null)
                     {
-                        //Error50279:intermediateChildPos is null.
-                        msg = new Msg(this, eMsgLevel.Error, PWClassName, "StartManualWeighingProd(70)", 1238, "Error50279");
+                        //Error50447:intermediateChildPos is null.
+                        msg = new Msg(this, eMsgLevel.Error, PWClassName, "StartFermentationStarter(70)", 280, "Error50447");
                         ActivateProcessAlarmWithLog(msg, false);
                         return;
                     }
@@ -291,7 +290,9 @@ namespace gipbakery.mes.processapplication
 
                     if (pwGroup == null)
                     {
-                        //todo error
+                        //Error50448: The parent PWGroup is not PWBakeryGroupFermentation. Please switch parent PWGroup to PWBakeryGroupFermentation.
+                        msg = new Msg(this, eMsgLevel.Error, PWClassName, "StartFermentationStarter(80)", 294, "Error50448");
+                        ActivateProcessAlarmWithLog(msg, false);
                         return;
                     }
 
@@ -299,7 +300,9 @@ namespace gipbakery.mes.processapplication
 
                     if (sourceFacility == null)
                     {
-                        //todo error
+                        //Error50449: The virtual source facility can not be found!
+                        msg = new Msg(this, eMsgLevel.Error, PWClassName, "StartFermentationStarter(90)", 304, "Error50449");
+                        ActivateProcessAlarmWithLog(msg, false);
                         return;
                     }
 
@@ -307,7 +310,9 @@ namespace gipbakery.mes.processapplication
 
                     if (targetFacility == null)
                     {
-                        //todo error
+                        //Error50450: The virtual target facility can not be found!
+                        msg = new Msg(this, eMsgLevel.Error, PWClassName, "StartFermentationStarter(100)", 314, "Error50450");
+                        ActivateProcessAlarmWithLog(msg, false);
                         return;
                     }
 
@@ -331,14 +336,9 @@ namespace gipbakery.mes.processapplication
                             Material material = dbApp.Material.FirstOrDefault(c => c.MaterialID == prodMaterialID);
                             if (material == null)
                             {
-                                // Error50416: The production order can not be adjusted by temperature calculator. The material with material No {0} can not be found in the database.
-                                msg = new Msg(this, eMsgLevel.Error, PWClassName, "AddProdOrderPartslistPos(10)", 1397, "Error50416", prodMaterialID);
-                                if (IsAlarmActive(ProcessAlarm, msg.Message) == null)
-                                {
-                                    OnNewAlarmOccurred(ProcessAlarm, msg);
-                                    Root.Messages.LogMessageMsg(msg);
-                                }
-
+                                // Error50451: The material with material ID {0} can not be found in the database.
+                                msg = new Msg(this, eMsgLevel.Error, PWClassName, "StartFermentationStarter(110)", 1397, "Error50416", prodMaterialID);
+                                ActivateProcessAlarmWithLog(msg);
                                 return;
                             }
 
@@ -355,12 +355,19 @@ namespace gipbakery.mes.processapplication
                             dbApp.ProdOrderPartslistPos.AddObject(component);
 
                             msg = dbApp.ACSaveChanges();
-
+                            if (msg != null)
+                            {
+                                ActivateProcessAlarmWithLog(msg);
+                            }
                         }
 
                         prodRelation = AdjustBatchPosInProdOrderPartslist(dbApp, currentProdOrderPartslist, intermediateChildPos.Material, component, batch, 0, 0);
 
                         msg = dbApp.ACSaveChanges();
+                        if (msg != null)
+                        {
+                            ActivateProcessAlarmWithLog(msg);
+                        }
                     }
 
                     if (prodRelation == null)
@@ -402,7 +409,7 @@ namespace gipbakery.mes.processapplication
             {
                 if (ACFacilityManager == null)
                 {
-                    //TODO:Error;
+                    
                     return false;
                 }
 
@@ -466,10 +473,18 @@ namespace gipbakery.mes.processapplication
                     }
 
                     msg = dbApp.ACSaveChanges();
+                    if (msg != null)
+                    {
+                        ActivateProcessAlarmWithLog(msg);
+                    }
                 }
 
                 target.OutwardEnabled = outwardEnabled;
-                dbApp.ACSaveChanges();
+                Msg msg1 = dbApp.ACSaveChanges();
+                if (msg1 != null)
+                {
+                    ActivateProcessAlarmWithLog(msg1);
+                }
 
                 quants = target.FacilityCharge_Facility.Where(c => !c.NotAvailable).ToArray();
                 if (quants.Any())
@@ -493,9 +508,7 @@ namespace gipbakery.mes.processapplication
                             result.ValidMessage.Message = result.ResultState.ToString();
                         Messages.Msg(result.ValidMessage);
                     }
-
                 }
-
             }
             return true;
         }
@@ -570,7 +583,6 @@ namespace gipbakery.mes.processapplication
             return batchRelation;
         }
 
-        //TODO: book scale quantity averege on every quant, if quant has still available quantity then zero book quant
         public virtual bool BookFermentationStarter(DatabaseApp dbApp, ProdOrderPartslistPosRelation prodRelation, FacilityCharge facilityCharge, Facility facility)
         {
             try
@@ -643,7 +655,6 @@ namespace gipbakery.mes.processapplication
                             collectedMessages.AddDetailMessage(resultBooking.ValidMessage);
                     }
                 }
-
             }
             catch (Exception e)
             {
@@ -651,8 +662,6 @@ namespace gipbakery.mes.processapplication
                 Messages.LogException(GetACUrl(), "BookFermentationStarter()", e);
                 return false;
             }
-
-
             return true;
         }
 
@@ -668,7 +677,7 @@ namespace gipbakery.mes.processapplication
                 scaleWeight = totalScale.TotalActualWeight.ValueT;
             }
 
-            if (scaleWeight >= targetQuantity) //TODO: scale weight on start 
+            if (scaleWeight >= targetQuantity) //TODO: scale weight on start depend on scenario
             {
 
                 var availableQuants = sourceFacility.FacilityCharge_Facility.Where(c => c.MaterialID == prodRelation.SourceProdOrderPartslistPos.MaterialID && !c.NotAvailable);
@@ -735,6 +744,29 @@ namespace gipbakery.mes.processapplication
         private static bool HandleExecuteACMethod_PWBakeryFermentationStarter(out object result, IACComponent acComponent, string acMethodName, gip.core.datamodel.ACClassMethod acClassMethod, object[] acParameter)
         {
             return HandleExecuteACMethod_PWNodeProcessMethod(out result, acComponent, acMethodName, acClassMethod, acParameter);
+        }
+
+        protected override void DumpPropertyList(XmlDocument doc, XmlElement xmlACPropertyList)
+        {
+            base.DumpPropertyList(doc, xmlACPropertyList);
+
+            XmlElement xmlChild = xmlACPropertyList["AutoDetectTolerance"];
+            if (xmlChild == null)
+            {
+                xmlChild = doc.CreateElement("AutoDetectTolerance");
+                if (xmlChild != null)
+                    xmlChild.InnerText = AutoDetectTolerance?.ToString();
+                xmlACPropertyList.AppendChild(xmlChild);
+            }
+
+            xmlChild = xmlACPropertyList["IsUserAck"];
+            if (xmlChild == null)
+            {
+                xmlChild = doc.CreateElement("IsUserAck");
+                if (xmlChild != null)
+                    xmlChild.InnerText = _IsUserAck.ToString();
+                xmlACPropertyList.AppendChild(xmlChild);
+            }
         }
 
         #endregion

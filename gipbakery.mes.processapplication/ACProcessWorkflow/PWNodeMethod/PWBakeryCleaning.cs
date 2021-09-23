@@ -2,17 +2,15 @@
 using gip.core.datamodel;
 using gip.mes.datamodel;
 using gip.mes.processapplication;
-using System;
-using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace gipbakery.mes.processapplication
 {
     [ACClassInfo(Const.PackName_VarioAutomation, "en{'PWBakeryCleaning'}de{'PWBakeryCleaning'}", Global.ACKinds.TPWNodeMethod, Global.ACStorableTypes.Optional, false, PWMethodVBBase.PWClassName, true)]
     public class PWBakeryCleaning : PWNodeProcessMethod
     {
+        #region c'tors
+
         public PWBakeryCleaning(gip.core.datamodel.ACClass acType, IACObject content, IACObject parentACObject, ACValueList parameter, string acIdentifier = "") : 
             base(acType, content, parentACObject, parameter, acIdentifier)
         {
@@ -20,12 +18,9 @@ namespace gipbakery.mes.processapplication
 
         public const string PWClassName = "PWBakeryCleaning";
 
-        public T ParentPWMethod<T>() where T : PWMethodVBBase
-        {
-            if (ParentRootWFNode == null)
-                return null;
-            return ParentRootWFNode as T;
-        }
+        #endregion
+
+        #region Properties
 
         public bool IsTransport
         {
@@ -33,6 +28,17 @@ namespace gipbakery.mes.processapplication
             {
                 return ParentPWMethod<PWMethodTransportBase>() != null;
             }
+        }
+
+        #endregion
+
+        #region Methods
+
+        public T ParentPWMethod<T>() where T : PWMethodVBBase
+        {
+            if (ParentRootWFNode == null)
+                return null;
+            return ParentRootWFNode as T;
         }
 
         [ACMethodState("en{'Executing'}de{'Ausführend'}", 20, true)]
@@ -122,5 +128,7 @@ namespace gipbakery.mes.processapplication
                 _InCallback = false;
             }
         }
+
+        #endregion
     }
 }

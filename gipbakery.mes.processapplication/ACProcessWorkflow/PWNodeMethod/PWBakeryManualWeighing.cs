@@ -79,6 +79,11 @@ namespace gipbakery.mes.processapplication
                 if (anyConfig)
                 {
                     Msg msg = dbApp.ACSaveChanges();
+                    if (msg != null)
+                    {
+                        ActivateProcessAlarmWithLog(msg);
+                    }
+
                     tempFunc.RefreshMeasureItems();
                 }
             }

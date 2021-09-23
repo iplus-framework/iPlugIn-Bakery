@@ -4,11 +4,9 @@ using gip.core.processapplication;
 using gip.mes.datamodel;
 using gip.mes.facility;
 using gip.mes.processapplication;
-using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using System.Xml;
 
 namespace gipbakery.mes.processapplication
 {
@@ -61,6 +59,8 @@ namespace gipbakery.mes.processapplication
             StopMonitorSourceStore();
             base.Recycle(content, parentACObject, parameter, acIdentifier);
         }
+
+        public new const string PWClassName = "PWBakeryDischargingPreProd";
 
         #endregion
 
@@ -295,8 +295,6 @@ namespace gipbakery.mes.processapplication
                                                     PickingPos pickingPos = pwMethod.CurrentPickingPos != null ? pwMethod.CurrentPickingPos.FromAppContext<PickingPos>(dbApp) : null;
                                                     if (picking != null)
                                                     {
-                                                        //if (NoPostingOnRelocation)
-                                                        //{
                                                         if (pickingPos != null)
                                                         {
                                                             MDDelivPosLoadState loadToTruck = DatabaseApp.s_cQry_GetMDDelivPosLoadState(dbApp, MDDelivPosLoadState.DelivPosLoadStates.LoadToTruck).FirstOrDefault();
@@ -304,15 +302,21 @@ namespace gipbakery.mes.processapplication
                                                             {
                                                                 pickingPos.MDDelivPosLoadState = loadToTruck;
                                                                 Msg msg = dbApp.ACSaveChanges();
-                                                                //TODO alarm
+                                                                
+                                                                if (msg != null)
+                                                                {
+                                                                    if (IsAlarmActive(ProcessAlarm, msg.Message) == null)
+                                                                    {
+                                                                        OnNewAlarmOccurred(ProcessAlarm, msg);
+                                                                        Messages.LogMessageMsg(msg);
+                                                                    }
+                                                                }
                                                             }
                                                         }
-                                                        //}
 
                                                         if (this.IsSimulationOn && actualQuantity <= 0.000001 && pickingPos != null)
                                                             actualQuantity = pickingPos.TargetQuantityUOM;
                                                         DoInwardBooking(actualQuantity, dbApp, routeItem, picking, pickingPos, e, true);
-
                                                     }
                                                 }
                                                 else if (pwMethod.CurrentFacilityBooking != null)
@@ -378,7 +382,6 @@ namespace gipbakery.mes.processapplication
                             var pwMethod = ParentPWMethod<PWMethodRelocation>();
                             PickingPos pickingPos = pwMethod.CurrentPickingPos != null ? pwMethod.CurrentPickingPos.FromAppContext<PickingPos>(dbApp) : null;
 
-
                             if (pickingPos != null)
                             {
                                 MDDelivPosLoadState loadToTruck = DatabaseApp.s_cQry_GetMDDelivPosLoadState(dbApp, MDDelivPosLoadState.DelivPosLoadStates.LoadToTruck).FirstOrDefault();
@@ -386,7 +389,15 @@ namespace gipbakery.mes.processapplication
                                 {
                                     pickingPos.MDDelivPosLoadState = loadToTruck;
                                     Msg msg = dbApp.ACSaveChanges();
-                                    //TODO alarm
+
+                                    if (msg != null)
+                                    {
+                                        if (IsAlarmActive(ProcessAlarm, msg.Message) == null)
+                                        {
+                                            OnNewAlarmOccurred(ProcessAlarm, msg);
+                                            Messages.LogMessageMsg(msg);
+                                        }
+                                    }
                                 }
                                 _BookingProcessed = true;
                             }
@@ -441,6 +452,8 @@ namespace gipbakery.mes.processapplication
             if (_SourceStoreMonitored)
                 return;
 
+            StopMonitorSourceStore();
+
             PAProcessModule module = ParentPWGroup?.AccessedProcessModule;
 
             PAMParkingspace sourceStore;
@@ -461,6 +474,20 @@ namespace gipbakery.mes.processapplication
             _SourceStoreMonitored = true;
 
             UnSubscribeToProjectWorkCycle();
+        }
+
+        [ACMethodInteractionClient("", "en{'Restart monitor source store'}de{'Monitor-Quellenspeicher neu starten'}", 650, true)]
+        public static void RestartMonitorSourceStore(ACComponent acComponent)
+        {
+            PWBakeryDischargingPreProd preProd = acComponent as PWBakeryDischargingPreProd;
+            if (preProd != null)
+                preProd.ReStartMonitorSourceStore();
+        }
+
+        public void ReStartMonitorSourceStore()
+        {
+            _SourceStoreMonitored = false;
+            SubscribeToProjectWorkCycle();
         }
 
         private void StopMonitorSourceStore()
@@ -498,9 +525,13 @@ namespace gipbakery.mes.processapplication
 
         private void RelocateFromSourceStoreToTarget(DatabaseApp dbApp, FacilityCharge quant, Facility source, Facility target, double actualQuantity)
         {
+            Msg msg;
+
             if (ACFacilityManager == null)
             {
-                //TODO:Error;
+                //Error50442: FacilityManager is not installed/configured!
+                msg = new Msg(this, eMsgLevel.Error, PWClassName, "RelocateFromSourceStoreToTarget(10)", 526, "Error50442");
+                ActivateProcessAlarmWithLog(msg);
                 return;
             }
 
@@ -522,20 +553,16 @@ namespace gipbakery.mes.processapplication
             bookingParam.InwardQuantity = actualQuantity;
             bookingParam.OutwardQuantity = actualQuantity;
 
-            //bookingParam.InwardMaterial = quant.Material;
-            //bookingParam.OutwardMaterial = quant.Material;
-
             //bookingParam.InwardFacilityLot = quant.FacilityLot;
             bookingParam.OutwardFacilityLot = quant.FacilityLot;
 
             //bookingParam.InwardFacilityLocation = source;
 
             ACMethodEventArgs resultBooking = ACFacilityManager.BookFacility(bookingParam, dbApp);
-            Msg msg;
 
             if (resultBooking.ResultState == Global.ACMethodResultState.Failed || resultBooking.ResultState == Global.ACMethodResultState.Notpossible)
             {
-                msg = new Msg(bookingParam.ValidMessage.InnerMessage, this, eMsgLevel.Error, PWClassName, "DoManualWeighingBooking(60)", 2045);
+                msg = new Msg(bookingParam.ValidMessage.InnerMessage, this, eMsgLevel.Error, PWClassName, "RelocateFromSourceStoreToTarget(20)", 568);
                 ActivateProcessAlarm(msg, false);
                 return;
             }
@@ -544,15 +571,19 @@ namespace gipbakery.mes.processapplication
                 if (!bookingParam.ValidMessage.IsSucceded() || bookingParam.ValidMessage.HasWarnings())
                 {
                     //collectedMessages.AddDetailMessage(resultBooking.ValidMessage);
-                    msg = new Msg(bookingParam.ValidMessage.InnerMessage, this, eMsgLevel.Error, PWClassName, "DoManualWeighingBooking(70)", 2053);
+                    msg = new Msg(bookingParam.ValidMessage.InnerMessage, this, eMsgLevel.Error, PWClassName, "RelocateFromSourceStoreToTarget(30)", 577);
                     ActivateProcessAlarmWithLog(msg, false);
                 }
             }
 
             msg = dbApp.ACSaveChanges();
+            if (msg != null)
+                ActivateProcessAlarmWithLog(msg);
 
             source.OutwardEnabled = outwardEnabled;
-            dbApp.ACSaveChanges();
+            msg = dbApp.ACSaveChanges();
+            if (msg != null)
+                ActivateProcessAlarmWithLog(msg);
         }
 
         private void RefreshParkingSpace_PropertyChanged(object sender, System.ComponentModel.PropertyChangedEventArgs e)
@@ -566,6 +597,47 @@ namespace gipbakery.mes.processapplication
         private static bool HandleExecuteACMethod_PWBakeryDischargingPreProd(out object result, IACComponent acComponent, string acMethodName, gip.core.datamodel.ACClassMethod acClassMethod, object[] acParameter)
         {
             return HandleExecuteACMethod_PWDischarging(out result, acComponent, acMethodName, acClassMethod, acParameter);
+        }
+
+        protected override void DumpPropertyList(XmlDocument doc, XmlElement xmlACPropertyList)
+        {
+            base.DumpPropertyList(doc, xmlACPropertyList);
+
+            XmlElement xmlChild = xmlACPropertyList["SourceStoreMonitored"];
+            if (xmlChild == null)
+            {
+                xmlChild = doc.CreateElement("SourceStoreMonitored");
+                if (xmlChild != null)
+                    xmlChild.InnerText = _SourceStoreMonitored.ToString();
+                xmlACPropertyList.AppendChild(xmlChild);
+            }
+
+            xmlChild = xmlACPropertyList["SourceStore"];
+            if (xmlChild == null)
+            {
+                xmlChild = doc.CreateElement("SourceStore");
+                if (xmlChild != null)
+                    xmlChild.InnerText = _SourceStore?.ToString();
+                xmlACPropertyList.AppendChild(xmlChild);
+            }
+
+            xmlChild = xmlACPropertyList["TargetStore"];
+            if (xmlChild == null)
+            {
+                xmlChild = doc.CreateElement("TargetStore");
+                if (xmlChild != null)
+                    xmlChild.InnerText = _TargetStore?.ToString();
+                xmlACPropertyList.AppendChild(xmlChild);
+            }
+
+            xmlChild = xmlACPropertyList["UseScaleWeightOnPost"];
+            if (xmlChild == null)
+            {
+                xmlChild = doc.CreateElement("UseScaleWeightOnPost");
+                if (xmlChild != null)
+                    xmlChild.InnerText = UseScaleWeightOnPost.ToString();
+                xmlACPropertyList.AppendChild(xmlChild);
+            }
         }
 
         #endregion

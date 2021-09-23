@@ -4,8 +4,6 @@ using gip.mes.processapplication;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Xml;
 using gip.mes.datamodel;
 using System.Runtime.Serialization;
@@ -615,7 +613,7 @@ namespace gipbakery.mes.processapplication
 
                 if (currentProdOrderPartslist == null)
                 {
-                    //TODO Error
+                    Messages.LogMessageMsg(new Msg(eMsgLevel.Error, "currentProdOrderPartslist is null."));
                     return;
                 }
 
@@ -692,9 +690,15 @@ namespace gipbakery.mes.processapplication
 
                 if (string.IsNullOrEmpty(_ColdWaterMaterialNo) || string.IsNullOrEmpty(_CityWaterMaterialNo) || string.IsNullOrEmpty(_WarmWaterMaterialNo) || string.IsNullOrEmpty(dryIce))
                 {
-                    //TODO error
+                    //Error50453: The water material number missing. Please check temperature service or water source tank/facility.
+                    Msg msg = new Msg(this, eMsgLevel.Error, PWClassName, "CalculateRelocationTargetTempreature(10)", 694, "Error50453");
+                    if (IsAlarmActive(ProcessAlarm, msg.Message) == null)
+                    {
+                        OnNewAlarmOccurred(ProcessAlarm, msg);
+                        Messages.LogMessageMsg(msg);
+                    }
+                    return;
                 }
-
 
                 Picking picking = pwMethodRelocation.CurrentPicking.FromAppContext<Picking>(dbApp);
                 PickingPos pickingPos = pwMethodRelocation.CurrentPickingPos.FromAppContext<PickingPos>(dbApp);
@@ -744,7 +748,13 @@ namespace gipbakery.mes.processapplication
             {
                 if (kneedingNodes.Count > 1)
                 {
-                    //TODO: alarm
+                    //Error50454: The workflow contains two or more PWBakeryKneading nodes. 
+                    Msg msg = new Msg(this, eMsgLevel.Error, PWClassName, "GetKneedingRiseTemperature(10)", 752, "Error50454");
+                    if (IsAlarmActive(ProcessAlarm, msg.Message) == null)
+                    {
+                        OnNewAlarmOccurred(ProcessAlarm, msg);
+                        Messages.LogMessageMsg(msg);
+                    }
                     return false;
                 }
 
@@ -753,7 +763,13 @@ namespace gipbakery.mes.processapplication
                 ACMethod kneedingNodeConfiguration = kneedingNode.MyConfiguration;
                 if (kneedingNodeConfiguration == null)
                 {
-                    //TOOD alarm
+                    //Error50455: The configuration for PWBakeryKneading node is null.
+                    Msg msg = new Msg(this, eMsgLevel.Error, PWClassName, "GetKneedingRiseTemperature(20)", 767, "Error50455");
+                    if (IsAlarmActive(ProcessAlarm, msg.Message) == null)
+                    {
+                        OnNewAlarmOccurred(ProcessAlarm, msg);
+                        Messages.LogMessageMsg(msg);
+                    }
                     return false;
                 }
 
@@ -1810,7 +1826,11 @@ namespace gipbakery.mes.processapplication
             Guid? recvPointID = recvPoint?.ComponentClass?.ACClassID;
             if (!recvPointID.HasValue)
             {
-                //TODO: error
+                //Error50456: Can not find the receiving point ACClassID.
+                Msg msg = new Msg(this, eMsgLevel.Error, PWClassName, "DetermineComponentsTemperature(10)", 1830, "Error50456");
+                if (IsAlarmActive(ProcessAlarm, msg.Message) == null)
+                    Messages.LogMessageMsg(msg);
+                OnNewAlarmOccurred(ProcessAlarm, msg, true);
                 return null;
             }
 
@@ -1889,7 +1909,8 @@ namespace gipbakery.mes.processapplication
             {
                 dryIceTemp.AverageTemperature = -1;
 
-                Msg msg = new Msg(eMsgLevel.Info, "The temperature of ICE for calcuation is now -1 °C. Please configure default ICE temperature in the Material master or in the Bill of material.");
+                //Info50078: The temperature of ICE for calcuation is now -1 °C. Please configure default ICE temperature in the Material master or in the Bill of material.
+                Msg msg = new Msg(this, eMsgLevel.Info, PWClassName, "DetermineComponentsTemperature(20)", 1913, "Info50078");
                 OnNewAlarmOccurred(ProcessAlarm, msg);
             }
 
@@ -1905,7 +1926,11 @@ namespace gipbakery.mes.processapplication
             Guid? recvPointID = recvPoint?.ComponentClass?.ACClassID;
             if (!recvPointID.HasValue)
             {
-                //TODO: error
+                //Error50456: Can not find the receiving point ACClassID.
+                Msg msg = new Msg(this, eMsgLevel.Error, PWClassName, "DetermineComponentsTemperature(11)", 1830, "Error50456");
+                if (IsAlarmActive(ProcessAlarm, msg.Message) == null)
+                    Messages.LogMessageMsg(msg);
+                OnNewAlarmOccurred(ProcessAlarm, msg, true);
                 return null;
             }
 
@@ -1983,7 +2008,8 @@ namespace gipbakery.mes.processapplication
             {
                 dryIceTemp.AverageTemperature = -1;
 
-                Msg msg = new Msg(eMsgLevel.Info, "The temperature of ICE for calcuation is now -1 °C. Please configure default ICE temperature in the Material master.");
+                //Info50079: The temperature of ICE for calcuation is now -1 °C. Please configure default ICE temperature in the Material master.
+                Msg msg = new Msg(this, eMsgLevel.Info, PWClassName, "DetermineComponentsTemperature(21)", 2012, "Info50079");
                 OnNewAlarmOccurred(ProcessAlarm, msg);
             }
 
@@ -2216,7 +2242,6 @@ namespace gipbakery.mes.processapplication
             }
         }
 
-        //TODO: dump
         protected override void DumpPropertyList(XmlDocument doc, XmlElement xmlACPropertyList)
         {
             base.DumpPropertyList(doc, xmlACPropertyList);
@@ -2236,6 +2261,96 @@ namespace gipbakery.mes.processapplication
                 xmlChild = doc.CreateElement("WaterTemp");
                 if (xmlChild != null)
                     xmlChild.InnerText = WaterTemp.ToString();
+                xmlACPropertyList.AppendChild(xmlChild);
+            }
+
+            xmlChild = xmlACPropertyList["_CalculatorMode"];
+            if (xmlChild == null)
+            {
+                xmlChild = doc.CreateElement("_CalculatorMode");
+                if (xmlChild != null)
+                    xmlChild.InnerText = _CalculatorMode.ToString();
+                xmlACPropertyList.AppendChild(xmlChild);
+            }
+
+            xmlChild = xmlACPropertyList["_RecalculateTemperatures"];
+            if (xmlChild == null)
+            {
+                xmlChild = doc.CreateElement("_RecalculateTemperatures");
+                if (xmlChild != null)
+                    xmlChild.InnerText = _RecalculateTemperatures.ToString();
+                xmlACPropertyList.AppendChild(xmlChild);
+            }
+
+            xmlChild = xmlACPropertyList["_UserResponse"];
+            if (xmlChild == null)
+            {
+                xmlChild = doc.CreateElement("_UserResponse");
+                if (xmlChild != null)
+                    xmlChild.InnerText = _UserResponse?.ToString();
+                xmlACPropertyList.AppendChild(xmlChild);
+            }
+
+            xmlChild = xmlACPropertyList["DryIceMaterialNo"];
+            if (xmlChild == null)
+            {
+                xmlChild = doc.CreateElement("DryIceMaterialNo");
+                if (xmlChild != null)
+                    xmlChild.InnerText = DryIceMaterialNo;
+                xmlACPropertyList.AppendChild(xmlChild);
+            }
+
+            xmlChild = xmlACPropertyList["UseWaterTemp"];
+            if (xmlChild == null)
+            {
+                xmlChild = doc.CreateElement("UseWaterTemp");
+                if (xmlChild != null)
+                    xmlChild.InnerText = UseWaterTemp.ToString();
+                xmlACPropertyList.AppendChild(xmlChild);
+            }
+
+            xmlChild = xmlACPropertyList["UseWaterMixer"];
+            if (xmlChild == null)
+            {
+                xmlChild = doc.CreateElement("UseWaterMixer");
+                if (xmlChild != null)
+                    xmlChild.InnerText = UseWaterMixer.ToString();
+                xmlACPropertyList.AppendChild(xmlChild);
+            }
+
+            xmlChild = xmlACPropertyList["IncludeMeltingHeat"];
+            if (xmlChild == null)
+            {
+                xmlChild = doc.CreateElement("IncludeMeltingHeat");
+                if (xmlChild != null)
+                    xmlChild.InnerText = IncludeMeltingHeat.ToString();
+                xmlACPropertyList.AppendChild(xmlChild);
+            }
+
+            xmlChild = xmlACPropertyList["WaterMeltingHeat"];
+            if (xmlChild == null)
+            {
+                xmlChild = doc.CreateElement("WaterMeltingHeat");
+                if (xmlChild != null)
+                    xmlChild.InnerText = WaterMeltingHeat?.ToString();
+                xmlACPropertyList.AppendChild(xmlChild);
+            }
+
+            xmlChild = xmlACPropertyList["MeltingHeatInfluence"];
+            if (xmlChild == null)
+            {
+                xmlChild = doc.CreateElement("MeltingHeatInfluence");
+                if (xmlChild != null)
+                    xmlChild.InnerText = MeltingHeatInfluence?.ToString();
+                xmlACPropertyList.AppendChild(xmlChild);
+            }
+
+            xmlChild = xmlACPropertyList["AskUserIsWaterNeeded"];
+            if (xmlChild == null)
+            {
+                xmlChild = doc.CreateElement("AskUserIsWaterNeeded");
+                if (xmlChild != null)
+                    xmlChild.InnerText = AskUserIsWaterNeeded.ToString();
                 xmlACPropertyList.AppendChild(xmlChild);
             }
         }
