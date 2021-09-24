@@ -590,12 +590,6 @@ namespace gipbakery.mes.processapplication
             }
         }
 
-        public override Global.ControlModes OnGetControlModes(IVBContent vbControl)
-        {
-
-            return base.OnGetControlModes(vbControl);
-        }
-
         #endregion
     }
 }

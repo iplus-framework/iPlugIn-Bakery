@@ -1540,6 +1540,74 @@ namespace gipbakery.mes.processapplication
             return true;
         }
 
+        protected override bool HandleExecuteACMethod(out object result, AsyncMethodInvocationMode invocationMode, string acMethodName, gip.core.datamodel.ACClassMethod acClassMethod, params object[] acParameter)
+        {
+            result = null;
+
+            switch (acMethodName)
+            {
+                case "Acknowledge":
+                    Acknowledge();
+                    return true;
+                case "IsEnabledAcknowledge":
+                    result = IsEnabledAcknowledge();
+                    return true;
+                case "Clean":
+                    Clean();
+                    return true;
+                case "IsEnabledClean":
+                    result = IsEnabledClean();
+                    return true;
+                case "StartClean":
+                    StartClean();
+                    return true;
+                case "IsEnabledStartClean":
+                    result = IsEnabledStartClean();
+                    return true;
+                case "StoreOutwardEnabledOn":
+                    StoreOutwardEnabledOn();
+                    return true;
+                case "IsEnabledStoreOutwardEnabledOn":
+                    result = IsEnabledStoreOutwardEnabledOn();
+                    return true;
+                case "StoreOutwardEnabledOff":
+                    StoreOutwardEnabledOff();
+                    return true;
+                case "IsEnabledStoreOutwardEnabledOff":
+                    result = IsEnabledStoreOutwardEnabledOff();
+                    return true;
+                case "FinishOrder":
+                    FinishOrder();
+                    return true;
+                case "PumpOver":
+                    PumpOver();
+                    return true;
+                case "IsEnabledPumpOver":
+                    result = IsEnabledPumpOver();
+                    return true;
+                case "PumpOverStart":
+                    PumpOverStart();
+                    return true;
+                case "IsEnabledPumpOverStart":
+                    result = IsEnabledPumpOverStart();
+                    return true;
+                case "BookNotAvailableFacilityCharge":
+                    BookNotAvailableFacilityCharge();
+                    return true;
+                case "IsEnabledBookNotAvailableFacilityCharge":
+                    result = IsEnabledBookNotAvailableFacilityCharge();
+                    return true;
+                case "BookNotAvailableFacility":
+                    BookNotAvailableFacility();
+                    return true;
+                case "IsEnabledBookNotAvailableFacility":
+                    result = IsEnabledBookNotAvailableFacility();
+                    return true;
+            }
+
+            return base.HandleExecuteACMethod(out result, invocationMode, acMethodName, acClassMethod, acParameter);
+        }
+
         #endregion
 
         #endregion

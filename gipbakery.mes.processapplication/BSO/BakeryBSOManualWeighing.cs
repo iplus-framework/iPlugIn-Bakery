@@ -314,7 +314,6 @@ namespace gipbakery.mes.processapplication
             GetTemperaturesFromPWBakeryTempCalc(pwNode);
         }
 
-
         public override void UnloadWFNode()
         {
             if (BakeryTempCalcACState != null)
