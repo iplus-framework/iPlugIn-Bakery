@@ -560,7 +560,8 @@ namespace gipbakery.mes.processapplication
                 }
                 else
                 {
-                    //error
+                    //Error50463: The fermentation starter scale can not be found! Please configure a fermentation scale ACUrl on the pre production function.
+                    Messages.Error(this, "Error50463");
                 }
 
                 string storeACUrl = PAFPreProducing.ExecuteMethod(PAFBakeryYeastProducing.MN_GetVirtualStoreACUrl) as string;
@@ -578,7 +579,8 @@ namespace gipbakery.mes.processapplication
                 }
                 else
                 {
-                    //error
+                    //Error50463: The fermentation starter scale can not be found! Please configure a fermentation scale ACUrl on the pre production function.
+                    Messages.Error(this, "Error50463");
                 }
 
                 string pumpOverModuleACUrl = GetConfigValue(funcClass, PAFBakeryYeastProducing.PN_PumpOverProcessModuleACUrl) as string;
@@ -613,14 +615,16 @@ namespace gipbakery.mes.processapplication
                 }
                 else
                 {
-                    //error
+                    //Error50464: Initialization is not complete. The property {0} can not be found!
+                    Messages.Error(this, "Error50463", false, Const.ACState);
                 }
             }
 
             ProcessModuleOrderInfo = processModule.GetPropertyNet("OrderInfo") as IACContainerTNet<string>;
             if (ProcessModuleOrderInfo == null)
             {
-                //error
+                //Error50464: Initialization is not complete. The property {0} can not be found!
+                Messages.Error(this, "Error50463", false, "OrderInfo");
                 return;
             }
 
@@ -637,7 +641,8 @@ namespace gipbakery.mes.processapplication
 
                 if (VirtualSourceFacility == null)
                 {
-                    //TODO:error
+                    //Error50465: The virtual source facility can not be found!
+                    Messages.Error(this, "Error50465");
                     return;
                 }
 
@@ -800,8 +805,8 @@ namespace gipbakery.mes.processapplication
 
                 if (pwGroup == null)
                 {
-                    //The user does not have access rights for class {0} ({1}). //TODO
-                    Messages.Error(this, "");
+                    //Error50466: The user does not have access rights for class {0}.
+                    Messages.Error(this, "Error50466", false, pwGroupACUrl);
                     return;
                 }
 
@@ -822,8 +827,8 @@ namespace gipbakery.mes.processapplication
                     {
                         pwGroupFermentation.Detach();
 
-                        //The user does not have access rights for class {0} ({1}). //TODO
-                        Messages.Error(this, "Error50290", false, fermentationStarter.ACUrlParent + "\\" + fermentationStarter.ACIdentifier);
+                        //Error50466: The user does not have access rights for class {0}.
+                        Messages.Error(this, "Error50466", false, fermentationStarter.ACUrlParent + "\\" + fermentationStarter.ACIdentifier);
                         return;
                     }
 
@@ -835,10 +840,8 @@ namespace gipbakery.mes.processapplication
                         pwGroupFermentation.Detach();
                         fermentationStarterRef.Detach();
 
-                        // The property {0} can't get from the class {1}.
-                        // The property PWBakeryFermentationStarter.PN_FSTargetQuantity can't get from PWBakeryFermentationStarter
-
-                        //TODO error
+                        //Error50464: Initialization is not complete. The property {0} can not be found!
+                        Messages.Error(this, "Error50463", false, PWBakeryFermentationStarter.PN_FSTargetQuantity);
                         return;
                     }
 
@@ -993,21 +996,24 @@ namespace gipbakery.mes.processapplication
             gip.core.datamodel.ACClass pafClass = PAFPreProducing?.ComponentClass.FromIPlusContext<gip.core.datamodel.ACClass>(DatabaseApp.ContextIPlus);
             if (pafClass == null)
             {
-                //error
+                //Error50467: Can not get the ACClass for a PAFPreProducing function.
+                Messages.Error(this, "Error50467");
                 return;
             }
 
-            var config = pafClass.ACClassConfig_ACClass.FirstOrDefault(c => c.ConfigACUrl == PAFBakeryYeastProducing.PN_CleaningMode);
+            var config = pafClass.ConfigurationEntries.FirstOrDefault(c => c.ConfigACUrl == PAFBakeryYeastProducing.PN_CleaningMode);
             if (config == null)
             {
-                //error
+                //Error50468: Can not find the configuration for {0} on the PAFPreProducing function. 
+                Messages.Error(this, "Error50468", false, PAFBakeryYeastProducing.PN_CleaningMode);
                 return;
             }
 
             BakeryPreProdCleaningMode? mode = config.Value as BakeryPreProdCleaningMode?;
             if (mode == null)
             {
-                //Error
+                //Error50469: The configuration for the pre production cleaning mode is null.
+                Messages.Error(this, "Error50469");
                 return;
             }
 
@@ -1032,16 +1038,11 @@ namespace gipbakery.mes.processapplication
 
                 var outwardFacilityRef = VirtualStore.GetPropertyNet("Facility") as IACContainerTNet<ACRef<Facility>>;
 
-                if (outwardFacilityRef == null)
-                {
-                    //TODO: error
-                }
-
-                Facility outFacility = outwardFacilityRef.ValueT?.ValueT;
-
+                Facility outFacility = outwardFacilityRef?.ValueT?.ValueT;
                 if (outFacility == null)
                 {
-                    //TODO: error
+                    //Error50462: The target virtual store can not be found!
+                    Messages.Error(this, "Error50462");
                     return;
                 }
 
@@ -1056,10 +1057,11 @@ namespace gipbakery.mes.processapplication
                 CurrentBookParamRelocation.InwardQuantity = 0.0001;
                 CurrentBookParamRelocation.OutwardQuantity = 0.0001;
 
-                config = pafClass.ACClassConfig_ACClass.FirstOrDefault(c => c.ConfigACUrl == PAFBakeryYeastProducing.PN_CleaningProdACClassWF);
+                config = pafClass.ConfigurationEntries.FirstOrDefault(c => c.ConfigACUrl == PAFBakeryYeastProducing.PN_CleaningProdACClassWF);
                 if (config == null)
                 {
-                    //error
+                    //Error50468: Can not find the configuration for {0} on the PAFPreProducing function. 
+                    Messages.Error(this, "Error50468", false, PAFBakeryYeastProducing.PN_CleaningProdACClassWF);
                     return;
                 }
 
@@ -1116,16 +1118,11 @@ namespace gipbakery.mes.processapplication
 
                         var outwardFacilityRef = VirtualStore.GetPropertyNet("Facility") as IACContainerTNet<ACRef<Facility>>;
 
-                        if (outwardFacilityRef == null)
-                        {
-                            //TODO: error
-                        }
-
-                        Facility outFacility = outwardFacilityRef.ValueT?.ValueT;
-
+                        Facility outFacility = outwardFacilityRef?.ValueT?.ValueT;
                         if (outFacility == null)
                         {
-                            //TODO: error
+                            //Error50462: The target virtual store can not be found!
+                            Messages.Error(this, "Error50462");
                             return;
                         }
 
@@ -1133,7 +1130,8 @@ namespace gipbakery.mes.processapplication
 
                         if (sourceFacility == null)
                         {
-                            //TODO: error
+                            //Error50465: The virtual source facility can not be found!
+                            Messages.Error(this, "Error50465");
                             return;
                         }
 
@@ -1246,6 +1244,9 @@ namespace gipbakery.mes.processapplication
             return PAFPreProducing != null;
         }
 
+        /// <summary>
+        /// Method that used for rightmanagment on outward enabled/disabled operation at virutal taget store
+        /// </summary>
         [ACMethodInfo("", "", 802, true)]
         public void FinishOrder()
         {
@@ -1272,11 +1273,10 @@ namespace gipbakery.mes.processapplication
 
             if (PumpTargets == null || !PumpTargets.Any())
             {
-                //TODO: error
+                //Error50470: The pumping targets not exist!
+                Messages.Error(this, "Error50470");
                 return;
             }
-
-
 
             CheckAndInitManagers();
 
@@ -1297,16 +1297,11 @@ namespace gipbakery.mes.processapplication
 
             var outwardFacilityRef = VirtualStore.GetPropertyNet("Facility") as IACContainerTNet<ACRef<Facility>>;
 
-            if (outwardFacilityRef == null)
-            {
-                //TODO: error
-            }
-
-            Facility outFacility = outwardFacilityRef.ValueT?.ValueT;
-
+            Facility outFacility = outwardFacilityRef?.ValueT?.ValueT;
             if (outFacility == null)
             {
-                //TODO: error
+                //Error50462: The target virtual store can not be found!
+                Messages.Error(this, "Error50462");
                 return;
             }
 
@@ -1327,14 +1322,16 @@ namespace gipbakery.mes.processapplication
 
             if (!inwardFacilityID.HasValue)
             {
-                //TODO: error
+                //Error50471: The selected pumping target has not defined source virutal store!
+                Messages.Error(this, "Error50471");
                 return;
             }
 
             Facility inwardFacility = DatabaseApp.Facility.FirstOrDefault(c => c.FacilityID == inwardFacilityID.Value);
             if (inwardFacility == null)
             {
-                //error
+                //Error50465: The virtual source facility can not be found!
+                Messages.Error(this, "Error50465");
                 return;
             }
 
@@ -1401,22 +1398,16 @@ namespace gipbakery.mes.processapplication
         {
             var outwardFacilityRef = VirtualStore.GetPropertyNet("Facility") as IACContainerTNet<ACRef<Facility>>;
 
-            if (outwardFacilityRef == null)
-            {
-                //TODO: error
-                return;
-            }
-
-            Facility outFacility = outwardFacilityRef.ValueT?.ValueT;
+            Facility outFacility = outwardFacilityRef?.ValueT?.ValueT;
 
             if (outFacility == null)
             {
-                //TODO: error
+                //Error50462: The target virtual store can not be found!
+                Messages.Error(this, "Error50462");
                 return;
             }
 
             Facility outwardFacility = outFacility.FromAppContext<Facility>(DatabaseApp);
-
             BookNotAvailableFacility(outwardFacility);
         }
 
@@ -1546,7 +1537,6 @@ namespace gipbakery.mes.processapplication
                 Messages.Msg(msg);
                 return false;
             }
-
             return true;
         }
 

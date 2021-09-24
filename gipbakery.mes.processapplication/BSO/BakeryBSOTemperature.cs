@@ -151,14 +151,16 @@ namespace gipbakery.mes.processapplication
             {
                 if (string.IsNullOrEmpty(workCenter.BakeryTemperatureServiceACUrl))
                 {
-                    //TODO: message
+                    //Error50459: The bakery temperature service ACUrl is not configured. Please configure temperature service ACUrl on the BakeryBSOWorkCenterSelector.
+                    Messages.Error(this, "Error50459");
                     return;
                 }
 
                 ACComponent tempService = Root.ACUrlCommand(workCenter.BakeryTemperatureServiceACUrl) as ACComponent;
                 if (tempService == null && Root.IsProxy)
                 {
-                    //TODO message
+                    //Error50460: The bakery temperature service can not be found!
+                    Messages.Error(this, "Error50460");
                     return;
                 }
 
@@ -188,7 +190,6 @@ namespace gipbakery.mes.processapplication
             ACComponent tempMeasureFunc = selectedProcessModule.ACComponentChildsOnServer.FirstOrDefault(c => _BakeryTempMeasuringType.IsAssignableFrom(c.ComponentClass.ObjectType)) as ACComponent;
             if (tempMeasureFunc == null)
             {
-                // error;
                 return;
             }
 
@@ -205,14 +206,15 @@ namespace gipbakery.mes.processapplication
             MaterialTempMeasureList measureItems = TempMeasuringFunc.ACUrlCommand("!GetTempMeasureItems") as MaterialTempMeasureList;
             if (measureItems == null)
             {
-                //TODO: error
                 return;
             }
 
             _ChangedItemsProp = TempMeasuringFunc.GetPropertyNet("ChangedTemperatureMeasureItems") as IACContainerTNet<MaterialTempMeasureList>;
             if (_ChangedItemsProp == null)
             {
-                //TODO: error
+
+                //Error50461: The property ChangedTemperatureMeasureItems can not be found!
+                Messages.Error(this, "Error50461");
                 return;
             }
 
@@ -234,7 +236,7 @@ namespace gipbakery.mes.processapplication
                 if (senderProp != null)
                 {
                     var temp = senderProp.ValueT.ToArray();
-                    Task.Run(() => RefreshChangedItems(temp));
+                    ParentBSOWCS.ApplicationQueue.Add(() => RefreshChangedItems(temp));
                 }
             }
         }
@@ -272,7 +274,6 @@ namespace gipbakery.mes.processapplication
 
             if (isAnyAddedOrRemoved)
                 TempMeasureItemsList = TempMeasureItemsList.OrderBy(c => c.MaterialConfig.Material.MaterialNo).ToList();
-            
         }
 
         private void TempServiceInfo_PropertyChanged(object sender, System.ComponentModel.PropertyChangedEventArgs e)

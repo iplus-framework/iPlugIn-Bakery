@@ -29,9 +29,7 @@ namespace gipbakery.mes.processapplication
         private Type _BakeryRecvPointType = typeof(BakeryReceivingPoint);
         private ACMonitorObject _71100_TempCalcLock = new ACMonitorObject(71100);
 
-
         public ACRef<IACComponentPWNode> _BakeryTempCalculator;
-
 
         private bool _IsTempCalcNotNull;
 
@@ -237,7 +235,7 @@ namespace gipbakery.mes.processapplication
                     {
                         bool cover = false;
 
-                        var config = recvPointClass.ACClassConfig_ACClass.FirstOrDefault(c => c.ConfigACUrl == "WithCover");
+                        var config = recvPointClass.ConfigurationEntries.FirstOrDefault(c => c.ConfigACUrl == "WithCover");
                         if (config != null)
                         {
                             bool? val = config.Value as bool?;
@@ -364,7 +362,8 @@ namespace gipbakery.mes.processapplication
 
             if (tempCalc == null)
             {
-                //TODO: error
+                //Error50457: The workflow node Bakery temperature calculator is not available.
+                Messages.LogError(this.GetACUrl(), "HandleTempCalcACState(10)", "The workflow node Bakery temperature calculator is not available.");
             }
 
             if (acState != ACStateEnum.SMRunning)
@@ -424,7 +423,8 @@ namespace gipbakery.mes.processapplication
                 IACComponentPWNode tempCalc = CurrentBakeryTempCalc;
                 if (tempCalc == null)
                 {
-                    //TODO: error
+                    //Error50457: The workflow node Bakery temperature calculator is not available.
+                    Messages.LogError(this.GetACUrl(), "HandleTempCalcResultMsg(10)", "The workflow node Bakery temperature calculator is not available.");
                 }
 
                 var existingMessageItems = MessagesListSafe.Where(c => c.UserAckPWNode != null && c.UserAckPWNode.ValueT == tempCalc).ToArray();
@@ -631,7 +631,9 @@ namespace gipbakery.mes.processapplication
                 IACComponentPWNode tempCalc = CurrentBakeryTempCalc;
                 if (tempCalc == null)
                 {
-                    //TODO: error
+                    //Error50457: The workflow node Bakery temperature calculator is not available.
+                    Messages.Error(this, "Error50457");
+                    return;                   
                 }
 
                 ACComponent currentProcessModule = CurrentProcessModule;
@@ -661,7 +663,8 @@ namespace gipbakery.mes.processapplication
             IACComponentPWNode tempCalc = CurrentBakeryTempCalc;
             if (tempCalc == null)
             {
-                //TODO: error
+                //Error50457: The workflow node Bakery temperature calculator is not available.
+                Messages.Error(this, "Error50457");
                 return;
             }
 
@@ -798,16 +801,12 @@ namespace gipbakery.mes.processapplication
                     }
 
                     ACClass compClass = currentProcessModule?.ComponentClass.FromIPlusContext<gip.core.datamodel.ACClass>(DatabaseApp.ContextIPlus);
-                    if (compClass == null)
-                    {
-                        //TODO:error
-                        return false;
-                    }
 
-                    var config = compClass.ACClassConfig_ACClass.FirstOrDefault(c => c.ConfigACUrl == "HoseDestination");
+                    var config = compClass?.ConfigurationEntries.FirstOrDefault(c => c.ConfigACUrl == "HoseDestination");
                     if (config == null)
                     {
-                        //TODO: error
+                        //Error50458: Can not find the configuration for hose destination on the receiving point. Please configure the hose destination.
+                        Messages.Error(this, "Error50458");
                         return false;
                     }
 
