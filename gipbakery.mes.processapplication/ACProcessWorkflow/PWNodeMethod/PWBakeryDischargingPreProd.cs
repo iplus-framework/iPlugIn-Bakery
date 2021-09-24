@@ -168,9 +168,9 @@ namespace gipbakery.mes.processapplication
                                     if (scaleBase != null)
                                     {
                                         double actValue = scaleBase.ActualValue.ValueT;
-                                        PAEScaleTotalizing scaleTotal = scaleBase as PAEScaleTotalizing;
-                                        if (scaleTotal != null)
-                                            actValue = scaleTotal.TotalActualWeight.ValueT;
+                                        //PAEScaleTotalizing scaleTotal = scaleBase as PAEScaleTotalizing;
+                                        //if (scaleTotal != null)
+                                        //    actValue = scaleTotal.TotalActualWeight.ValueT;
 
                                         actualQuantity = actValue;
                                     }
@@ -380,26 +380,29 @@ namespace gipbakery.mes.processapplication
                         using (DatabaseApp dbApp = new DatabaseApp())
                         {
                             var pwMethod = ParentPWMethod<PWMethodRelocation>();
-                            PickingPos pickingPos = pwMethod.CurrentPickingPos != null ? pwMethod.CurrentPickingPos.FromAppContext<PickingPos>(dbApp) : null;
-
-                            if (pickingPos != null)
+                            if (pwMethod != null)
                             {
-                                MDDelivPosLoadState loadToTruck = DatabaseApp.s_cQry_GetMDDelivPosLoadState(dbApp, MDDelivPosLoadState.DelivPosLoadStates.LoadToTruck).FirstOrDefault();
-                                if (loadToTruck != null)
-                                {
-                                    pickingPos.MDDelivPosLoadState = loadToTruck;
-                                    Msg msg = dbApp.ACSaveChanges();
+                                PickingPos pickingPos = pwMethod.CurrentPickingPos != null ? pwMethod.CurrentPickingPos.FromAppContext<PickingPos>(dbApp) : null;
 
-                                    if (msg != null)
+                                if (pickingPos != null)
+                                {
+                                    MDDelivPosLoadState loadToTruck = DatabaseApp.s_cQry_GetMDDelivPosLoadState(dbApp, MDDelivPosLoadState.DelivPosLoadStates.LoadToTruck).FirstOrDefault();
+                                    if (loadToTruck != null)
                                     {
-                                        if (IsAlarmActive(ProcessAlarm, msg.Message) == null)
+                                        pickingPos.MDDelivPosLoadState = loadToTruck;
+                                        Msg msg = dbApp.ACSaveChanges();
+
+                                        if (msg != null)
                                         {
-                                            OnNewAlarmOccurred(ProcessAlarm, msg);
-                                            Messages.LogMessageMsg(msg);
+                                            if (IsAlarmActive(ProcessAlarm, msg.Message) == null)
+                                            {
+                                                OnNewAlarmOccurred(ProcessAlarm, msg);
+                                                Messages.LogMessageMsg(msg);
+                                            }
                                         }
                                     }
+                                    _BookingProcessed = true;
                                 }
-                                _BookingProcessed = true;
                             }
                         }
                         //}
