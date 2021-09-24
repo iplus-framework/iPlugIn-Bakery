@@ -85,6 +85,13 @@ namespace gipbakery.mes.processapplication
             }
         }
 
+        [ACPropertyInfo(true, 9999)]
+        private double ScaleActualValue
+        {
+            get;
+            set;
+        }
+
         public PWMethodVBBase ParentPWMethodVBBase
         {
             get
@@ -119,9 +126,16 @@ namespace gipbakery.mes.processapplication
             set;
         }
 
+        public ProdOrderPartslistPosRelation CurrentProdOrderPartslistRel
+        {
+            get;
+            private set;
+        }
+
         private bool _IsUserAck = false;
+        private ScaleDetectModeEnum _ScaleDetectMode;
+
         private ACMethodBooking _BookParamNotAvailableClone;
-        private double _ScaleActualValue;
 
         #endregion
 
@@ -142,8 +156,10 @@ namespace gipbakery.mes.processapplication
 
         public override void SMIdle()
         {
+            CurrentProdOrderPartslistRel = null;
             FSTargetQuantity.ValueT = null;
-            _ScaleActualValue = 0;
+            ScaleActualValue = 0;
+            _ScaleDetectMode = ScaleDetectModeEnum.Gross;
 
             using (ACMonitor.Lock(_20015_LockValue))
             {
@@ -187,217 +203,230 @@ namespace gipbakery.mes.processapplication
                 return;
             }
 
-            _ScaleActualValue = scale.ActualValue.ValueT;
-
-            using (var dbIPlus = new Database())
+            if (CurrentProdOrderPartslistRel == null && !FSTargetQuantity.ValueT.HasValue)
             {
-                using (var dbApp = new DatabaseApp(dbIPlus))
+                ScaleActualValue = scale.ActualValue.ValueT;
+
+                using (var dbIPlus = new Database())
                 {
-                    ProdOrderPartslistPos endBatchPos = pwMethodProduction.CurrentProdOrderPartslistPos.FromAppContext<ProdOrderPartslistPos>(dbApp);
-                    if (pwMethodProduction.CurrentProdOrderBatch == null)
+                    using (var dbApp = new DatabaseApp(dbIPlus))
                     {
-                        // Error50444: No batch assigned to last intermediate material of this workflow
-                        msg = new Msg(this, eMsgLevel.Error, PWClassName, "StartFermentationStarter(30)", 200, "Error50444");
+                        ProdOrderPartslistPos endBatchPos = pwMethodProduction.CurrentProdOrderPartslistPos.FromAppContext<ProdOrderPartslistPos>(dbApp);
+                        if (pwMethodProduction.CurrentProdOrderBatch == null)
+                        {
+                            // Error50444: No batch assigned to last intermediate material of this workflow
+                            msg = new Msg(this, eMsgLevel.Error, PWClassName, "StartFermentationStarter(30)", 200, "Error50444");
 
-                        if (IsAlarmActive(ProcessAlarm, msg.Message) == null)
-                            Messages.LogError(this.GetACUrl(), msg.ACIdentifier, msg.InnerMessage);
-                        OnNewAlarmOccurred(ProcessAlarm, msg, false);
-                        return;
-                    }
+                            if (IsAlarmActive(ProcessAlarm, msg.Message) == null)
+                                Messages.LogError(this.GetACUrl(), msg.ACIdentifier, msg.InnerMessage);
+                            OnNewAlarmOccurred(ProcessAlarm, msg, false);
+                            return;
+                        }
 
-                    var contentACClassWFVB = ContentACClassWF.FromAppContext<gip.mes.datamodel.ACClassWF>(dbApp);
-                    ProdOrderBatch batch = pwMethodProduction.CurrentProdOrderBatch.FromAppContext<ProdOrderBatch>(dbApp);
-                    ProdOrderBatchPlan batchPlan = batch.ProdOrderBatchPlan;
-                    MaterialWFConnection matWFConnection = null;
-                    if (batchPlan != null && batchPlan.MaterialWFACClassMethodID.HasValue)
-                    {
-                        matWFConnection = dbApp.MaterialWFConnection
-                                                .Where(c => c.MaterialWFACClassMethod.MaterialWFACClassMethodID == batchPlan.MaterialWFACClassMethodID.Value
-                                                        && c.ACClassWFID == contentACClassWFVB.ACClassWFID)
-                                                .FirstOrDefault();
-                    }
-                    else
-                    {
-                        PartslistACClassMethod plMethod = endBatchPos.ProdOrderPartslist.Partslist.PartslistACClassMethod_Partslist.FirstOrDefault();
-                        if (plMethod != null)
+                        var contentACClassWFVB = ContentACClassWF.FromAppContext<gip.mes.datamodel.ACClassWF>(dbApp);
+                        ProdOrderBatch batch = pwMethodProduction.CurrentProdOrderBatch.FromAppContext<ProdOrderBatch>(dbApp);
+                        ProdOrderBatchPlan batchPlan = batch.ProdOrderBatchPlan;
+                        MaterialWFConnection matWFConnection = null;
+                        if (batchPlan != null && batchPlan.MaterialWFACClassMethodID.HasValue)
                         {
                             matWFConnection = dbApp.MaterialWFConnection
-                                                    .Where(c => c.MaterialWFACClassMethod.MaterialWFACClassMethodID == plMethod.MaterialWFACClassMethodID
+                                                    .Where(c => c.MaterialWFACClassMethod.MaterialWFACClassMethodID == batchPlan.MaterialWFACClassMethodID.Value
                                                             && c.ACClassWFID == contentACClassWFVB.ACClassWFID)
                                                     .FirstOrDefault();
                         }
                         else
                         {
-                            matWFConnection = contentACClassWFVB.MaterialWFConnection_ACClassWF
-                                .Where(c => c.MaterialWFACClassMethod.MaterialWFID == endBatchPos.ProdOrderPartslist.Partslist.MaterialWFID
-                                            && c.MaterialWFACClassMethod.PartslistACClassMethod_MaterialWFACClassMethod.Where(d => d.PartslistID == endBatchPos.ProdOrderPartslist.PartslistID).Any())
+                            PartslistACClassMethod plMethod = endBatchPos.ProdOrderPartslist.Partslist.PartslistACClassMethod_Partslist.FirstOrDefault();
+                            if (plMethod != null)
+                            {
+                                matWFConnection = dbApp.MaterialWFConnection
+                                                        .Where(c => c.MaterialWFACClassMethod.MaterialWFACClassMethodID == plMethod.MaterialWFACClassMethodID
+                                                                && c.ACClassWFID == contentACClassWFVB.ACClassWFID)
+                                                        .FirstOrDefault();
+                            }
+                            else
+                            {
+                                matWFConnection = contentACClassWFVB.MaterialWFConnection_ACClassWF
+                                    .Where(c => c.MaterialWFACClassMethod.MaterialWFID == endBatchPos.ProdOrderPartslist.Partslist.MaterialWFID
+                                                && c.MaterialWFACClassMethod.PartslistACClassMethod_MaterialWFACClassMethod.Where(d => d.PartslistID == endBatchPos.ProdOrderPartslist.PartslistID).Any())
+                                    .FirstOrDefault();
+                            }
+                        }
+
+                        if (matWFConnection == null)
+                        {
+                            // Error50445: No relation defined between Workflownode and intermediate material in Materialworkflow
+                            msg = new Msg(this, eMsgLevel.Error, PWClassName, "StartFermentationStarter(40)", 241, "Error50445");
+
+                            if (IsAlarmActive(ProcessAlarm, msg.Message) == null)
+                                Messages.LogError(this.GetACUrl(), msg.ACIdentifier, msg.InnerMessage);
+                            OnNewAlarmOccurred(ProcessAlarm, msg, false);
+                            return;
+                        }
+
+                        // Find intermediate position which is assigned to this Dosing-Workflownode
+                        var currentProdOrderPartslist = endBatchPos.ProdOrderPartslist.FromAppContext<ProdOrderPartslist>(dbApp);
+                        ProdOrderPartslistPos intermediatePosition = currentProdOrderPartslist.ProdOrderPartslistPos_ProdOrderPartslist
+                            .Where(c => c.MaterialID.HasValue && c.MaterialID == matWFConnection.MaterialID
+                                && c.MaterialPosType == GlobalApp.MaterialPosTypes.InwardIntern
+                                && !c.ParentProdOrderPartslistPosID.HasValue).FirstOrDefault();
+                        if (intermediatePosition == null)
+                        {
+                            // Error50446: Intermediate product line not found which is assigned to this workflownode.
+                            msg = new Msg(this, eMsgLevel.Error, PWClassName, "StartFermentationStarter(50)", 258, "Error50446");
+
+                            if (IsAlarmActive(ProcessAlarm, msg.Message) == null)
+                                Messages.LogError(this.GetACUrl(), msg.ACIdentifier, msg.InnerMessage);
+                            OnNewAlarmOccurred(ProcessAlarm, msg, false);
+                            return;
+                        }
+
+                        ProdOrderPartslistPos intermediateChildPos = null;
+                        // Lock, if a parallel Dosing also creates a child Position for this intermediate Position
+
+                        using (ACMonitor.Lock(pwMethodProduction._62000_PWGroupLockObj))
+                        {
+                            // Find intermediate child position, which is assigned to this Batch
+                            intermediateChildPos = intermediatePosition.ProdOrderPartslistPos_ParentProdOrderPartslistPos
+                                .Where(c => c.ProdOrderBatchID.HasValue
+                                            && c.ProdOrderBatchID.Value == pwMethodProduction.CurrentProdOrderBatch.ProdOrderBatchID)
                                 .FirstOrDefault();
                         }
-                    }
-
-                    if (matWFConnection == null)
-                    {
-                        // Error50445: No relation defined between Workflownode and intermediate material in Materialworkflow
-                        msg = new Msg(this, eMsgLevel.Error, PWClassName, "StartFermentationStarter(40)", 241, "Error50445");
-
-                        if (IsAlarmActive(ProcessAlarm, msg.Message) == null)
-                            Messages.LogError(this.GetACUrl(), msg.ACIdentifier, msg.InnerMessage);
-                        OnNewAlarmOccurred(ProcessAlarm, msg, false);
-                        return;
-                    }
-
-                    // Find intermediate position which is assigned to this Dosing-Workflownode
-                    var currentProdOrderPartslist = endBatchPos.ProdOrderPartslist.FromAppContext<ProdOrderPartslist>(dbApp);
-                    ProdOrderPartslistPos intermediatePosition = currentProdOrderPartslist.ProdOrderPartslistPos_ProdOrderPartslist
-                        .Where(c => c.MaterialID.HasValue && c.MaterialID == matWFConnection.MaterialID
-                            && c.MaterialPosType == GlobalApp.MaterialPosTypes.InwardIntern
-                            && !c.ParentProdOrderPartslistPosID.HasValue).FirstOrDefault();
-                    if (intermediatePosition == null)
-                    {
-                        // Error50446: Intermediate product line not found which is assigned to this workflownode.
-                        msg = new Msg(this, eMsgLevel.Error, PWClassName, "StartFermentationStarter(50)", 258, "Error50446");
-
-                        if (IsAlarmActive(ProcessAlarm, msg.Message) == null)
-                            Messages.LogError(this.GetACUrl(), msg.ACIdentifier, msg.InnerMessage);
-                        OnNewAlarmOccurred(ProcessAlarm, msg, false);
-                        return;
-                    }
-
-                    ProdOrderPartslistPos intermediateChildPos = null;
-                    // Lock, if a parallel Dosing also creates a child Position for this intermediate Position
-
-                    using (ACMonitor.Lock(pwMethodProduction._62000_PWGroupLockObj))
-                    {
-                        // Find intermediate child position, which is assigned to this Batch
-                        intermediateChildPos = intermediatePosition.ProdOrderPartslistPos_ParentProdOrderPartslistPos
-                            .Where(c => c.ProdOrderBatchID.HasValue
-                                        && c.ProdOrderBatchID.Value == pwMethodProduction.CurrentProdOrderBatch.ProdOrderBatchID)
-                            .FirstOrDefault();
-                    }
-                    if (intermediateChildPos == null)
-                    {
-                        //Error50447:intermediateChildPos is null.
-                        msg = new Msg(this, eMsgLevel.Error, PWClassName, "StartFermentationStarter(70)", 280, "Error50447");
-                        ActivateProcessAlarmWithLog(msg, false);
-                        return;
-                    }
-
-                    var relations = intermediateChildPos.ProdOrderPartslistPosRelation_TargetProdOrderPartslistPos.ToArray();
-
-                    var prodRelation = relations.FirstOrDefault(c => c.SourceProdOrderPartslistPos.MaterialID == endBatchPos.BookingMaterial.MaterialID);
-
-                    PWBakeryGroupFermentation pwGroup = ParentPWGroup as PWBakeryGroupFermentation;
-
-                    if (pwGroup == null)
-                    {
-                        //Error50448: The parent PWGroup is not PWBakeryGroupFermentation. Please switch parent PWGroup to PWBakeryGroupFermentation.
-                        msg = new Msg(this, eMsgLevel.Error, PWClassName, "StartFermentationStarter(80)", 294, "Error50448");
-                        ActivateProcessAlarmWithLog(msg, false);
-                        return;
-                    }
-
-                    Facility sourceFacility = pwGroup.GetSourceFacility();
-
-                    if (sourceFacility == null)
-                    {
-                        //Error50449: The virtual source facility can not be found!
-                        msg = new Msg(this, eMsgLevel.Error, PWClassName, "StartFermentationStarter(90)", 304, "Error50449");
-                        ActivateProcessAlarmWithLog(msg, false);
-                        return;
-                    }
-
-                    Facility targetFacility = pwGroup.GetTargetFacility();
-
-                    if (targetFacility == null)
-                    {
-                        //Error50450: The virtual target facility can not be found!
-                        msg = new Msg(this, eMsgLevel.Error, PWClassName, "StartFermentationStarter(100)", 314, "Error50450");
-                        ActivateProcessAlarmWithLog(msg, false);
-                        return;
-                    }
-
-                    sourceFacility = sourceFacility.FromAppContext<Facility>(dbApp);
-                    targetFacility = targetFacility.FromAppContext<Facility>(dbApp);
-
-                    RelocateFromTargetToSourceFacility(dbApp, sourceFacility, targetFacility, scale);
-
-                    Guid prodMaterialID = endBatchPos.BookingMaterial.MaterialID;
-
-                    bool anyQuantWithProdMaterial = sourceFacility.FacilityCharge_Facility.Any(c => !c.NotAvailable && c.MaterialID == prodMaterialID);
-
-                    if (prodRelation == null && anyQuantWithProdMaterial)
-                    {
-                        var components = currentProdOrderPartslist.ProdOrderPartslistPos_ProdOrderPartslist.Where(c => c.MaterialID.HasValue
-                                                                                                                    && c.MaterialPosType == GlobalApp.MaterialPosTypes.OutwardRoot);
-
-                        ProdOrderPartslistPos component = components.FirstOrDefault(c => c.MaterialID == endBatchPos.BookingMaterial.MaterialID);
-                        if (component == null)
+                        if (intermediateChildPos == null)
                         {
-                            Material material = dbApp.Material.FirstOrDefault(c => c.MaterialID == prodMaterialID);
-                            if (material == null)
+                            //Error50447:intermediateChildPos is null.
+                            msg = new Msg(this, eMsgLevel.Error, PWClassName, "StartFermentationStarter(70)", 280, "Error50447");
+                            ActivateProcessAlarmWithLog(msg, false);
+                            return;
+                        }
+
+                        var relations = intermediateChildPos.ProdOrderPartslistPosRelation_TargetProdOrderPartslistPos.ToArray();
+
+                        var prodRelation = relations.FirstOrDefault(c => c.SourceProdOrderPartslistPos.MaterialID == endBatchPos.BookingMaterial.MaterialID);
+
+                        PWBakeryGroupFermentation pwGroup = ParentPWGroup as PWBakeryGroupFermentation;
+
+                        if (pwGroup == null)
+                        {
+                            //Error50448: The parent PWGroup is not PWBakeryGroupFermentation. Please switch parent PWGroup to PWBakeryGroupFermentation.
+                            msg = new Msg(this, eMsgLevel.Error, PWClassName, "StartFermentationStarter(80)", 294, "Error50448");
+                            ActivateProcessAlarmWithLog(msg, false);
+                            return;
+                        }
+
+                        Facility sourceFacility = pwGroup.GetSourceFacility();
+
+                        if (sourceFacility == null)
+                        {
+                            //Error50449: The virtual source facility can not be found!
+                            msg = new Msg(this, eMsgLevel.Error, PWClassName, "StartFermentationStarter(90)", 304, "Error50449");
+                            ActivateProcessAlarmWithLog(msg, false);
+                            return;
+                        }
+
+                        Facility targetFacility = pwGroup.GetTargetFacility();
+
+                        if (targetFacility == null)
+                        {
+                            //Error50450: The virtual target facility can not be found!
+                            msg = new Msg(this, eMsgLevel.Error, PWClassName, "StartFermentationStarter(100)", 314, "Error50450");
+                            ActivateProcessAlarmWithLog(msg, false);
+                            return;
+                        }
+
+                        sourceFacility = sourceFacility.FromAppContext<Facility>(dbApp);
+                        targetFacility = targetFacility.FromAppContext<Facility>(dbApp);
+
+                        RelocateFromTargetToSourceFacility(dbApp, sourceFacility, targetFacility, scale);
+
+                        Guid prodMaterialID = endBatchPos.BookingMaterial.MaterialID;
+
+                        bool anyQuantWithProdMaterial = sourceFacility.FacilityCharge_Facility.Any(c => !c.NotAvailable && c.MaterialID == prodMaterialID);
+
+                        if (prodRelation == null && anyQuantWithProdMaterial)
+                        {
+                            var components = currentProdOrderPartslist.ProdOrderPartslistPos_ProdOrderPartslist.Where(c => c.MaterialID.HasValue
+                                                                                                                        && c.MaterialPosType == GlobalApp.MaterialPosTypes.OutwardRoot);
+
+                            ProdOrderPartslistPos component = components.FirstOrDefault(c => c.MaterialID == endBatchPos.BookingMaterial.MaterialID);
+                            if (component == null)
                             {
-                                // Error50451: The material with material ID {0} can not be found in the database.
-                                msg = new Msg(this, eMsgLevel.Error, PWClassName, "StartFermentationStarter(110)", 1397, "Error50416", prodMaterialID);
-                                ActivateProcessAlarmWithLog(msg);
-                                return;
+                                Material material = dbApp.Material.FirstOrDefault(c => c.MaterialID == prodMaterialID);
+                                if (material == null)
+                                {
+                                    // Error50451: The material with material ID {0} can not be found in the database.
+                                    msg = new Msg(this, eMsgLevel.Error, PWClassName, "StartFermentationStarter(110)", 1397, "Error50416", prodMaterialID);
+                                    ActivateProcessAlarmWithLog(msg);
+                                    return;
+                                }
+
+                                component = ProdOrderPartslistPos.NewACObject(dbApp, currentProdOrderPartslist);
+                                component.Material = material;
+                                component.MaterialPosTypeIndex = (short)GlobalApp.MaterialPosTypes.OutwardRoot;
+                                component.Sequence = 1;
+                                if (components.Any())
+                                {
+                                    component.Sequence = components.Max(x => x.Sequence) + 1;
+                                }
+                                component.MDUnit = material.BaseMDUnit;
+
+                                dbApp.ProdOrderPartslistPos.AddObject(component);
+
+                                msg = dbApp.ACSaveChanges();
+                                if (msg != null)
+                                {
+                                    ActivateProcessAlarmWithLog(msg);
+                                }
+                                
                             }
 
-                            component = ProdOrderPartslistPos.NewACObject(dbApp, currentProdOrderPartslist);
-                            component.Material = material;
-                            component.MaterialPosTypeIndex = (short)GlobalApp.MaterialPosTypes.OutwardRoot;
-                            component.Sequence = 1;
-                            if (components.Any())
-                            {
-                                component.Sequence = components.Max(x => x.Sequence) + 1;
-                            }
-                            component.MDUnit = material.BaseMDUnit;
-
-                            dbApp.ProdOrderPartslistPos.AddObject(component);
+                            prodRelation = AdjustBatchPosInProdOrderPartslist(dbApp, currentProdOrderPartslist, intermediateChildPos.Material, component, batch, 0, 0);
 
                             msg = dbApp.ACSaveChanges();
                             if (msg != null)
                             {
                                 ActivateProcessAlarmWithLog(msg);
                             }
+
+                            _ScaleDetectMode = ScaleDetectModeEnum.Skip;
                         }
 
-                        prodRelation = AdjustBatchPosInProdOrderPartslist(dbApp, currentProdOrderPartslist, intermediateChildPos.Material, component, batch, 0, 0);
-
-                        msg = dbApp.ACSaveChanges();
-                        if (msg != null)
+                        if (prodRelation == null)
                         {
-                            ActivateProcessAlarmWithLog(msg);
-                        }
-                    }
-
-                    if (prodRelation == null)
-                    {
-                        CurrentACState = ACStateEnum.SMCompleted;
-                        return;
-                    }
-
-                    FSTargetQuantity.ValueT = prodRelation.TargetQuantityUOM;
-
-                    if (AutoDetectTolerance != null)
-                    {
-                        double tolerance = prodRelation.TargetQuantityUOM * AutoDetectTolerance.Value / 100;
-                        double targetQuantity = prodRelation.TargetQuantityUOM - tolerance;
-
-                        TryCompleteFermentationStarter(dbApp, scale, targetQuantity, sourceFacility, prodRelation);
-                    }
-                    else
-                    {
-                        bool isUserAck = false;
-                        using (ACMonitor.Lock(_20015_LockValue))
-                        {
-                            isUserAck = _IsUserAck;
+                            CurrentACState = ACStateEnum.SMCompleted;
+                            return;
                         }
 
-                        if (isUserAck)
-                        {
-                            TryCompleteFermentationStarter(dbApp, scale, prodRelation.TargetQuantityUOM, sourceFacility, prodRelation);
-                        }
+                        CurrentProdOrderPartslistRel = prodRelation;
+                        FSTargetQuantity.ValueT = prodRelation.TargetQuantityUOM;
+                        SubscribeToProjectWorkCycle();
                     }
+                }
+            }
+
+            if (!FSTargetQuantity.ValueT.HasValue)
+                return;
+
+            double targetQuantityRel = FSTargetQuantity.ValueT.Value;
+
+            if (AutoDetectTolerance != null)
+            {
+                double tolerance = targetQuantityRel * AutoDetectTolerance.Value / 100;
+                double targetQuantity = targetQuantityRel - tolerance;
+
+                TryCompleteFermentationStarter(scale, targetQuantity, CurrentProdOrderPartslistRel);
+            }
+            else
+            {
+                bool isUserAck = false;
+                using (ACMonitor.Lock(_20015_LockValue))
+                {
+                    isUserAck = _IsUserAck;
+                }
+
+                if (isUserAck)
+                {
+                    TryCompleteFermentationStarter(scale, targetQuantityRel, CurrentProdOrderPartslistRel);
                 }
             }
         }
@@ -409,7 +438,6 @@ namespace gipbakery.mes.processapplication
             {
                 if (ACFacilityManager == null)
                 {
-                    
                     return false;
                 }
 
@@ -419,13 +447,6 @@ namespace gipbakery.mes.processapplication
                     target.OutwardEnabled = true;
 
                 double actualQuantity = scale.ActualValue.ValueT;
-
-                PAEScaleTotalizing scaleTotal = scale as PAEScaleTotalizing;
-                if (scaleTotal != null)
-                {
-                    actualQuantity = scaleTotal.TotalActualWeight.ValueT;
-                }
-
                 double quantsTotalQuantity = quants.Sum(c => c.AvailableQuantity);
 
                 foreach (FacilityCharge quant in quants)
@@ -439,19 +460,12 @@ namespace gipbakery.mes.processapplication
                     bookingParam.InwardFacility = source;
                     bookingParam.OutwardFacility = target;
 
-                    //bookingParam.InwardFacilityCharge = quant;
                     bookingParam.OutwardFacilityCharge = quant;
 
                     bookingParam.InwardQuantity = calcQuantity;
                     bookingParam.OutwardQuantity = calcQuantity;
 
-                    //bookingParam.InwardMaterial = quant.Material;
-                    //bookingParam.OutwardMaterial = quant.Material;
-
-                    //bookingParam.InwardFacilityLot = quant.FacilityLot;
                     bookingParam.OutwardFacilityLot = quant.FacilityLot;
-
-                    //bookingParam.InwardFacilityLocation = source;
 
                     ACMethodEventArgs resultBooking = ACFacilityManager.BookFacility(bookingParam, dbApp);
                     Msg msg;
@@ -665,62 +679,91 @@ namespace gipbakery.mes.processapplication
             return true;
         }
 
-        public Msg TryCompleteFermentationStarter(DatabaseApp dbApp, PAEScaleBase scale, double targetQuantity, Facility sourceFacility,
-                                                   ProdOrderPartslistPosRelation prodRelation)
+        private Msg TryCompleteFermentationStarter(PAEScaleBase scale, double targetQuantity, ProdOrderPartslistPosRelation prodRelation)
         {
             Msg msg = null;
 
             double scaleWeight = scale.ActualValue.ValueT;
-            PAEScaleTotalizing totalScale = scale as PAEScaleTotalizing;
-            if (totalScale != null)
+
+            bool isStarterQuantityInTank = scaleWeight >= targetQuantity;
+            if (_ScaleDetectMode == ScaleDetectModeEnum.Difference)
             {
-                scaleWeight = totalScale.TotalActualWeight.ValueT;
+                double diff = scaleWeight - ScaleActualValue;
+                isStarterQuantityInTank = diff >= targetQuantity;
+            }
+            else if (_ScaleDetectMode == ScaleDetectModeEnum.Skip)
+            {
+                isStarterQuantityInTank = true;
             }
 
-            if (scaleWeight >= targetQuantity) //TODO: scale weight on start depend on scenario
+            if (isStarterQuantityInTank)
             {
-
-                var availableQuants = sourceFacility.FacilityCharge_Facility.Where(c => c.MaterialID == prodRelation.SourceProdOrderPartslistPos.MaterialID && !c.NotAvailable);
-                if (availableQuants.Any())
+                using (DatabaseApp dbApp = new DatabaseApp())
                 {
-                    MDProdOrderPartslistPosState posState = DatabaseApp.s_cQry_GetMDProdOrderPosState(dbApp, MDProdOrderPartslistPosState.ProdOrderPartslistPosStates.Completed).FirstOrDefault();
+                    ProdOrderPartslistPosRelation rel = prodRelation.FromAppContext<ProdOrderPartslistPosRelation>(dbApp);
 
-                    if (posState == null)
+                    PWBakeryGroupFermentation pwGroup = ParentPWGroup as PWBakeryGroupFermentation;
+
+                    if (pwGroup == null)
                     {
-                        SubscribeToProjectWorkCycle();
-                        //TODO
-                        // Error50265: MDProdOrderPartslistPosState for Completed-State doesn't exist
-                        msg = new Msg(this, eMsgLevel.Error, PWClassName, "DoManualWeighingBooking(1)", 1702, "Error50265");
-                        ActivateProcessAlarmWithLog(msg, false);
+                        //Error50448: The parent PWGroup is not PWBakeryGroupFermentation. Please switch parent PWGroup to PWBakeryGroupFermentation.
+                        msg = new Msg(this, eMsgLevel.Error, PWClassName, "StartFermentationStarter(80)", 294, "Error50448");
                         return msg;
                     }
 
-                    bool errorInBooking = false;
+                    Facility sourceFacility = pwGroup.GetSourceFacility();
+                    sourceFacility = sourceFacility.FromAppContext<Facility>(dbApp);
 
-                    foreach (FacilityCharge quant in availableQuants)
+                    if (sourceFacility == null)
                     {
-                        bool result = BookFermentationStarter(dbApp, prodRelation, quant, sourceFacility);
-                        if (!result && !errorInBooking)
-                        {
-                            errorInBooking = true;
-                        }
+                        //Error50449: The virtual source facility can not be found!
+                        msg = new Msg(this, eMsgLevel.Error, PWClassName, "StartFermentationStarter(90)", 304, "Error50449");
+                        return msg;
                     }
 
-                    if (!errorInBooking)
+                    var availableQuants = sourceFacility.FacilityCharge_Facility.Where(c => c.MaterialID == rel.SourceProdOrderPartslistPos.MaterialID && !c.NotAvailable);
+                    if (availableQuants.Any())
                     {
-                        prodRelation.MDProdOrderPartslistPosState = posState;
-                        msg = dbApp.ACSaveChanges();
-                        if (msg == null)
+                        MDProdOrderPartslistPosState posState = DatabaseApp.s_cQry_GetMDProdOrderPosState(dbApp, MDProdOrderPartslistPosState.ProdOrderPartslistPosStates.Completed).FirstOrDefault();
+
+                        if (posState == null)
                         {
-                            CurrentACState = ACStateEnum.SMCompleted;
+                            SubscribeToProjectWorkCycle();
+                            //TODO
+                            // Error50265: MDProdOrderPartslistPosState for Completed-State doesn't exist
+                            msg = new Msg(this, eMsgLevel.Error, PWClassName, "DoManualWeighingBooking(1)", 1702, "Error50265");
+                            ActivateProcessAlarmWithLog(msg, false);
+                            return msg;
+                        }
+
+                        bool errorInBooking = false;
+
+                        foreach (FacilityCharge quant in availableQuants)
+                        {
+                            bool result = BookFermentationStarter(dbApp, rel, quant, sourceFacility);
+                            if (!result && !errorInBooking)
+                            {
+                                errorInBooking = true;
+                            }
+                        }
+
+                        if (!errorInBooking)
+                        {
+                            rel.MDProdOrderPartslistPosState = posState;
+                            msg = dbApp.ACSaveChanges();
+                            if (msg == null)
+                            {
+                                CurrentACState = ACStateEnum.SMCompleted;
+                            }
                         }
                     }
-                }
-                else
-                {
-                    //wait for available quant in source facility
-                    SubscribeToProjectWorkCycle();
-                    return msg;
+                    else
+                    {
+                        //wait for available quant in source facility
+                        _ScaleDetectMode = ScaleDetectModeEnum.Difference;
+                        SubscribeToProjectWorkCycle();
+                        return msg;
+                    }
                 }
             }
             else
@@ -728,7 +771,6 @@ namespace gipbakery.mes.processapplication
                 SubscribeToProjectWorkCycle();
                 return msg;
             }
-
             return msg;
         }
 
@@ -770,5 +812,12 @@ namespace gipbakery.mes.processapplication
         }
 
         #endregion
+
+        private enum ScaleDetectModeEnum : short
+        {
+            Gross = 0, //Gross weight must be greather than autodetect quantity
+            Difference = 10, // Difference weight must be greather than autodetect quantity (WeightOnEnd - WeightOnStart) > Autodetect
+            Skip = 20 // Skip scale weight check, in case if is a fermentation starter combined with manual weighing
+        }
     }
 }

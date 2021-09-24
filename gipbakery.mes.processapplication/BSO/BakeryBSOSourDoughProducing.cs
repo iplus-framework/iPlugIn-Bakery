@@ -338,7 +338,7 @@ namespace gipbakery.mes.processapplication
                 if (scale != null)
                 {
                     FlourScale = scale;
-                    _FlourScaleActValue = scale.GetPropertyNet("ActualWeight") as IACContainerTNet<double>;
+                    _FlourScaleActValue = scale.GetPropertyNet("TotalActualWeight") as IACContainerTNet<double>;
                     if (_FlourScaleActValue != null)
                     {
                         FlourScaleActualValue = _FlourScaleActValue.ValueT;
@@ -380,7 +380,7 @@ namespace gipbakery.mes.processapplication
                 if (scale != null)
                 {
                     WaterScale = scale;
-                    _WaterScaleActValue = scale.GetPropertyNet("ActualWeight") as IACContainerTNet<double>;
+                    _WaterScaleActValue = scale.GetPropertyNet("TotalActualWeight") as IACContainerTNet<double>;
                     if (_WaterScaleActValue != null)
                     {
                         WaterScaleActualValue = _WaterScaleActValue.ValueT;
@@ -407,8 +407,6 @@ namespace gipbakery.mes.processapplication
                 tempRef = null;
             }
         }
-
-
 
         public override void InitPreProdFunction(ACComponent processModule, IEnumerable<ACChildInstanceInfo> childInstances)
         {

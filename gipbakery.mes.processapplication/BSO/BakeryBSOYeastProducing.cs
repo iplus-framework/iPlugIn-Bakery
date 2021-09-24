@@ -551,7 +551,7 @@ namespace gipbakery.mes.processapplication
                 {
                     PreProdScale = scale;
 
-                    _PreProdScaleActValue = scale.GetPropertyNet("TotalActualWeight") as IACContainerTNet<double>;
+                    _PreProdScaleActValue = scale.GetPropertyNet("ActualValue") as IACContainerTNet<double>;
                     if (_PreProdScaleActValue != null)
                     {
                         PreProdScaleActualValue = _PreProdScaleActValue.ValueT;
