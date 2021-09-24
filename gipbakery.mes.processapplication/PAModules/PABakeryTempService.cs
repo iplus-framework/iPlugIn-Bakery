@@ -175,7 +175,7 @@ namespace gipbakery.mes.processapplication
             DeinitCache();
 
             List<BakerySilo> silosWithBakeryPTC = new List<BakerySilo>();
-            Temperatures = new Dictionary<BakeryReceivingPoint, BakeryRecvPointTemperature>();
+            var temperatures = new Dictionary<BakeryReceivingPoint, BakeryRecvPointTemperature>();
 
             var projects = Root.ACComponentChilds.Where(c => c.ComponentClass.ACProject.ACProjectTypeIndex == (short)Global.ACProjectTypes.Application
                                                           && c.ACIdentifier != "DataAccess");
@@ -221,12 +221,12 @@ namespace gipbakery.mes.processapplication
                         }
                     }
 
-                    Temperatures.Add(receivingPoint, tempInfo);
+                    temperatures.Add(receivingPoint, tempInfo);
                 }
 
                 // Temperatures for water/room
 
-                foreach (var cacheItem in Temperatures)
+                foreach (var cacheItem in temperatures)
                 {
                     //City water
                     InitializeWaterSensor(cacheItem, cacheItem.Key.PAPointMatIn2, dbApp, WaterType.CityWater);
@@ -241,6 +241,11 @@ namespace gipbakery.mes.processapplication
                     cacheItem.Value.AddRoomTemperature(cacheItem.Key);
                 }
             }
+
+            using (ACMonitor.Lock(_20015_LockValue))
+            {
+                Temperatures = temperatures;
+            }
         }
 
         private void MaterialNo_PropertyChanged(object sender, PropertyChangedEventArgs e)
@@ -248,7 +253,14 @@ namespace gipbakery.mes.processapplication
             if (e.PropertyName == Const.ValueT)
             {
                 SetTempServiceInfo(0);
-                foreach (var bakeryTempItem in Temperatures.Values)
+                BakeryRecvPointTemperature[] values = null;
+
+                using (ACMonitor.Lock(_20015_LockValue))
+                {
+                    values = Temperatures.Values.ToArray();
+                }
+
+                foreach (var bakeryTempItem in values)
                 {
                     bakeryTempItem.SiloMaterialNoPropertyChanged(sender, e);
                 }
@@ -264,7 +276,15 @@ namespace gipbakery.mes.processapplication
                 if (propValue != null)
                 {
                     SetTempServiceInfo(0);
-                    foreach (var bakeryTempItem in Temperatures.Values)
+
+                    BakeryRecvPointTemperature[] values = null;
+
+                    using (ACMonitor.Lock(_20015_LockValue))
+                    {
+                        values = Temperatures.Values.ToArray();
+                    }
+
+                    foreach (var bakeryTempItem in values)
                     {
                         bakeryTempItem.SiloMaterialNoPropertyChanged(sender, e);
                     }
@@ -275,7 +295,17 @@ namespace gipbakery.mes.processapplication
 
         private void DeinitCache()
         {
-            if (Temperatures == null)
+            BakeryRecvPointTemperature[] values = null;
+
+            using (ACMonitor.Lock(_20015_LockValue))
+            {
+                if (Temperatures == null)
+                    return;
+
+                values = Temperatures.Values.ToArray();
+            }
+
+            if (values == null)
                 return;
 
             if (_PossibleSilos != null && _PossibleSilos.Any())
@@ -287,7 +317,7 @@ namespace gipbakery.mes.processapplication
                 }
             }
 
-            foreach(var cacheItem in Temperatures.Values)
+            foreach(var cacheItem in values)
             {
                 cacheItem.DeInit();
             }
@@ -387,16 +417,16 @@ namespace gipbakery.mes.processapplication
 
         private void RecalculateAverageTemperature()
         {
-            if (Temperatures == null)
-                return;
-
-            SetTempServiceInfo(0);
-
             KeyValuePair<BakeryReceivingPoint, BakeryRecvPointTemperature>[] recalcItems = null;
             using (ACMonitor.Lock(_20015_LockValue))
             {
+                if (Temperatures == null)
+                    return;
+
                 recalcItems = Temperatures?.ToArray();
             }
+
+            SetTempServiceInfo(0);
 
             if (recalcItems == null)
                 return;
