@@ -2242,6 +2242,46 @@ namespace gipbakery.mes.processapplication
             }
         }
 
+        [ACMethodInteractionClient("", "en{'Water is needed'}de{'Wasser wird benötigt'}", 650,true)]
+        public static void ResponseYes(ACComponent acComponent)
+        {
+            PWBakeryTempCalc thisComponent = acComponent as PWBakeryTempCalc;
+            if (thisComponent != null)
+            {
+                thisComponent.UserResponseYes();
+            }
+        }
+
+        public static bool IsEnabledResponseYes(ACComponent acComponent)
+        {
+            PWBakeryTempCalc thisComponent = acComponent as PWBakeryTempCalc;
+            if (thisComponent != null)
+            {
+                return thisComponent.AskUserIsWaterNeeded;
+            }
+            return false;
+        }
+
+        [ACMethodInteractionClient("", "en{'Water is not needed'}de{'Wasser wird nicht benötigt'}", 651, true)]
+        public static void ResponseNo(ACComponent acComponent)
+        {
+            PWBakeryTempCalc thisComponent = acComponent as PWBakeryTempCalc;
+            if (thisComponent != null)
+            {
+                thisComponent.UserResponseNo();
+            }
+        }
+
+        public static bool IsEnabledResponseNo(ACComponent acComponent)
+        {
+            PWBakeryTempCalc thisComponent = acComponent as PWBakeryTempCalc;
+            if (thisComponent != null)
+            {
+                return thisComponent.AskUserIsWaterNeeded;
+            }
+            return false;
+        }
+
         protected override void DumpPropertyList(XmlDocument doc, XmlElement xmlACPropertyList)
         {
             base.DumpPropertyList(doc, xmlACPropertyList);
@@ -2387,6 +2427,15 @@ namespace gipbakery.mes.processapplication
 
                 case "GetTemperaturesUsedInCalc":
                     result = GetTemperaturesUsedInCalc();
+                    return true;
+                case "UserResponseYes":
+                    UserResponseYes();
+                    return true;
+                case "UserResponseNo":
+                    UserResponseNo();
+                    return true;
+                case "GetUserResponse":
+                    result = GetUserResponse();
                     return true;
             }
             return base.HandleExecuteACMethod(out result, invocationMode, acMethodName, acClassMethod, acParameter);
