@@ -339,7 +339,8 @@ namespace gipbakery.mes.processapplication
                 //todo error
                 return;
             }
-            lastNode.EndOnTime.ValueT = plannedEndTime;
+
+            lastNode.SetEndOnTime(plannedEndTime);
 
             bool isEndTimeDST = TimeZoneInfo.Local.IsDaylightSavingTime(plannedEndTime);
             bool useDSTSwitch = UseDSTSwitch;
@@ -397,7 +398,7 @@ namespace gipbakery.mes.processapplication
                     }
                 }
 
-                prevEndOnTime.EndOnTime.ValueT = prevTime;
+                prevEndOnTime.SetEndOnTime(prevTime);
 
                 currentNode = prevEndOnTime;
 

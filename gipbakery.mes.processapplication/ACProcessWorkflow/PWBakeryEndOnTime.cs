@@ -44,6 +44,13 @@ namespace gipbakery.mes.processapplication
         [ACPropertyBindingSource(800, "ACConfig", "en{'End on time'}de{'Beenden bei Uhrzeit'}", "", false, true)]
         public IACContainerTNet<DateTime> EndOnTime { get; set; }
 
+        [ACPropertyInfo(801, "", "en{'End on time new'}de{'Beenden bei Uhrzeit neu'}", "", true)]
+        public DateTime EndOnTimeNew
+        {
+            get;
+            set;
+        }
+
         protected bool DurationMustExpire
         {
             get
@@ -84,6 +91,18 @@ namespace gipbakery.mes.processapplication
             {
                 fermentationGroup.OnChildPWBakeryEndOnTimeStart(this);
             }
+        }
+
+        public void SetEndOnTime(DateTime dateTime)
+        {
+            EndOnTime.ValueT = dateTime;
+            EndOnTimeNew = dateTime;
+        }
+
+        [ACMethodInfo("", "en{'Apply new time'}de{'Neue Zeit anwenden'}", 800, true)]
+        public void ApplyEndOnTimeNew()
+        {
+            EndOnTime.ValueT = EndOnTimeNew;
         }
 
         protected override void objectManager_ProjectTimerCycle200ms(object sender, EventArgs e)
