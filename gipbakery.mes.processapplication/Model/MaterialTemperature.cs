@@ -228,6 +228,7 @@ namespace gipbakery.mes.processapplication
                     IACContainerTNet<bool> outwardEnabled = tProxy.ParentACComponent?.GetPropertyNet("OutwardEnabled") as IACContainerTNet<bool>;
                     if (outwardEnabled != null)
                     {
+                        //TODO: bug - on first open when proxy component is not here then shows wrong outward enabled state
                         string siloACCaption = tProxy.ParentACComponent?.ACCaption;
                         BakeryThermometersInfo.Add(new BakeryThermometerInfoItem(siloACCaption, tProxy, outwardEnabled.ValueT));
                     }
