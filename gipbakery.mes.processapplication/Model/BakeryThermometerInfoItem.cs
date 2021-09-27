@@ -4,7 +4,7 @@ using System.ComponentModel;
 namespace gipbakery.mes.processapplication
 {
     [ACClassInfo(Const.PackName_VarioSystem, "en{'BakeryThermometerInfoItem'}de{'BakeryThermometerInfoItem'}", Global.ACKinds.TACSimpleClass)]
-    public class BakeryThermometerInfoItem : INotifyPropertyChanged
+    public class BakeryThermometerInfoItem : EntityBase
     {
         public BakeryThermometerInfoItem(string siloACCaption, IACComponent tempSensor, bool siloOutwardEnabled)
         {
@@ -35,18 +35,17 @@ namespace gipbakery.mes.processapplication
             set;
         }
 
+        private bool _SiloOutwardEnabled;
+
         [ACPropertyInfo(9999)]
         public bool SiloOutwardEnabled
         {
-            get;
-            set;
-        }
-
-        public event PropertyChangedEventHandler PropertyChanged;
-
-        public void OnPropertyChanged(string propertyName)
-        {
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+            get => _SiloOutwardEnabled;
+            set
+            {
+                _SiloOutwardEnabled = value;
+                OnPropertyChanged("SiloOutwardEnabled");
+            }
         }
     }
 }

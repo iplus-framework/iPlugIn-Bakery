@@ -37,12 +37,34 @@ namespace gipbakery.mes.processapplication
         {
         }
 
+        public override bool ACPostInit()
+        {
+            bool result = base.ACPostInit();
+
+            EndOnTimeNew = EndOnTimeSafe;
+
+            return result;
+        }
+
         #endregion
 
         #region Properties
 
+        private ACMonitorObject _65100_MembersLock = new ACMonitorObject(65100);
+
         [ACPropertyBindingSource(800, "ACConfig", "en{'End on time'}de{'Beenden bei Uhrzeit'}", "", false, true)]
         public IACContainerTNet<DateTime> EndOnTime { get; set; }
+
+        public DateTime EndOnTimeSafe
+        {
+            get
+            {
+                using (ACMonitor.Lock(_65100_MembersLock))
+                {
+                    return EndOnTime.ValueT;
+                }
+            }
+        }
 
         [ACPropertyInfo(801, "", "en{'End on time new'}de{'Beenden bei Uhrzeit neu'}", "", true)]
         public DateTime EndOnTimeNew
@@ -95,14 +117,29 @@ namespace gipbakery.mes.processapplication
 
         public void SetEndOnTime(DateTime dateTime)
         {
-            EndOnTime.ValueT = dateTime;
-            EndOnTimeNew = dateTime;
+            using (ACMonitor.Lock(_65100_MembersLock))
+            {
+                EndOnTime.ValueT = dateTime;
+                EndOnTimeNew = dateTime;
+            }
         }
 
         [ACMethodInfo("", "en{'Apply new time'}de{'Neue Zeit anwenden'}", 800, true)]
         public void ApplyEndOnTimeNew()
         {
-            EndOnTime.ValueT = EndOnTimeNew;
+            PWBakeryGroupFermentation fermentation = ParentPWGroup as PWBakeryGroupFermentation;
+            if (fermentation != null)
+            {
+                DateTime dt, dtNew;
+                using (ACMonitor.Lock(_65100_MembersLock))
+                {
+                    dt = EndOnTime.ValueT;
+                    dtNew = EndOnTimeNew;
+                    EndOnTime.ValueT = EndOnTimeNew;
+                }
+
+                fermentation.ChangeStartNextFermentationStageTime(dt, dtNew);
+            }
         }
 
         protected override void objectManager_ProjectTimerCycle200ms(object sender, EventArgs e)
@@ -125,7 +162,9 @@ namespace gipbakery.mes.processapplication
                     return;
                 }
 
-                if ((EndOnTime.ValueT < DateTime.Now || EndOnTime.ValueT == DateTime.MinValue)
+                DateTime dt = EndOnTimeSafe;
+
+                if ((dt < DateTime.Now || dt == DateTime.MinValue)
                      && CurrentACState >= ACStateEnum.SMStarting
                      && CurrentACState <= ACStateEnum.SMCompleted)
                 {

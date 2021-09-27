@@ -71,7 +71,14 @@ namespace gipbakery.mes.processapplication
 
         #region Properties
 
-        private bool _IsTimeCalculated = false;
+        private ACMonitorObject _65100_MemebersLock = new ACMonitorObject(65100);
+
+        [ACPropertyBindingSource(800, "Info", "en{'IsTimeCalculated'}de{'IsTimeCalculated'}", "", false, true)]
+        public IACContainerTNet<bool> IsTimeCalculated
+        {
+            get;
+            set;
+        }
 
         #region Properties => TimeCalculation
 
@@ -164,9 +171,9 @@ namespace gipbakery.mes.processapplication
             base.SMRunning();
 
             bool calculated = false;
-            using(ACMonitor.Lock(_20015_LockValue))
+            //using(ACMonitor.Lock(_20015_LockValue))
             {
-                calculated = _IsTimeCalculated;
+                calculated = IsTimeCalculated.ValueT;
             }
 
             if (!calculated)
@@ -177,9 +184,9 @@ namespace gipbakery.mes.processapplication
 
                 //ActivatePreProdFunctions();
 
-                using (ACMonitor.Lock(_20015_LockValue))
+                //using (ACMonitor.Lock(_20015_LockValue))
                 {
-                    _IsTimeCalculated = true;
+                    IsTimeCalculated.ValueT = true;
                 }
             }
 
@@ -198,9 +205,9 @@ namespace gipbakery.mes.processapplication
         {
             base.SMIdle();
 
-            using(ACMonitor.Lock(_20015_LockValue))
+            //using(ACMonitor.Lock(_20015_LockValue))
             {
-                _IsTimeCalculated = false;
+                IsTimeCalculated.ValueT = false;
             }
 
             NextFermentationStage.ValueT = 0;
@@ -234,9 +241,15 @@ namespace gipbakery.mes.processapplication
 
         public void CheckIfStartIsTooLate()
         {
-            if (StartNextFermentationStageTime.ValueT > DateTime.MinValue)
+            DateTime dt;
+            using (ACMonitor.Lock(_65100_MemebersLock))
             {
-                if (StartNextFermentationStageTime.ValueT < DateTime.Now)
+                dt = StartNextFermentationStageTime.ValueT;
+            }
+
+            if (dt > DateTime.MinValue)
+            {
+                if (dt < DateTime.Now)
                 {
                     string orderInfo = AccessedProcessModule?.OrderInfo.ValueT;
                     orderInfo = orderInfo.Replace("\r", "").Replace("\n", " ");
@@ -244,7 +257,7 @@ namespace gipbakery.mes.processapplication
                     //Warning50041: The production order {0} is planned to start at {1} but now is {2}. Please take a look.
 
                     Msg msg = new Msg(this, eMsgLevel.Error, PWClassName, "CheckIfStartIsTooLate(10)", 256, "Warning50041", 
-                                      orderInfo, StartNextFermentationStageTime.ValueT, DateTime.Now);
+                                      orderInfo, dt, DateTime.Now);
 
                     OnNewAlarmOccurred(ProcessAlarm, msg, true);
                     if (IsAlarmActive(ProcessAlarm, msg.Message) == null)
@@ -259,12 +272,24 @@ namespace gipbakery.mes.processapplication
 
         public void RunCalcAgain()
         {
-            using(ACMonitor.Lock(_20015_LockValue))
+            //using(ACMonitor.Lock(_20015_LockValue))
             {
-                _IsTimeCalculated = false;
+                IsTimeCalculated.ValueT = false;
             }
             SubscribeToProjectWorkCycle();
         }
+
+        public void ChangeStartNextFermentationStageTime(DateTime oldDateTime, DateTime newDateTime)
+        {
+            using (ACMonitor.Lock(_65100_MemebersLock))
+            {
+                if (StartNextFermentationStageTime.ValueT == oldDateTime)
+                {
+                    StartNextFermentationStageTime.ValueT = newDateTime;
+                }
+            }
+        }
+
 
         [ACMethodInteractionClient("", "en{'Recalculate prod times'}de{'Neuberechnung der Produktionszeiten'}", 800, true)]
         public static void RunCalculationAgain(IACComponent acComponent)
@@ -356,7 +381,11 @@ namespace gipbakery.mes.processapplication
                 PWBakeryEndOnTime prevEndOnTime = FindPrevEndOnTimeNode(currentNode);
                 if (prevEndOnTime == null)
                 {
-                    StartNextFermentationStageTime.ValueT = currentNode.EndOnTime.ValueT;
+                    DateTime dt = currentNode.EndOnTimeSafe;
+                    using (ACMonitor.Lock(_65100_MemebersLock))
+                    {
+                        StartNextFermentationStageTime.ValueT = dt;
+                    }
                     break;
                 }
 
@@ -374,7 +403,7 @@ namespace gipbakery.mes.processapplication
 
                 TimeSpan durationPerStage = fixedDuration + variableDuration;
 
-                DateTime prevTime = currentNode.EndOnTime.ValueT - durationPerStage;
+                DateTime prevTime = currentNode.EndOnTimeSafe - durationPerStage;
 
                 if (useDSTSwitch)
                 {
@@ -519,9 +548,13 @@ namespace gipbakery.mes.processapplication
 
         public virtual void OnChildPWBakeryEndOnTimeStart(PWBakeryEndOnTime pwNode)
         {
-            if (pwNode.EndOnTime.ValueT != ReadyForDosingTime.ValueT)
+            DateTime dt = pwNode.EndOnTimeSafe;
+            if (dt != ReadyForDosingTime.ValueT)
             {
-                StartNextFermentationStageTime.ValueT = pwNode.EndOnTime.ValueT;
+                using (ACMonitor.Lock(_65100_MemebersLock))
+                {
+                    StartNextFermentationStageTime.ValueT = dt;
+                }
                 if (NextFermentationStage.ValueT == 0)
                 {
                     NextFermentationStage.ValueT = 1;
@@ -650,12 +683,12 @@ namespace gipbakery.mes.processapplication
         {
             base.DumpPropertyList(doc, xmlACPropertyList);
 
-            XmlElement xmlChild = xmlACPropertyList["_IsTimeCalculated"];
+            XmlElement xmlChild = xmlACPropertyList["IsTimeCalculated"];
             if (xmlChild == null)
             {
-                xmlChild = doc.CreateElement("_IsTimeCalculated");
+                xmlChild = doc.CreateElement("IsTimeCalculated");
                 if (xmlChild != null)
-                    xmlChild.InnerText = _IsTimeCalculated.ToString();
+                    xmlChild.InnerText = IsTimeCalculated.ToString();
                 xmlACPropertyList.AppendChild(xmlChild);
             }
 
