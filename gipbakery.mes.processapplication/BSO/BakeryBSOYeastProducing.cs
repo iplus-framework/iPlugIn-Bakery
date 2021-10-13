@@ -956,7 +956,7 @@ namespace gipbakery.mes.processapplication
             RoutingResult rResult = ACRoutingService.FindSuccessors(RoutingService, DatabaseApp.ContextIPlus, true, CurrentProcessModule.ComponentClass,
                                                                     BakeryReceivingPoint.SelRuleID_RecvPoint, RouteDirections.Forwards, null, null, null, 0, true, false);
 
-            IEnumerable<IACComponent> possbileDestinations = rResult.Routes.SelectMany(c => c.GetRouteTargets()).Select(x => x.TargetACComponent);
+            IEnumerable<IACComponent> possbileDestinations = rResult?.Routes?.SelectMany(c => c.GetRouteTargets()).Select(x => x.TargetACComponent);
 
             List<BakeryCleanInfoItem> items = new List<BakeryCleanInfoItem>();
 
@@ -965,18 +965,21 @@ namespace gipbakery.mes.processapplication
             drain.RouteItemID = 0;
             items.Add(drain);
 
-            foreach (IACComponent possibleDest in possbileDestinations)
+            if (possbileDestinations != null)
             {
-                string routeItemID = possibleDest.ACUrlCommand("RouteItemID") as string;
-
-                int routeItemAsNum = -1;
-
-                if (int.TryParse(routeItemID, out routeItemAsNum))
+                foreach (IACComponent possibleDest in possbileDestinations)
                 {
-                    BakeryCleanInfoItem cleanItem = new BakeryCleanInfoItem();
-                    cleanItem.ACCaption = possibleDest.ACCaption;
-                    cleanItem.RouteItemID = routeItemAsNum;
-                    items.Add(cleanItem);
+                    string routeItemID = possibleDest.ACUrlCommand("RouteItemID") as string;
+
+                    int routeItemAsNum = -1;
+
+                    if (int.TryParse(routeItemID, out routeItemAsNum))
+                    {
+                        BakeryCleanInfoItem cleanItem = new BakeryCleanInfoItem();
+                        cleanItem.ACCaption = possibleDest.ACCaption;
+                        cleanItem.RouteItemID = routeItemAsNum;
+                        items.Add(cleanItem);
+                    }
                 }
             }
 
@@ -1017,6 +1020,31 @@ namespace gipbakery.mes.processapplication
                 return;
             }
 
+            bool managers = CheckAndInitManagers();
+            if (!managers)
+                return;
+
+            ClearBookingData();
+
+            if (VirtualStore == null)
+                return;
+
+            var outwardFacilityRef = VirtualStore.GetPropertyNet("Facility") as IACContainerTNet<ACRef<Facility>>;
+
+            Facility outFacility = outwardFacilityRef?.ValueT?.ValueT;
+            if (outFacility == null)
+            {
+                //Error50462: The target virtual store can not be found!
+                Messages.Error(this, "Error50462");
+                return;
+            }
+
+            Facility outwardFacility = outFacility.FromAppContext<Facility>(DatabaseApp);
+
+            bool outFacilityOutwardEnabled = outFacility.OutwardEnabled;
+
+            outwardFacility.OutwardEnabled = true;
+
             if (mode.Value == BakeryPreProdCleaningMode.OverBits)
             {
                 Msg resultMsg = PAFPreProducing.ExecuteMethod(PAFBakeryYeastProducing.MN_Clean, (short)11) as Msg;
@@ -1027,31 +1055,6 @@ namespace gipbakery.mes.processapplication
             }
             else
             {
-                bool managers = CheckAndInitManagers();
-                if (!managers)
-                    return;
-
-                ClearBookingData();
-
-                if (VirtualStore == null)
-                    return;
-
-                var outwardFacilityRef = VirtualStore.GetPropertyNet("Facility") as IACContainerTNet<ACRef<Facility>>;
-
-                Facility outFacility = outwardFacilityRef?.ValueT?.ValueT;
-                if (outFacility == null)
-                {
-                    //Error50462: The target virtual store can not be found!
-                    Messages.Error(this, "Error50462");
-                    return;
-                }
-
-                Facility outwardFacility = outFacility.FromAppContext<Facility>(DatabaseApp);
-
-                bool outFacilityOutwardEnabled = outFacility.OutwardEnabled;
-
-                outwardFacility.OutwardEnabled = true;
-
                 CurrentBookParamRelocation.InwardFacility = outwardFacility;
                 CurrentBookParamRelocation.OutwardFacility = outwardFacility;
                 CurrentBookParamRelocation.InwardQuantity = 0.0001;
@@ -1075,12 +1078,12 @@ namespace gipbakery.mes.processapplication
                 var wfMethod = wfClass?.ACClassMethod;
 
                 RunWorkflow(wfClass, wfMethod);
-
-                outFacility.OutwardEnabled = outFacilityOutwardEnabled;
-                CloseTopDialog();
-
-                BookNotAvailableFacility(outwardFacility);
             }
+
+            outFacility.OutwardEnabled = outFacilityOutwardEnabled;
+            CloseTopDialog();
+
+            BookNotAvailableFacility(outwardFacility);
         }
 
         public bool IsEnabledStartClean()
@@ -1116,10 +1119,10 @@ namespace gipbakery.mes.processapplication
                         if (VirtualStore == null)
                             return;
 
-                        var outwardFacilityRef = VirtualStore.GetPropertyNet("Facility") as IACContainerTNet<ACRef<Facility>>;
+                        var inFacilityRef = VirtualStore.GetPropertyNet("Facility") as IACContainerTNet<ACRef<Facility>>;
 
-                        Facility outFacility = outwardFacilityRef?.ValueT?.ValueT;
-                        if (outFacility == null)
+                        Facility inFacility = inFacilityRef?.ValueT?.ValueT;
+                        if (inFacility == null)
                         {
                             //Error50462: The target virtual store can not be found!
                             Messages.Error(this, "Error50462");
@@ -1137,21 +1140,28 @@ namespace gipbakery.mes.processapplication
 
                         try
                         {
-                            Facility outwardFacility = outFacility.FromAppContext<Facility>(DatabaseApp);
-                            outFacility.AutoRefresh();
+                            Facility inwardFacility = inFacility.FromAppContext<Facility>(DatabaseApp);
+                            inwardFacility.AutoRefresh();
 
-                            outwardFacility.OutwardEnabled = outFacility.OutwardEnabled;
+                            if (!inwardFacility.MaterialID.HasValue)
+                            {
+                                //Info50080: The virutual store has not material assigned. Please assign material to the virtual store then restart dosing process and temperature control.
+                                Messages.Info(this, "Info50080");
+                                return;
+                            }
 
-                            CurrentBookParamRelocation.InwardMaterial = outwardFacility.Material;
-                            CurrentBookParamRelocation.InwardFacility = outwardFacility;
-                            CurrentBookParamRelocation.OutwardMaterial = outwardFacility.Material;
+                            inwardFacility.OutwardEnabled = inFacility.OutwardEnabled;
+
+                            CurrentBookParamRelocation.InwardMaterial = inwardFacility.Material;
+                            CurrentBookParamRelocation.InwardFacility = inwardFacility;
+                            CurrentBookParamRelocation.OutwardMaterial = inwardFacility.Material;
                             CurrentBookParamRelocation.OutwardFacility = sourceFacility;
                             CurrentBookParamRelocation.InwardQuantity = PreProdScaleActualValue;
                             CurrentBookParamRelocation.OutwardQuantity = PreProdScaleActualValue;
 
                             gip.core.datamodel.ACClass compClass = PAFPreProducing?.ComponentClass.FromIPlusContext<gip.core.datamodel.ACClass>(DatabaseApp.ContextIPlus);
 
-                            var config = compClass?.ACClassConfig_ACClass.FirstOrDefault(c => c.ConfigACUrl == "ContinueProdACClassWF");
+                            var config = compClass?.ConfigurationEntries.FirstOrDefault(c => c.ConfigACUrl == "ContinueProdACClassWF");
                             if (config == null)
                                 return;
 
