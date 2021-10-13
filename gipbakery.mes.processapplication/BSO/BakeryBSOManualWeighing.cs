@@ -367,7 +367,7 @@ namespace gipbakery.mes.processapplication
 
             if (acState != ACStateEnum.SMRunning)
             {
-                var existingMessageItems = MessagesListSafe.Where(c => c.UserAckPWNode.ValueT == tempCalc).ToArray();
+                var existingMessageItems = MessagesListSafe.Where(c => c.UserAckPWNode != null && c.UserAckPWNode.ValueT == tempCalc).ToArray();
                 if (existingMessageItems != null && existingMessageItems.Any())
                 {
                     foreach (MessageItem mItem in existingMessageItems)
@@ -397,7 +397,7 @@ namespace gipbakery.mes.processapplication
                     return;
                 }
 
-                var existingMessageItems = MessagesListSafe.Where(c => c.UserAckPWNode.ValueT == tempCalc).ToArray();
+                var existingMessageItems = MessagesListSafe.Where(c => c.UserAckPWNode != null && c.UserAckPWNode.ValueT == tempCalc).ToArray();
                 if (existingMessageItems != null)
                 {
                     foreach (MessageItem mItem in existingMessageItems)
