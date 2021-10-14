@@ -102,15 +102,15 @@ namespace gipbakery.mes.processapplication
 
         private bool SaveScaleWeightOnStart(PAEScaleBase scaleBase)
         {
-            PAEScaleTotalizing totalScale = scaleBase as PAEScaleTotalizing;
-            if (totalScale != null)
-            {
-                ScaleWeightOnStart = totalScale.TotalActualWeight.ValueT;
-            }
-            else if (scaleBase != null)
-            {
+            //PAEScaleTotalizing totalScale = scaleBase as PAEScaleTotalizing;
+            //if (totalScale != null)
+            //{
+            //    ScaleWeightOnStart = totalScale.TotalActualWeight.ValueT;
+            //}
+            //else if (scaleBase != null)
+            //{
                 ScaleWeightOnStart = scaleBase.ActualValue.ValueT;
-            }
+            //}
 
             return true;
         }
@@ -152,18 +152,20 @@ namespace gipbakery.mes.processapplication
 
                                 double scaleWeightAfterPumping = 0;
 
-                                PAEScaleTotalizing totalScale = scaleBase as PAEScaleTotalizing;
-                                if (totalScale != null)
-                                {
-                                    scaleWeightAfterPumping = totalScale.TotalActualWeight.ValueT;
-                                }
-                                else if (scaleBase != null)
-                                {
+                                //PAEScaleTotalizing totalScale = scaleBase as PAEScaleTotalizing;
+                                //if (totalScale != null)
+                                //{
+                                //    scaleWeightAfterPumping = totalScale.TotalActualWeight.ValueT;
+                                //}
+                                //else if (scaleBase != null)
+                                //{
                                     scaleWeightAfterPumping = scaleBase.ActualValue.ValueT;
-                                }
+                                //}
 
                                 double actualQuantity = ScaleWeightOnStart - scaleWeightAfterPumping;
 
+                                if (actualQuantity <= -0.0000001)
+                                    actualQuantity = 0.0;
                                 acMethod.ResultValueList["ActualQuantity"] = actualQuantity;
                             }
                         }

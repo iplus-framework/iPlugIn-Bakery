@@ -1317,7 +1317,7 @@ namespace gipbakery.mes.processapplication
 
             Facility outwardFacility = outFacility.FromAppContext<Facility>(DatabaseApp);
 
-            double currentStock = outwardFacility.CurrentFacilityStock.AvailableQuantity;
+            double currentStock = outwardFacility.CurrentFacilityStock != null ? outwardFacility.CurrentFacilityStock.AvailableQuantity : 0.0;
 
             if (currentStock < PumpOverTargetQuantity)
             {
