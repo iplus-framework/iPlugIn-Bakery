@@ -55,6 +55,7 @@ namespace gipbakery.mes.processapplication
                 int iOffset = 0;
 
                 iOffset += gip.core.communication.ISOonTCP.Types.Real.Length; // TargetQuantity
+                iOffset += 56;
                 iOffset += gip.core.communication.ISOonTCP.Types.Int.Length; // Destination
 
                 OnReadObjectGetLength(response, dbNo, offset, miscParams, readParameter, ref iOffset);
@@ -71,8 +72,9 @@ namespace gipbakery.mes.processapplication
 
                 response.ParameterValueList.GetACValue("TargetQuantity").Value = gip.core.communication.ISOonTCP.Types.Real.FromByteArray(readPackage1, iOffset);
                 iOffset += gip.core.communication.ISOonTCP.Types.Real.Length;
+                iOffset += 56;
 
-                response.ParameterValueList.GetACValue("Destination").Value = gip.core.communication.ISOonTCP.Types.Int.FromByteArray(readPackage1, iOffset);
+                response.ParameterValueList.GetACValue("CleaningTarget").Value = gip.core.communication.ISOonTCP.Types.Int.FromByteArray(readPackage1, iOffset);
                 iOffset += gip.core.communication.ISOonTCP.Types.Int.Length;
 
                 OnReadObjectAppend(response, dbNo, iOffset, miscParams, readPackage1, readParameter, ref iOffset);
@@ -105,6 +107,7 @@ namespace gipbakery.mes.processapplication
             int iOffset = 0;
 
             iOffset += gip.core.communication.ISOonTCP.Types.Real.Length; // TargetQuantity
+            iOffset += 56;
             iOffset += gip.core.communication.ISOonTCP.Types.Int.Length; // Destination
 
             if (s7Session.HashCodeValidation != HashCodeValidationEnum.Off)
@@ -118,8 +121,9 @@ namespace gipbakery.mes.processapplication
             Array.Copy(gip.core.communication.ISOonTCP.Types.Real.ToByteArray(request.ParameterValueList.GetDouble("TargetQuantity")),
                 0, sendPackage1, iOffset, gip.core.communication.ISOonTCP.Types.Real.Length);
             iOffset += gip.core.communication.ISOonTCP.Types.Real.Length;
+            iOffset += 56;
 
-            Array.Copy(gip.core.communication.ISOonTCP.Types.Int.ToByteArray(request.ParameterValueList.GetInt16("Destination")),
+            Array.Copy(gip.core.communication.ISOonTCP.Types.Int.ToByteArray(request.ParameterValueList.GetInt16("CleaningTarget")),
                 0, sendPackage1, iOffset, gip.core.communication.ISOonTCP.Types.Int.Length);
             iOffset += gip.core.communication.ISOonTCP.Types.Int.Length;
 

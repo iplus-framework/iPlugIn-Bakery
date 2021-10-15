@@ -1262,8 +1262,10 @@ namespace gipbakery.mes.processapplication
         {
             if (DischargingACStateProp != null)
             {
-                DischargingACStateProp.ValueT = ACStateEnum.SMCompleted;
-                DischargingState = (short)DischargingACStateProp.ValueT;
+                if (DischargingACStateProp.ParentACComponent != null)
+                    DischargingACStateProp.ParentACComponent.ACUrlCommand(ACUrlHelper.Delimiter_InvokeMethod + ACStateConst.TMAbort);
+                //DischargingACStateProp.ValueT = ACStateEnum.SMCompleted;
+                //DischargingState = (short)DischargingACStateProp.ValueT;
             }
         }
 
