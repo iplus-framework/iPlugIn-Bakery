@@ -42,6 +42,12 @@ namespace gipbakery.mes.processapplication
         {
         }
 
+        public override bool ACDeInit(bool deleteACClassTask = false)
+        {
+            ResetMembers();
+            return base.ACDeInit(deleteACClassTask);
+        }
+
         public new const string PWClassName = "PWBakeryRecvPointReady";
 
         #endregion
@@ -80,7 +86,11 @@ namespace gipbakery.mes.processapplication
             }
         }
 
-        private PAEScaleBase _AckScale;
+        private ACRef<PAEScaleBase> _AckScale;
+        public PAEScaleBase AckScale
+        {
+            get => _AckScale?.ValueT;
+        }
         private bool? _DischargeOverHose = null;
 
         #endregion
@@ -136,7 +146,7 @@ namespace gipbakery.mes.processapplication
                         }
                         else
                         {
-                            _AckScale = scale;
+                            _AckScale = new ACRef<PAEScaleBase>(scale, this);
 
                             if (AckStartOverWeight())
                             {
@@ -144,7 +154,7 @@ namespace gipbakery.mes.processapplication
                                 return;
                             }
 
-                            _AckScale.ActualValue.PropertyChanged += ActualValue_PropertyChanged;
+                            AckScale.ActualValue.PropertyChanged += ActualValue_PropertyChanged;
                         }
                     }
                 }
@@ -164,11 +174,11 @@ namespace gipbakery.mes.processapplication
 
         private bool AckStartOverWeight()
         {
-            if (_AckScale == null)
+            if (AckScale == null)
                 return false;
 
-            if ((AckScaleWeight > 0.0000001 && _AckScale.ActualValue.ValueT >= AckScaleWeight)
-             || (AckScaleWeight < -0.0000001 && _AckScale.ActualValue.ValueT < Math.Abs(AckScaleWeight))
+            if ((AckScaleWeight > 0.0000001 && AckScale.ActualValue.ValueT >= AckScaleWeight)
+             || (AckScaleWeight < -0.0000001 && AckScale.ActualValue.ValueT < Math.Abs(AckScaleWeight))
                 )
             {
                 AckStart(); //TODO:calming time
@@ -193,7 +203,9 @@ namespace gipbakery.mes.processapplication
         {
             if (_AckScale != null)
             {
-                _AckScale.ActualValue.PropertyChanged -= ActualValue_PropertyChanged;
+                if (AckScale != null)
+                    AckScale.ActualValue.PropertyChanged -= ActualValue_PropertyChanged;
+                _AckScale.Detach();
                 _AckScale = null;
             }
             _DischargeOverHose = null;
