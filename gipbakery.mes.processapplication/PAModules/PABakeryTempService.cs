@@ -213,7 +213,8 @@ namespace gipbakery.mes.processapplication
                     foreach (var silo in silosWithBakeryPTC)
                     {
                         RoutingResult routingResult = ACRoutingService.SelectRoutes(RoutingService, db, false, silo.ComponentClass, receivingPoint.ComponentClass,
-                                                                                    RouteDirections.Forwards, "", null, null, null, 1, true, true);
+                                                                                    RouteDirections.Forwards, PAMParkingspace.SelRuleID_ParkingSpace_Deselector, null, 
+                                                                                    null, null, 1, true, true);
 
                         if (routingResult != null && routingResult.Routes != null && routingResult.Routes.Any())
                         {
