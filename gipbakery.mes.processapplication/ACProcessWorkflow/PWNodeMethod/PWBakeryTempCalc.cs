@@ -1898,6 +1898,15 @@ namespace gipbakery.mes.processapplication
                     double? iceTemp = dryIce.ConfigurationEntries.FirstOrDefault(x => x.KeyACUrl == PABakeryTempService.MaterialTempertureConfigKeyACUrl
                                                                                    && x.VBiACClassID == recvPointID)?.Value as double?;
 
+                    if (iceTemp == null)
+                    {
+                        ACPropertyExt temperature = dryIce.ACProperties.GetOrCreateACPropertyExtByName("Temperature", false);
+                        if (temperature != null)
+                        {
+                            iceTemp = temperature.Value as double?;
+                        }
+                    }
+
                     dryIceTemp = new MaterialTemperature() { Material = dryIce, AverageTemperature = iceTemp, Water = WaterType.DryIce }; 
                     componentTemp.Add(dryIceTemp);
                 }
@@ -1996,6 +2005,15 @@ namespace gipbakery.mes.processapplication
                 {
                     double? iceTemp = dryIce.ConfigurationEntries.FirstOrDefault(x => x.KeyACUrl == PABakeryTempService.MaterialTempertureConfigKeyACUrl
                                                                                    && x.VBiACClassID == recvPointID)?.Value as double?;
+
+                    if (iceTemp == null)
+                    {
+                        ACPropertyExt tempProp = dryIce.ACProperties.GetOrCreateACPropertyExtByName("Temperature", false);
+                        if (tempProp != null)
+                        {
+                            iceTemp = tempProp.Value as double?;
+                        }
+                    }
 
                     dryIceTemp = new MaterialTemperature() { Material = dryIce, AverageTemperature = iceTemp, Water = WaterType.DryIce };
                     componentTemp.Add(dryIceTemp);
