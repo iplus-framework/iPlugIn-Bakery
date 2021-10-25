@@ -458,7 +458,7 @@ namespace gipbakery.mes.processapplication
                 }
 
                 ACValue wTemp = config.ParameterValueList.GetACValue("WaterTemp");
-                if (wTemp != null)
+                if (wTemp != null && wTemp.Value != null)
                 {
                     WaterTargetTemperature = wTemp.ParamAsDouble;
                 }
