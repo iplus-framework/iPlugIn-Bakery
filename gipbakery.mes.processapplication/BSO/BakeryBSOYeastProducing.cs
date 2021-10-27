@@ -1281,7 +1281,7 @@ namespace gipbakery.mes.processapplication
                     targets.Remove(pTarget);
             }
 
-            PumpTargets = targets;
+            PumpTargets = new ACValueList(targets.OrderBy(c => c.ACCaption).ToArray());
 
             if (PumpTargets == null || !PumpTargets.Any())
             {
