@@ -88,13 +88,35 @@ namespace gipbakery.mes.processapplication
 
             var pafPreProd = sModule.FindChildComponents<PAFBakeryYeastProducing>().FirstOrDefault();
             PAEScaleBase scaleBase = pafPreProd?.GetFermentationStarterScale();
+
+            if (scaleBase == null)
+            {
+                //Can not get the scale from a pump source. Please configure the FermentationStarterScale on the PAFSourdoughProduction under pump source process module.
+                Msg msg = new Msg(this, eMsgLevel.Error, PWClassName, "AfterConfigForACMethodIsSet", 94, "");
+                OnNewAlarmOccurred(ProcessAlarm, msg);
+                if (IsAlarmActive(ProcessAlarm, msg.Message) == null)
+                {
+                    Messages.LogMessageMsg(msg);
+                }
+
+                MDDelivPosLoadState loadToTruck = DatabaseApp.s_cQry_GetMDDelivPosLoadState(dbApp, MDDelivPosLoadState.DelivPosLoadStates.LoadToTruck).FirstOrDefault();
+                if (loadToTruck != null)
+                {
+                    PickingPos pPos = pickingPos.FromAppContext<PickingPos>(dbApp);
+                    pPos.MDDelivPosLoadState = loadToTruck;
+                    dbApp.ACSaveChanges();
+                }
+
+                return false;
+            }
+
             _TargetScale = scaleBase;
 
             SaveScaleWeightOnStart(scaleBase);
 
             paramMethod["Source"] = sModule.RouteItemIDAsNum;
             paramMethod["Destination"] = tModule.RouteItemIDAsNum;
-            paramMethod["TargetQuantity"] = pickingPos.TargetQuantityUOM;
+            paramMethod["TargetQuantity"] = pickingPos.PickingQuantityUOM;
             paramMethod["ScaleACUrl"] = scaleBase?.ACUrl;
 
             return true;
@@ -102,16 +124,7 @@ namespace gipbakery.mes.processapplication
 
         private bool SaveScaleWeightOnStart(PAEScaleBase scaleBase)
         {
-            //PAEScaleTotalizing totalScale = scaleBase as PAEScaleTotalizing;
-            //if (totalScale != null)
-            //{
-            //    ScaleWeightOnStart = totalScale.TotalActualWeight.ValueT;
-            //}
-            //else if (scaleBase != null)
-            //{
-                ScaleWeightOnStart = scaleBase.ActualValue.ValueT;
-            //}
-
+            ScaleWeightOnStart = scaleBase.ActualValue.ValueT;
             return true;
         }
 
