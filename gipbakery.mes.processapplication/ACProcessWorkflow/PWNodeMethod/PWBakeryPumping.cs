@@ -18,6 +18,28 @@ namespace gipbakery.mes.processapplication
         {
         }
 
+        public override bool ACDeInit(bool deleteACClassTask = false)
+        {
+            if (_TargetScale != null)
+            {
+                _TargetScale.Detach();
+                _TargetScale = null;
+            }
+
+            return base.ACDeInit(deleteACClassTask);
+        }
+
+        public override void Recycle(IACObject content, IACObject parentACObject, ACValueList parameter, string acIdentifier = "")
+        {
+            if (_TargetScale != null)
+            {
+                _TargetScale.Detach();
+                _TargetScale = null;
+            }
+
+            base.Recycle(content, parentACObject, parameter, acIdentifier);
+        }
+
         public new const string PWClassName = "PWBakeryPumping";
 
         #endregion
@@ -36,7 +58,14 @@ namespace gipbakery.mes.processapplication
             }
         }
 
-        private PAEScaleBase _TargetScale;
+        private ACRef<PAEScaleBase> _TargetScale;
+        private PAEScaleBase TargetScale
+        {
+            get
+            {
+                return _TargetScale?.ValueT;
+            }
+        }
 
         #endregion
 
@@ -91,8 +120,8 @@ namespace gipbakery.mes.processapplication
 
             if (scaleBase == null)
             {
-                //Can not get the scale from a pump source. Please configure the FermentationStarterScale on the PAFSourdoughProduction under pump source process module.
-                Msg msg = new Msg(this, eMsgLevel.Error, PWClassName, "AfterConfigForACMethodIsSet", 94, "");
+                //Error50476: Can not get the scale from a pump source. Please configure the FermentationStarterScale on the PAFSourdoughProduction under pump source process module.
+                Msg msg = new Msg(this, eMsgLevel.Error, PWClassName, "AfterConfigForACMethodIsSet", 95, "Error50476");
                 OnNewAlarmOccurred(ProcessAlarm, msg);
                 if (IsAlarmActive(ProcessAlarm, msg.Message) == null)
                 {
@@ -110,7 +139,7 @@ namespace gipbakery.mes.processapplication
                 return false;
             }
 
-            _TargetScale = scaleBase;
+            _TargetScale = new ACRef<PAEScaleBase>(scaleBase, this);
 
             SaveScaleWeightOnStart(scaleBase);
 
@@ -151,7 +180,7 @@ namespace gipbakery.mes.processapplication
                             PAFBakeryPumping function = module.GetExecutingFunction<PAFBakeryPumping>(eM.ACRequestID);
                             if (function != null)
                             {
-                                PAEScaleBase scaleBase = _TargetScale;
+                                PAEScaleBase scaleBase = TargetScale;
 
                                 if (scaleBase == null)
                                 {
@@ -163,23 +192,16 @@ namespace gipbakery.mes.processapplication
                                     }
                                 }
 
-                                double scaleWeightAfterPumping = 0;
+                                if (scaleBase != null)
+                                {
+                                    double scaleWeightAfterPumping = scaleBase.ActualValue.ValueT;
 
-                                //PAEScaleTotalizing totalScale = scaleBase as PAEScaleTotalizing;
-                                //if (totalScale != null)
-                                //{
-                                //    scaleWeightAfterPumping = totalScale.TotalActualWeight.ValueT;
-                                //}
-                                //else if (scaleBase != null)
-                                //{
-                                    scaleWeightAfterPumping = scaleBase.ActualValue.ValueT;
-                                //}
+                                    double actualQuantity = ScaleWeightOnStart - scaleWeightAfterPumping;
 
-                                double actualQuantity = ScaleWeightOnStart - scaleWeightAfterPumping;
-
-                                if (actualQuantity <= -0.0000001)
-                                    actualQuantity = 0.0;
-                                acMethod.ResultValueList["ActualQuantity"] = actualQuantity;
+                                    if (actualQuantity <= -0.0000001)
+                                        actualQuantity = 0.0;
+                                    acMethod.ResultValueList["ActualQuantity"] = actualQuantity;
+                                }
                             }
                         }
                     }

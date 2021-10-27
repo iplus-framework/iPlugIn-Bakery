@@ -1323,9 +1323,8 @@ namespace gipbakery.mes.processapplication
 
             if (currentStock < PumpOverTargetQuantity)
             {
-                //The current stock in facility is {0} kg, but you want pump over {0} kg. Do you still want to continue?
-                if (Messages.Question(this, "The current stock in facility is {0} kg, but you want pump over {0} kg. Do you still want to continue?", 
-                                            Global.MsgResult.No, false, currentStock, PumpOverTargetQuantity) != Global.MsgResult.Yes)
+                //Question50073: The current stock in facility is {0} kg, but you want pump over {1} kg. Do you still want to continue?
+                if (Messages.Question(this, "Question50073", Global.MsgResult.No, false, currentStock, PumpOverTargetQuantity) != Global.MsgResult.Yes)
                 {
                     return;
                 }
