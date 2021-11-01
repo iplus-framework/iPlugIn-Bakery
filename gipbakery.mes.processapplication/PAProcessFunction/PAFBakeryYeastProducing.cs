@@ -477,6 +477,9 @@ namespace gipbakery.mes.processapplication
                 case "GetPumpOverTargets":
                     result = GetPumpOverTargets();
                     return true;
+                case "GetSourceVirtualStoreID":
+                    result = GetSourceVirtualStoreID();
+                    return true;
             }
             return base.HandleExecuteACMethod(out result, invocationMode, acMethodName, acClassMethod, acParameter);
         }

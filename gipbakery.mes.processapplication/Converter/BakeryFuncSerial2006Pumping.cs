@@ -51,7 +51,9 @@ namespace gipbakery.mes.processapplication
                 int iOffset = 0;
 
                 iOffset += gip.core.communication.ISOonTCP.Types.Real.Length; // TargetQuantity
-                iOffset += 36;
+                iOffset += 32;
+                iOffset += gip.core.communication.ISOonTCP.Types.Int.Length; //Power
+                iOffset += 4;
                 iOffset += gip.core.communication.ISOonTCP.Types.Int.Length; // Source
                 iOffset += 18;
                 iOffset += gip.core.communication.ISOonTCP.Types.Int.Length; // Destination
@@ -70,7 +72,11 @@ namespace gipbakery.mes.processapplication
 
                 response.ParameterValueList.GetACValue("TargetQuantity").Value = gip.core.communication.ISOonTCP.Types.Real.FromByteArray(readPackage1, iOffset);
                 iOffset += gip.core.communication.ISOonTCP.Types.Real.Length;
-                iOffset += 36;
+                iOffset += 32;
+
+                response.ParameterValueList.GetACValue("Power").Value = gip.core.communication.ISOonTCP.Types.Int.FromByteArray(readPackage1, iOffset);
+                iOffset += gip.core.communication.ISOonTCP.Types.Int.Length;
+                iOffset += 4;
 
                 response.ParameterValueList.GetACValue("Source").Value = gip.core.communication.ISOonTCP.Types.Int.FromByteArray(readPackage1, iOffset);
                 iOffset += gip.core.communication.ISOonTCP.Types.Int.Length;
@@ -109,9 +115,14 @@ namespace gipbakery.mes.processapplication
             int iOffset = 0;
 
             iOffset += gip.core.communication.ISOonTCP.Types.Real.Length; // TargetQuantity
-            iOffset += 36;
+            iOffset += 32;
+
+            iOffset += gip.core.communication.ISOonTCP.Types.Int.Length; //Power
+            iOffset += 4;
+
             iOffset += gip.core.communication.ISOonTCP.Types.Int.Length; // Source
             iOffset += 18;
+
             iOffset += gip.core.communication.ISOonTCP.Types.Int.Length; // Destination
 
             if (s7Session.HashCodeValidation != HashCodeValidationEnum.Off)
@@ -125,7 +136,12 @@ namespace gipbakery.mes.processapplication
             Array.Copy(gip.core.communication.ISOonTCP.Types.Real.ToByteArray(request.ParameterValueList.GetDouble("TargetQuantity")),
                 0, sendPackage1, iOffset, gip.core.communication.ISOonTCP.Types.Real.Length);
             iOffset += gip.core.communication.ISOonTCP.Types.Real.Length;
-            iOffset += 36;
+            iOffset += 32;
+
+            Array.Copy(gip.core.communication.ISOonTCP.Types.Int.ToByteArray(request.ParameterValueList.GetInt16("Power")),
+                0, sendPackage1, iOffset, gip.core.communication.ISOonTCP.Types.Int.Length);
+            iOffset += gip.core.communication.ISOonTCP.Types.Int.Length;
+            iOffset += 4;
 
             Array.Copy(gip.core.communication.ISOonTCP.Types.Int.ToByteArray(request.ParameterValueList.GetInt16("Source")),
                 0, sendPackage1, iOffset, gip.core.communication.ISOonTCP.Types.Int.Length);

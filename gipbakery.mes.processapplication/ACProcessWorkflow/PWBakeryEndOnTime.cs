@@ -117,12 +117,13 @@ namespace gipbakery.mes.processapplication
 
         public override void SMCompleted()
         {
-            base.SMCompleted();
             PWBakeryGroupFermentation fermentationGroup = ParentPWGroup as PWBakeryGroupFermentation;
             if (fermentationGroup != null)
             {
-                fermentationGroup.OnChildPWBakeryEndTimeCompleted(this);
+                fermentationGroup.OnChildPWBakeryEndOnTimeCompleted(this);
             }
+
+            base.SMCompleted();
         }
 
         public void SetEndOnTime(DateTime dateTime)

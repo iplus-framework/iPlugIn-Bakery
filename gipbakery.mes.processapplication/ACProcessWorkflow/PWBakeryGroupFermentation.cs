@@ -67,6 +67,18 @@ namespace gipbakery.mes.processapplication
 
         public new const string PWClassName = "PWBakeryGroupFermentation";
 
+        public override bool ACDeInit(bool deleteACClassTask = false)
+        {
+            EndOnTimeNodes = null;
+            return base.ACDeInit(deleteACClassTask);
+        }
+
+        public override void Recycle(IACObject content, IACObject parentACObject, ACValueList parameter, string acIdentifier = "")
+        {
+            EndOnTimeNodes = null;
+            base.Recycle(content, parentACObject, parameter, acIdentifier);
+        }
+
         #endregion
 
         #region Properties
@@ -75,6 +87,12 @@ namespace gipbakery.mes.processapplication
 
         [ACPropertyBindingSource(800, "Info", "en{'IsTimeCalculated'}de{'IsTimeCalculated'}", "", false, true)]
         public IACContainerTNet<bool> IsTimeCalculated
+        {
+            get;
+            set;
+        }
+
+        private PWBakeryEndOnTime[] EndOnTimeNodes
         {
             get;
             set;
@@ -241,35 +259,50 @@ namespace gipbakery.mes.processapplication
 
         public void CheckIfStartIsTooLate()
         {
-            DateTime dt;
-            using (ACMonitor.Lock(_65100_MemebersLock))
+            if (EndOnTimeNodes == null)
             {
-                dt = StartNextFermentationStageTime.ValueT;
+                EndOnTimeNodes = FindChildComponents<PWBakeryEndOnTime>(1).OrderBy(c => c.EndOnTimeSafe).ToArray();
             }
 
-            if (dt > DateTime.MinValue)
+            PWBakeryEndOnTime endOnTime = EndOnTimeNodes.FirstOrDefault();
+
+            if (endOnTime != null)
             {
-                if (dt < DateTime.Now)
+                if (endOnTime.IterationCount.ValueT >= 1)
                 {
-                    string orderInfo = AccessedProcessModule?.OrderInfo.ValueT;
-                    orderInfo = orderInfo.Replace("\r", "").Replace("\n", " ");
-
-                    //Warning50041: The production order {0} is planned to start at {1} but now is {2}. Please take a look.
-
-                    Msg msg = new Msg(this, eMsgLevel.Error, PWClassName, "CheckIfStartIsTooLate(10)", 256, "Warning50041",
-                                      orderInfo, dt, DateTime.Now);
-
-                    if (IsAlarmActive(ProcessAlarm, msg.Message) == null)
-                    {
-                        Messages.LogMessageMsg(msg);
-                    }
-
-                    OnNewAlarmOccurred(ProcessAlarm, msg, true);
-                    ProcessAlarm.ValueT = PANotifyState.AlarmOrFault;
-
                     UnSubscribeToProjectWorkCycle();
+                    return;
                 }
-            }
+
+                DateTime dt = endOnTime.EndOnTimeSafe;
+                TimeSpan waitingTime = endOnTime.WaitingTime.ValueT;
+
+                dt = dt - waitingTime;
+
+                if (dt > DateTime.MinValue)
+                {
+                    if (dt < DateTime.Now)
+                    {
+                        string orderInfo = AccessedProcessModule?.OrderInfo.ValueT;
+                        orderInfo = orderInfo.Replace("\r", "").Replace("\n", " ");
+
+                        //Warning50041: The production order {0} is planned to start at {1} but now is {2}. Please take a look.
+
+                        Msg msg = new Msg(this, eMsgLevel.Error, PWClassName, "CheckIfStartIsTooLate(10)", 256, "Warning50041",
+                                          orderInfo, dt, DateTime.Now);
+
+                        if (IsAlarmActive(ProcessAlarm, msg.Message) == null)
+                        {
+                            Messages.LogMessageMsg(msg);
+                        }
+
+                        OnNewAlarmOccurred(ProcessAlarm, msg, true);
+                        ProcessAlarm.ValueT = PANotifyState.AlarmOrFault;
+
+                        UnSubscribeToProjectWorkCycle();
+                    }
+                }
+            }    
         }
 
         public void RunCalcAgain()
@@ -571,28 +604,27 @@ namespace gipbakery.mes.processapplication
             }
         }
 
-        public virtual void OnChildPWBakeryEndTimeCompleted(PWBakeryEndOnTime pwNode)
+        public virtual void OnChildPWBakeryEndOnTimeCompleted(PWBakeryEndOnTime pwNode)
         {
             if (pwNode == null)
                 return;
 
-            List<PWBakeryEndOnTime> endOnTimeNodes = pwNode.FindSuccessors<PWBakeryEndOnTime>(true, c => c is PWBakeryEndOnTime);
-
-            if (endOnTimeNodes == null || !endOnTimeNodes.Any())
-                return;
-
-            PWBakeryEndOnTime nextEndOnTime = endOnTimeNodes.OrderBy(c => c.EndOnTimeSafe).FirstOrDefault();
-
-            if (nextEndOnTime != null)
+            IEnumerable<PWBakeryEndOnTime> nodes = pwNode.FindSuccessors<PWBakeryEndOnTime>(true, c => c is PWBakeryEndOnTime).OrderBy(x => x.EndOnTimeSafe);
+            if (nodes != null && nodes.Any())
             {
-                DateTime dt = nextEndOnTime.EndOnTimeSafe;
-                using (ACMonitor.Lock(_65100_MemebersLock))
-                {
-                    StartNextFermentationStageTime.ValueT = dt;
-                }
+                PWBakeryEndOnTime nextNode = nodes.FirstOrDefault();
 
-                SubscribeToProjectWorkCycle();
+                if (nextNode != null)
+                {
+                    DateTime dt = nextNode.EndOnTimeSafe;
+
+                    using (ACMonitor.Lock(_65100_MemebersLock))
+                    {
+                        StartNextFermentationStageTime.ValueT = dt;
+                    }
+                }
             }
+
         }
 
         public override void AcknowledgeAlarms()
