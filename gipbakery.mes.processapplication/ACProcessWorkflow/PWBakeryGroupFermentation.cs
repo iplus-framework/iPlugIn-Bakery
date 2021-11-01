@@ -256,15 +256,17 @@ namespace gipbakery.mes.processapplication
 
                     //Warning50041: The production order {0} is planned to start at {1} but now is {2}. Please take a look.
 
-                    Msg msg = new Msg(this, eMsgLevel.Error, PWClassName, "CheckIfStartIsTooLate(10)", 256, "Warning50041", 
+                    Msg msg = new Msg(this, eMsgLevel.Error, PWClassName, "CheckIfStartIsTooLate(10)", 256, "Warning50041",
                                       orderInfo, dt, DateTime.Now);
 
-                    OnNewAlarmOccurred(ProcessAlarm, msg, true);
                     if (IsAlarmActive(ProcessAlarm, msg.Message) == null)
                     {
                         Messages.LogMessageMsg(msg);
                     }
-                    
+
+                    OnNewAlarmOccurred(ProcessAlarm, msg, true);
+                    ProcessAlarm.ValueT = PANotifyState.AlarmOrFault;
+
                     UnSubscribeToProjectWorkCycle();
                 }
             }
@@ -422,7 +424,7 @@ namespace gipbakery.mes.processapplication
                             prevTime = prevTime.AddHours(1);
                         }
 
-                        //change time only once, all predecessors will be calcualted on this changed node end time
+                        //change time only once, all predecessors will be calculated on this changed node end time
                         useDSTSwitch = false;
                     }
                 }
@@ -548,6 +550,9 @@ namespace gipbakery.mes.processapplication
 
         public virtual void OnChildPWBakeryEndOnTimeStart(PWBakeryEndOnTime pwNode)
         {
+            if (pwNode == null)
+                return;
+
             DateTime dt = pwNode.EndOnTimeSafe;
             if (dt != ReadyForDosingTime.ValueT)
             {
@@ -564,6 +569,35 @@ namespace gipbakery.mes.processapplication
                     NextFermentationStage.ValueT++;
                 }
             }
+        }
+
+        public virtual void OnChildPWBakeryEndTimeCompleted(PWBakeryEndOnTime pwNode)
+        {
+            if (pwNode == null)
+                return;
+
+            List<PWBakeryEndOnTime> endOnTimeNodes = pwNode.FindSuccessors<PWBakeryEndOnTime>(true, c => c is PWBakeryEndOnTime);
+
+            if (endOnTimeNodes == null || !endOnTimeNodes.Any())
+                return;
+
+            PWBakeryEndOnTime nextEndOnTime = endOnTimeNodes.OrderBy(c => c.EndOnTimeSafe).FirstOrDefault();
+
+            if (nextEndOnTime != null)
+            {
+                DateTime dt = nextEndOnTime.EndOnTimeSafe;
+                using (ACMonitor.Lock(_65100_MemebersLock))
+                {
+                    StartNextFermentationStageTime.ValueT = dt;
+                }
+
+                SubscribeToProjectWorkCycle();
+            }
+        }
+
+        public override void AcknowledgeAlarms()
+        {
+            base.AcknowledgeAlarms();
         }
 
         #endregion
