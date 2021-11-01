@@ -115,6 +115,16 @@ namespace gipbakery.mes.processapplication
             }
         }
 
+        public override void SMCompleted()
+        {
+            base.SMCompleted();
+            PWBakeryGroupFermentation fermentationGroup = ParentPWGroup as PWBakeryGroupFermentation;
+            if (fermentationGroup != null)
+            {
+                fermentationGroup.OnChildPWBakeryEndTimeCompleted(this);
+            }
+        }
+
         public void SetEndOnTime(DateTime dateTime)
         {
             using (ACMonitor.Lock(_65100_MembersLock))
