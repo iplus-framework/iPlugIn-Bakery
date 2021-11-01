@@ -15,6 +15,11 @@ namespace gipbakery.mes.processapplication
     [ACClassInfo(Const.PackName_VarioAutomation, "en{'Yeast'}de{'Hefe'}", Global.ACKinds.TPAProcessFunction, Global.ACStorableTypes.Required, false, true, "", BSOConfig = BakeryBSOYeastProducing.ClassName, SortIndex = 50)]
     public class PAFBakeryYeastProducing : PAFWorkCenterSelItemBase
     {
+        static PAFBakeryYeastProducing()
+        {
+            RegisterExecuteHandler(typeof(PAFBakeryYeastProducing), HandleExecuteACMethod_PAFBakeryYeastProducing);
+        }
+
         #region c'tors
 
         public PAFBakeryYeastProducing(gip.core.datamodel.ACClass acType, IACObject content, IACObject parentACObject, ACValueList parameter, string acIdentifier = "") :
@@ -453,6 +458,35 @@ namespace gipbakery.mes.processapplication
         }
 
         #endregion
+
+        #region Handle Excute
+        protected override bool HandleExecuteACMethod(out object result, AsyncMethodInvocationMode invocationMode, string acMethodName, gip.core.datamodel.ACClassMethod acClassMethod, params object[] acParameter)
+        {
+            result = null;
+            switch (acMethodName)
+            {
+                case "GetVirtualStoreACUrl":
+                    result = GetVirtualStoreACUrl();
+                    return true;
+                case "SwitchVirtualStoreOutwardEnabled":
+                    result = SwitchVirtualStoreOutwardEnabled();
+                    return true;
+                case "Clean":
+                    result = Clean((short) acParameter[0]);
+                    return true;
+                case "GetPumpOverTargets":
+                    result = GetPumpOverTargets();
+                    return true;
+            }
+            return base.HandleExecuteACMethod(out result, invocationMode, acMethodName, acClassMethod, acParameter);
+        }
+
+        public static bool HandleExecuteACMethod_PAFBakeryYeastProducing(out object result, IACComponent acComponent, string acMethodName, gip.core.datamodel.ACClassMethod acClassMethod, params object[] acParameter)
+        {
+            return HandleExecuteACMethod_PAFWorkCenterSelItemBase(out result, acComponent, acMethodName, acClassMethod, acParameter);
+        }
+        #endregion
+
     }
 
     [DataContract]

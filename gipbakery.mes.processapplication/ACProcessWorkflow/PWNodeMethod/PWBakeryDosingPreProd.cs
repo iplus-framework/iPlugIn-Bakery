@@ -73,7 +73,7 @@ namespace gipbakery.mes.processapplication
                 var method = MyConfiguration;
                 if (method != null)
                 {
-                    var acValue = method.ParameterValueList.GetACValue("FlowRate1");
+                    var acValue = method.ParameterValueList.GetACValue("FlowSwitching1");
                     if (acValue != null)
                     {
                         return acValue.ParamAsDouble;

@@ -14,6 +14,11 @@ namespace gipbakery.mes.processapplication
     [ACClassInfo(Const.PackName_VarioAutomation, "en{'Cyclic temperature measuring'}de{'Zyklische Temperaturmessung'}", Global.ACKinds.TPAProcessFunction, Global.ACStorableTypes.Required, false, true, "", BSOConfig = BakeryBSOTemperature.ClassName, SortIndex = 200)]
     public class PAFBakeryTempMeasuring : PAFWorkCenterSelItemBase
     {
+        static PAFBakeryTempMeasuring()
+        {
+            RegisterExecuteHandler(typeof(PAFBakeryTempMeasuring), HandleExecuteACMethod_PAFBakeryTempMeasuring);
+        }
+
         #region c'tors
 
         public PAFBakeryTempMeasuring(gip.core.datamodel.ACClass acType, IACObject content, IACObject parentACObject, ACValueList parameter, string acIdentifier = "") : 
@@ -416,6 +421,37 @@ namespace gipbakery.mes.processapplication
             return true;
         }
 
+        #endregion
+
+        #region Handle Excute
+        protected override bool HandleExecuteACMethod(out object result, AsyncMethodInvocationMode invocationMode, string acMethodName, gip.core.datamodel.ACClassMethod acClassMethod, params object[] acParameter)
+        {
+            result = null;
+            switch (acMethodName)
+            {
+                case "DeleteMeasurement":
+                    DeleteMeasurement((Guid) acParameter[0]);
+                    return true;
+                case "GetManualTempMeasurementACUrl":
+                    result = GetManualTempMeasurementACUrl();
+                    return true;
+                case "ChangeHintSetting":
+                    ChangeHintSetting((bool)acParameter[0]);
+                    return true;
+                case "GetTempMeasureItems":
+                    result = GetTempMeasureItems();
+                    return true;
+                case "MeasureMaterialTemperature":
+                    MeasureMaterialTemperature((Guid)acParameter[0], (double)acParameter[1]);
+                    return true;
+            }
+            return base.HandleExecuteACMethod(out result, invocationMode, acMethodName, acClassMethod, acParameter);
+        }
+
+        public static bool HandleExecuteACMethod_PAFBakeryTempMeasuring(out object result, IACComponent acComponent, string acMethodName, gip.core.datamodel.ACClassMethod acClassMethod, params object[] acParameter)
+        {
+            return HandleExecuteACMethod_PAFWorkCenterSelItemBase(out result, acComponent, acMethodName, acClassMethod, acParameter);
+        }
         #endregion
     }
 }

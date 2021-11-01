@@ -684,7 +684,7 @@ namespace gipbakery.mes.processapplication
             if (acClass == null || string.IsNullOrEmpty(configName))
                 return null;
 
-            var config = acClass.ConfigurationEntries.FirstOrDefault(c => c.ConfigACUrl == configName);
+            var config = acClass.ConfigurationEntries.FirstOrDefault(c => c.KeyACUrl == acClass.ACConfigKeyACUrl && c.LocalConfigACUrl == configName);
             if (config == null)
                 return null;
 
@@ -1004,7 +1004,7 @@ namespace gipbakery.mes.processapplication
                 return;
             }
 
-            var config = pafClass.ConfigurationEntries.FirstOrDefault(c => c.ConfigACUrl == PAFBakeryYeastProducing.PN_CleaningMode);
+            var config = pafClass.ConfigurationEntries.FirstOrDefault(c => c.KeyACUrl == pafClass.ACConfigKeyACUrl && c.LocalConfigACUrl == PAFBakeryYeastProducing.PN_CleaningMode);
             if (config == null)
             {
                 //Error50468: Can not find the configuration for {0} on the PAFPreProducing function. 
@@ -1060,7 +1060,7 @@ namespace gipbakery.mes.processapplication
                 CurrentBookParamRelocation.InwardQuantity = 0.0001;
                 CurrentBookParamRelocation.OutwardQuantity = 0.0001;
 
-                config = pafClass.ConfigurationEntries.FirstOrDefault(c => c.ConfigACUrl == PAFBakeryYeastProducing.PN_CleaningProdACClassWF);
+                config = pafClass.ConfigurationEntries.FirstOrDefault(c => c.KeyACUrl == pafClass.ACConfigKeyACUrl && c.LocalConfigACUrl == PAFBakeryYeastProducing.PN_CleaningProdACClassWF);
                 if (config == null)
                 {
                     //Error50468: Can not find the configuration for {0} on the PAFPreProducing function. 
@@ -1074,7 +1074,10 @@ namespace gipbakery.mes.processapplication
                 string wfIdentifier = parts.FirstOrDefault().Trim();
                 string acUrl = parts.LastOrDefault().Trim();
 
-                var wfClass = DatabaseApp.ContextIPlus.ACClassWF.Where(c => c.ACClassMethod != null && c.ACClassMethod.ACIdentifier == wfIdentifier).ToArray().FirstOrDefault(c => c.ConfigACUrl == acUrl);
+                var wfClass = DatabaseApp.ContextIPlus.ACClassWF
+                    .Where(c => c.ACClassMethod != null && c.ACClassMethod.ACIdentifier == wfIdentifier)
+                    .ToArray()
+                    .FirstOrDefault(c => c.ConfigACUrl == acUrl);
                 var wfMethod = wfClass?.ACClassMethod;
 
                 RunWorkflow(wfClass, wfMethod);
@@ -1161,7 +1164,7 @@ namespace gipbakery.mes.processapplication
 
                             gip.core.datamodel.ACClass compClass = PAFPreProducing?.ComponentClass.FromIPlusContext<gip.core.datamodel.ACClass>(DatabaseApp.ContextIPlus);
 
-                            var config = compClass?.ConfigurationEntries.FirstOrDefault(c => c.ConfigACUrl == "ContinueProdACClassWF");
+                            var config = compClass?.ConfigurationEntries.FirstOrDefault(c => c.KeyACUrl == compClass.ACConfigKeyACUrl && c.LocalConfigACUrl == "ContinueProdACClassWF");
                             if (config == null)
                                 return;
 
@@ -1171,7 +1174,10 @@ namespace gipbakery.mes.processapplication
                             string wfIdentifier = parts.FirstOrDefault().Trim();
                             string acUrl = parts.LastOrDefault().Trim();
 
-                            var wfClass = DatabaseApp.ContextIPlus.ACClassWF.Where(c => c.ACClassMethod != null && c.ACClassMethod.ACIdentifier == wfIdentifier).ToArray().FirstOrDefault(c => c.ConfigACUrl == acUrl);
+                            var wfClass = DatabaseApp.ContextIPlus.ACClassWF
+                                .Where(c => c.ACClassMethod != null && c.ACClassMethod.ACIdentifier == wfIdentifier)
+                                .ToArray()
+                                .FirstOrDefault(c => c.ConfigACUrl == acUrl);
                             var wfMethod = wfClass?.ACClassMethod;
 
                             RunWorkflow(wfClass, wfMethod);
@@ -1352,7 +1358,7 @@ namespace gipbakery.mes.processapplication
             CurrentBookParamRelocation.InwardQuantity = PumpOverTargetQuantity;
             CurrentBookParamRelocation.OutwardQuantity = PumpOverTargetQuantity;
 
-            var config = PAFPreProducing?.ComponentClass.ConfigurationEntries.FirstOrDefault(c => c.ConfigACUrl == "PumpOverACClassWF");
+            var config = PAFPreProducing?.ComponentClass.ConfigurationEntries.FirstOrDefault(c => c.KeyACUrl == PAFPreProducing.ComponentClass.ACConfigKeyACUrl && c.LocalConfigACUrl == "PumpOverACClassWF");
             if (config == null)
                 return;
 
@@ -1362,7 +1368,10 @@ namespace gipbakery.mes.processapplication
             string wfIdentifier = parts.FirstOrDefault().Trim();
             string acUrl = parts.LastOrDefault().Trim();
 
-            var wfClass = DatabaseApp.ContextIPlus.ACClassWF.Where(c => c.ACClassMethod != null && c.ACClassMethod.ACIdentifier == wfIdentifier).ToArray().FirstOrDefault(c => c.ConfigACUrl == acUrl);
+            var wfClass = DatabaseApp.ContextIPlus.ACClassWF
+                .Where(c => c.ACClassMethod != null && c.ACClassMethod.ACIdentifier == wfIdentifier)
+                .ToArray()
+                .FirstOrDefault(c => c.ConfigACUrl == acUrl);
             var wfMethod = wfClass?.ACClassMethod;
 
             RunWorkflow(wfClass, wfMethod);

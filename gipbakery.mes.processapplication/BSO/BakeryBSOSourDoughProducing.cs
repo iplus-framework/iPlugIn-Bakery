@@ -588,6 +588,23 @@ namespace gipbakery.mes.processapplication
             }
         }
 
+        protected override bool HandleExecuteACMethod(out object result, AsyncMethodInvocationMode invocationMode, string acMethodName, gip.core.datamodel.ACClassMethod acClassMethod, params object[] acParameter)
+        {
+            result = null;
+
+            switch (acMethodName)
+            {
+                case "StoreOutwardEnabledOff":
+                    StoreOutwardEnabledOff();
+                    return true;
+                case "IsEnabledStoreOutwardEnabledOff":
+                    result = IsEnabledStoreOutwardEnabledOff();
+                    return true;
+            }
+
+            return base.HandleExecuteACMethod(out result, invocationMode, acMethodName, acClassMethod, acParameter);
+        }
+
         #endregion
     }
 }

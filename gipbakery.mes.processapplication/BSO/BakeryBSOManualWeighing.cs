@@ -235,7 +235,7 @@ namespace gipbakery.mes.processapplication
                     {
                         bool cover = false;
 
-                        var config = recvPointClass.ConfigurationEntries.FirstOrDefault(c => c.ConfigACUrl == "WithCover");
+                        var config = recvPointClass.ConfigurationEntries.FirstOrDefault(c => c.KeyACUrl == recvPointClass.ACConfigKeyACUrl && c.LocalConfigACUrl == "WithCover");
                         if (config != null)
                         {
                             bool? val = config.Value as bool?;
@@ -801,7 +801,7 @@ namespace gipbakery.mes.processapplication
 
                     ACClass compClass = currentProcessModule?.ComponentClass.FromIPlusContext<gip.core.datamodel.ACClass>(DatabaseApp.ContextIPlus);
 
-                    var config = compClass?.ConfigurationEntries.FirstOrDefault(c => c.ConfigACUrl == "HoseDestination");
+                    var config = compClass?.ConfigurationEntries.FirstOrDefault(c => c.KeyACUrl == compClass.ACConfigKeyACUrl && c.LocalConfigACUrl == "HoseDestination");
                     if (config == null)
                     {
                         //Error50458: Can not find the configuration for hose destination on the receiving point. Please configure the hose destination.

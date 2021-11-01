@@ -314,6 +314,27 @@ namespace gipbakery.mes.processapplication
         #endregion
 
         #region Execute-Helper-Handlers
+        protected override bool HandleExecuteACMethod(out object result, AsyncMethodInvocationMode invocationMode, string acMethodName, gip.core.datamodel.ACClassMethod acClassMethod, params object[] acParameter)
+        {
+            result = null;
+            switch (acMethodName)
+            {
+                case "GetComponentTemperatures":
+                    result = GetComponentTemperatures();
+                    return true;
+                case "GetWaterComponentsFromTempService":
+                    result = GetWaterComponentsFromTempService();
+                    return true;
+                case "IsCoverDownPropertyBounded":
+                    result = IsCoverDownPropertyBounded();
+                    return true;
+                case "IsTemperatureServiceInitialized":
+                    result = IsTemperatureServiceInitialized();
+                    return true;
+            }
+            return base.HandleExecuteACMethod(out result, invocationMode, acMethodName, acClassMethod, acParameter);
+        }
+
         public static bool HandleExecuteACMethod_BakeryReceivingPoint(out object result, IACComponent acComponent, string acMethodName, gip.core.datamodel.ACClassMethod acClassMethod, params object[] acParameter)
         {
             return HandleExecuteACMethod_PAMPlatformscale(out result, acComponent, acMethodName, acClassMethod, acParameter);
