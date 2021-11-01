@@ -799,6 +799,17 @@ namespace gipbakery.mes.processapplication
 
         public static bool HandleExecuteACMethod_PWBakeryGroupFermentation(out object result, IACComponent acComponent, string acMethodName, gip.core.datamodel.ACClassMethod acClassMethod, params object[] acParameter)
         {
+            result = null;
+            switch (acMethodName)
+            {
+                case "RunCalculationAgain":
+                    RunCalculationAgain(acComponent);
+                    return true;
+                case Const.IsEnabledPrefix + "RunCalculationAgain":
+                    result = IsEnabledRunCalculationAgain(acComponent);
+                    return true;
+            }
+
             return HandleExecuteACMethod_PWGroupVB(out result, acComponent, acMethodName, acClassMethod, acParameter);
         }
     }

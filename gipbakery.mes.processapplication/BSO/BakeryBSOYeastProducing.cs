@@ -71,6 +71,7 @@ namespace gipbakery.mes.processapplication
 
         protected Type _PWFermentationStarterType = typeof(PWBakeryFermentationStarter);
         private Type _PAFBakeryYeastProdType = typeof(PAFBakeryYeastProducing);
+        private Type _PAFBakeryPumpingType = typeof(PAFBakeryPumping);
         protected Type _PAFDischargingType = typeof(PAFDischarging);
 
         protected ACMonitorObject _70100_MembersLock = new ACMonitorObject(70100);
@@ -246,6 +247,14 @@ namespace gipbakery.mes.processapplication
         {
             get => _PAFYeastProducing?.ValueT;
         }
+
+        private ACRef<ACComponent> _PAFPumping;
+
+        public virtual ACComponent PAFPumping
+        {
+            get => _PAFPumping?.ValueT;
+        }
+
 
         private ACRef<ACComponent> _PreProdScale;
 
@@ -449,6 +458,12 @@ namespace gipbakery.mes.processapplication
                 _PAFYeastProducing = null;
             }
 
+            if (_PAFPumping != null)
+            {
+                _PAFPumping.Detach();
+                _PAFPumping = null;
+            }
+
             if (DischargingACStateProp != null)
             {
                 DischargingACStateProp.PropertyChanged -= DischargingACStateProp_PropertyChanged;
@@ -585,7 +600,29 @@ namespace gipbakery.mes.processapplication
 
                 string pumpOverModuleACUrl = GetConfigValue(funcClass, PAFBakeryYeastProducing.PN_PumpOverProcessModuleACUrl) as string;
                 if (!string.IsNullOrEmpty(pumpOverModuleACUrl))
-                    PumpOverProcessModule = Root.ACUrlCommand(pumpOverModuleACUrl) as ACComponent;
+                {
+                    ACComponent pumpOverProcessModule = Root.ACUrlCommand(pumpOverModuleACUrl) as ACComponent;
+                    if (pumpOverProcessModule != null)
+                    {
+                        PumpOverProcessModule = pumpOverProcessModule;
+
+                        var pumpOverChildInstances = pumpOverProcessModule.GetChildInstanceInfo(1, false);
+
+                        ACChildInstanceInfo func = pumpOverChildInstances.FirstOrDefault(c => _PAFBakeryPumpingType.IsAssignableFrom(c.ACType.ValueT.ObjectType));
+                        if (func != null)
+                        {
+                            ACComponent funcComp = pumpOverProcessModule.ACUrlCommand(func.ACIdentifier) as ACComponent;
+                            if (funcComp != null)
+                            {
+                                _PAFPumping = new ACRef<ACComponent>(funcComp, this);
+                            }
+                        }
+                    }
+                    else
+                    {
+                        Messages.LogError(this.GetACUrl(), "InitBSO(30)", "The process module for pumping is null. ACUrl: " + pumpOverModuleACUrl);
+                    }
+                }
 
                 string tempSensorACUrl = GetConfigValue(funcClass, PAFBakeryYeastProducing.PN_TemperatureSensorACUrl) as string;
                 if (!string.IsNullOrEmpty(tempSensorACUrl))
@@ -1278,6 +1315,25 @@ namespace gipbakery.mes.processapplication
         [ACMethodInfo("", "en{'Pump over'}de{'Umpumpen'}", 802, true)]
         public void PumpOver()
         {
+            ACComponent pafPumping = PAFPumping;
+
+            if (pafPumping != null)
+            {
+                ACStateEnum? pafPumpingState = pafPumping.ACUrlCommand(Const.ACState) as ACStateEnum?;
+                if (pafPumpingState.HasValue && pafPumpingState > ACStateEnum.SMIdle && pafPumpingState < ACStateEnum.SMCompleted)
+                {
+                    //Question50074: It's being pumped over. Do you want to cancel the pumping process?
+                    if (Messages.Question(this, "Question50074") == Global.MsgResult.Yes)
+                    {
+                        pafPumping.ExecuteMethod(ACStateConst.TMAbort);
+                    }
+                    else
+                    {
+                        return;
+                    }
+                }
+            }
+            
             ACValueList targets = PAFPreProducing?.ExecuteMethod(PAFBakeryYeastProducing.MN_GetPumpOverTargets) as ACValueList;
 
             if (VirtualSourceFacility != null && targets != null)
