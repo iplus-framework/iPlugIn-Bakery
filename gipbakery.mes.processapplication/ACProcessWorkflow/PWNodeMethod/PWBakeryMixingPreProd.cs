@@ -25,9 +25,9 @@ namespace gipbakery.mes.processapplication
             method.ParameterValueList.Add(new ACValue("DosingGroupNo", typeof(int), 0, Global.ParamOption.Optional));
             paramTranslation.Add("DosingGroupNo", "en{'Dosing group No for wait when another dosing active with same group No'}de{'Dosiergruppennummer für Warten, wenn eine andere aktive Dosierung mit derselben Gruppennummer'}");
 
-            var wrapper = new ACMethodWrapper(method, "en{'Configuration'}de{'Konfiguration'}", typeof(PWMixing), paramTranslation, null);
-            ACMethod.RegisterVirtualMethod(typeof(PWMixing), ACStateConst.SMStarting, wrapper);
-            RegisterExecuteHandler(typeof(PWMixing), HandleExecuteACMethod_PWMixing);
+            var wrapper = new ACMethodWrapper(method, "en{'Configuration'}de{'Konfiguration'}", typeof(PWBakeryMixingPreProd), paramTranslation, null);
+            ACMethod.RegisterVirtualMethod(typeof(PWBakeryMixingPreProd), ACStateConst.SMStarting, wrapper);
+            RegisterExecuteHandler(typeof(PWBakeryMixingPreProd), HandleExecuteACMethod_PWMixing);
         }
 
         public PWBakeryMixingPreProd(ACClass acType, IACObject content, IACObject parentACObject, ACValueList parameter, string acIdentifier = "") : 
@@ -56,7 +56,7 @@ namespace gipbakery.mes.processapplication
             }
         }
 
-        [ACPropertyBindingSource]
+        [ACPropertyBindingSource(800, "", "en{'StartingOrder'}de{'StartingOrder'}", "", true, true)]
         public IACContainerTNet<short?> StartingOrder
         {
             get;
@@ -88,47 +88,50 @@ namespace gipbakery.mes.processapplication
 
         private bool VerifyCanStart()
         {
-            var possibleMixings = ApplicationManager.FindChildComponents<PWBakeryMixingPreProd>().Where(x => x.ParentPWGroup != ParentPWGroup && x.DosingGroupNo == DosingGroupNo);
-            var dosings = possibleMixings.SelectMany(x => x.GetNextDosings());
-            bool anyRun = dosings.Any(c => c.CurrentACState == ACStateEnum.SMRunning || c.CurrentACState == ACStateEnum.SMStarting) 
-                       || possibleMixings.Any(c => c.CurrentACState == ACStateEnum.SMRunning);
-
-
-            if (!anyRun)
+            if (DosingGroupNo > 0)
             {
-                var cleaningNodes = ApplicationManager.FindChildComponents<PWBakeryCleaning>();
-                if (cleaningNodes != null && cleaningNodes.Any())
+                var possibleMixings = ApplicationManager.FindChildComponents<PWBakeryMixingPreProd>().Where(x => x.ParentPWGroup != ParentPWGroup && x.DosingGroupNo == DosingGroupNo);
+                var dosings = possibleMixings.SelectMany(x => x.GetNextDosings());
+                bool anyRun = dosings.Any(c => c.CurrentACState == ACStateEnum.SMRunning || c.CurrentACState == ACStateEnum.SMStarting)
+                           || possibleMixings.Any(c => c.CurrentACState == ACStateEnum.SMRunning);
+
+
+                if (!anyRun)
                 {
-                    anyRun = cleaningNodes.Any(c => c.CurrentACState == ACStateEnum.SMRunning || c.CurrentACState == ACStateEnum.SMStarting);
-                }
-            }
-
-            if (StartingOrder.ValueT.HasValue && !anyRun)
-            {
-                short? nextRun = possibleMixings.Where(x => x.StartingOrder.ValueT.HasValue).Min(c => c.StartingOrder.ValueT);
-                if (nextRun == null || nextRun >= StartingOrder.ValueT)
-                    return true;
-
-                return false;
-            }
-            else
-            {
-                if (anyRun)
-                {
-                    if (!StartingOrder.ValueT.HasValue)
+                    var cleaningNodes = ApplicationManager.FindChildComponents<PWBakeryCleaning>();
+                    if (cleaningNodes != null && cleaningNodes.Any())
                     {
-                        var waitingMixings = possibleMixings.Where(c => c.StartingOrder.ValueT != null).Select(x => x.StartingOrder.ValueT);
-                        if (waitingMixings != null && waitingMixings.Any())
-                        {
-                            short max = waitingMixings.Max(c => c.Value);
-                            StartingOrder.ValueT = (short)(max + 1);
-                        }
-                        else
-                        {
-                            StartingOrder.ValueT = 1;
-                        }
+                        anyRun = cleaningNodes.Any(c => c.CurrentACState == ACStateEnum.SMRunning || c.CurrentACState == ACStateEnum.SMStarting);
                     }
+                }
+
+                if (StartingOrder.ValueT.HasValue && !anyRun)
+                {
+                    short? nextRun = possibleMixings.Where(x => x.StartingOrder.ValueT.HasValue).Min(c => c.StartingOrder.ValueT);
+                    if (nextRun == null || nextRun >= StartingOrder.ValueT)
+                        return true;
+
                     return false;
+                }
+                else
+                {
+                    if (anyRun)
+                    {
+                        if (!StartingOrder.ValueT.HasValue)
+                        {
+                            var waitingMixings = possibleMixings.Where(c => c.StartingOrder.ValueT != null).Select(x => x.StartingOrder.ValueT);
+                            if (waitingMixings != null && waitingMixings.Any())
+                            {
+                                short max = waitingMixings.Max(c => c.Value);
+                                StartingOrder.ValueT = (short)(max + 1);
+                            }
+                            else
+                            {
+                                StartingOrder.ValueT = 1;
+                            }
+                        }
+                        return false;
+                    }
                 }
             }
 

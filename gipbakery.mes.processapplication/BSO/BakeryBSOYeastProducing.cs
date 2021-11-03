@@ -1303,6 +1303,8 @@ namespace gipbakery.mes.processapplication
         [ACMethodInfo("", "", 802, true)]
         public void FinishOrder()
         {
+            OnFinishOrder();
+
             if (DischargingACStateProp != null)
             {
                 if (DischargingACStateProp.ParentACComponent != null)
@@ -1310,6 +1312,11 @@ namespace gipbakery.mes.processapplication
                 //DischargingACStateProp.ValueT = ACStateEnum.SMCompleted;
                 //DischargingState = (short)DischargingACStateProp.ValueT;
             }
+        }
+
+        public virtual void OnFinishOrder()
+        {
+
         }
 
         [ACMethodInfo("", "en{'Pump over'}de{'Umpumpen'}", 802, true)]
