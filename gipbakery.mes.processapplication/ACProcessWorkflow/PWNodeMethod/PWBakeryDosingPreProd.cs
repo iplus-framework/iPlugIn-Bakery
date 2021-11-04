@@ -418,6 +418,7 @@ namespace gipbakery.mes.processapplication
             return null;
         }
 
+        //Lack of material - silo change without abort
         public override void OnHandleStateCheckEmptySilo(PAFDosing dosing)
         {
             if (!DosingForFlour)
@@ -486,6 +487,8 @@ namespace gipbakery.mes.processapplication
                                         if (sourceSilo == null)
                                         {
                                             //TODO: error
+                                            //Send number 2
+                                            //Material mengel at KOPF_ZELL A11 = 2
                                         }
                                         else
                                         {
@@ -499,6 +502,8 @@ namespace gipbakery.mes.processapplication
                                                 Msg msg = dosing.ReSendACMethod(acMethod);
                                                 //TODO: alarm
                                                 dosing.AcknowledgeAlarms();
+
+                                                //KOPF_ZELL A11 = 0
                                             }
                                         }
                                     }
