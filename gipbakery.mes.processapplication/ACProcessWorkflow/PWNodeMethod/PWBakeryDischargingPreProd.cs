@@ -466,6 +466,7 @@ namespace gipbakery.mes.processapplication
 
             if (sourceStore == null || targetStore == null)
             {
+                UnSubscribeToProjectWorkCycle();
                 return;
             }
 
