@@ -486,9 +486,7 @@ namespace gipbakery.mes.processapplication
                                         PAMSilo sourceSilo = CurrentDosingSilo(null);
                                         if (sourceSilo == null)
                                         {
-                                            //TODO: error
-                                            //Send number 2
-                                            //Material mengel at KOPF_ZELL A11 = 2
+                                            OnNextSourceSiloNotFound();
                                         }
                                         else
                                         {
@@ -500,10 +498,13 @@ namespace gipbakery.mes.processapplication
 
                                                 //dosing.CurrentACMethod.ValueT = acMethod;
                                                 Msg msg = dosing.ReSendACMethod(acMethod);
-                                                //TODO: alarm
-                                                dosing.AcknowledgeAlarms();
+                                                if (msg != null)
+                                                {
+                                                    OnNewAlarmOccurred(ProcessAlarm, msg);
+                                                }
 
-                                                //KOPF_ZELL A11 = 0
+                                                dosing.AcknowledgeAlarms();
+                                                OnNextSourceSiloFound();
                                             }
                                         }
                                     }
@@ -533,6 +534,16 @@ namespace gipbakery.mes.processapplication
                     }
                 }
             }
+        }
+
+        public virtual void OnNextSourceSiloFound()
+        {
+
+        }
+
+        public virtual void OnNextSourceSiloNotFound()
+        {
+
         }
 
         private Route FindNextSource()

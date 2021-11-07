@@ -1450,6 +1450,20 @@ namespace gipbakery.mes.processapplication
             return PAFPreProducing != null && SelectedPumpTarget != null && PumpOverTargetQuantity > 0;
         }
 
+        [ACMethodInfo("", "en{'Abort'}de{'Abbrechen'}", 606)]
+        public virtual void Abort()
+        {
+            if (!IsEnabledAbort())
+                return;
+
+            ParentBSOWCS?.SelectExtraDisTargetOnPWGroup();
+        }
+
+        public bool IsEnabledAbort()
+        {
+            return true; //ComponentPWNode != null;
+        }
+
         #endregion
 
         #region Methods => Booking

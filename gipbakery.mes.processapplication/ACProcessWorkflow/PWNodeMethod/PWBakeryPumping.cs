@@ -3,6 +3,8 @@ using gip.core.datamodel;
 using gip.core.processapplication;
 using gip.mes.datamodel;
 using gip.mes.processapplication;
+using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Xml;
 
@@ -13,7 +15,21 @@ namespace gipbakery.mes.processapplication
     {
         #region c'tors
 
-        public PWBakeryPumping(gip.core.datamodel.ACClass acType, IACObject content, IACObject parentACObject, ACValueList parameter, string acIdentifier = "") : 
+        static PWBakeryPumping()
+        {
+            ACMethod method;
+            method = new ACMethod(ACStateConst.SMStarting);
+            Dictionary<string, string> paramTranslation = new Dictionary<string, string>();
+
+            method.ParameterValueList.Add(new ACValue("BlockSourceAtEnd ", typeof(bool), false, Global.ParamOption.Required));
+            paramTranslation.Add("BlockSourceAtEnd ", "en{'Block Source when function completes'}de{'Quelle sperren bei Funktionsende'}");
+
+            var wrapper = new ACMethodWrapper(method, "en{'Configuration'}de{'Konfiguration'}", typeof(PWBakeryPumping), paramTranslation, null);
+            ACMethod.RegisterVirtualMethod(typeof(PWBakeryPumping), ACStateConst.SMStarting, wrapper);
+            RegisterExecuteHandler(typeof(PWBakeryPumping), HandleExecuteACMethod_PWBakeryPumping);
+        }
+
+        public PWBakeryPumping(gip.core.datamodel.ACClass acType, IACObject content, IACObject parentACObject, ACValueList parameter, string acIdentifier = "") :
             base(acType, content, parentACObject, parameter, acIdentifier)
         {
         }
@@ -67,6 +83,23 @@ namespace gipbakery.mes.processapplication
             }
         }
 
+        public bool BlockSourceAtEnd
+        {
+            get
+            {
+                var method = MyConfiguration;
+                if (method != null)
+                {
+                    var acValue = method.ParameterValueList.GetACValue("BlockSourceAtEnd");
+                    if (acValue != null)
+                    {
+                        return acValue.ParamAsBoolean;
+                    }
+                }
+                return false;
+            }
+        }
+
         #endregion
 
         #region Methods
@@ -94,6 +127,9 @@ namespace gipbakery.mes.processapplication
 
             PAProcessModule sModule, tModule = null;
 
+            //Helper route with source virtual store
+            Route currentRoute = null;
+
             using (Database db = new Database())
             {
                 gip.core.datamodel.ACClass sourceFacilityClass = pickingPos.FromFacility.GetFacilityACClass(db);
@@ -103,7 +139,9 @@ namespace gipbakery.mes.processapplication
                                                                         PAProcessModule.SelRuleID_ProcessModule, RouteDirections.Backwards, null, null, null, 0,
                                                                         true, true);
 
-                sModule = rResult?.Routes.FirstOrDefault().GetRouteSource()?.SourceACComponent as PAProcessModule;
+                currentRoute = rResult.Routes.FirstOrDefault();
+
+                sModule = currentRoute?.GetRouteSource()?.SourceACComponent as PAProcessModule;
 
                 rResult = ACRoutingService.FindSuccessors(RoutingService, db, false, targetModuleClass,
                                                           PAProcessModule.SelRuleID_ProcessModule, RouteDirections.Forwards, null, null, null, 0,
@@ -145,6 +183,7 @@ namespace gipbakery.mes.processapplication
 
             paramMethod["Source"] = sModule.RouteItemIDAsNum;
             paramMethod["Destination"] = tModule.RouteItemIDAsNum;
+            paramMethod["Route"] = currentRoute;
             paramMethod["TargetQuantity"] = pickingPos.PickingQuantityUOM;
             paramMethod["ScaleACUrl"] = scaleBase?.ACUrl;
 
@@ -202,6 +241,49 @@ namespace gipbakery.mes.processapplication
                                         actualQuantity = 0.0;
                                     acMethod.ResultValueList["ActualQuantity"] = actualQuantity;
                                 }
+
+                                base.TaskCallback(sender, e, wrapObject);
+
+                                if (BlockSourceAtEnd)
+                                {
+                                    ACValue rValue = acMethod.ParameterValueList.GetACValue("Route");
+                                    if (rValue != null && rValue.Value != null)
+                                    {
+                                        Route route = rValue.Value as Route;
+                                        if (route != null)
+                                        {
+
+                                            using (DatabaseApp dbApp = new DatabaseApp())
+                                            {
+                                                if (!route.IsAttached)
+                                                {
+                                                    route.AttachTo(dbApp);
+                                                }
+
+                                                PAMSilo silo = route.GetRouteTarget()?.TargetACComponent as PAMSilo;
+                                                route.Detach();
+                                                if (silo != null)
+                                                {
+                                                    Facility facility = silo.Facility?.ValueT?.ValueT;
+                                                    if (facility != null)
+                                                    {
+
+                                                        Facility siloFacility = facility.FromAppContext<Facility>(dbApp);
+                                                        siloFacility.OutwardEnabled = false;
+                                                        Msg msg = dbApp.ACSaveChanges();
+                                                        if (msg != null)
+                                                        {
+                                                            OnNewAlarmOccurred(ProcessAlarm, msg);
+                                                            Messages.LogMessageMsg(msg);
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+
+                                return;
                             }
                         }
                     }
@@ -256,5 +338,11 @@ namespace gipbakery.mes.processapplication
         }
 
         #endregion
+
+        private static bool HandleExecuteACMethod_PWBakeryPumping(out object result, IACComponent acComponent, string acMethodName, gip.core.datamodel.ACClassMethod acClassMethod, object[] acParameter)
+        {
+            return HandleExecuteACMethod_PWDischarging(out result, acComponent, acMethodName, acClassMethod, acParameter);
+        }
+
     }
 }
