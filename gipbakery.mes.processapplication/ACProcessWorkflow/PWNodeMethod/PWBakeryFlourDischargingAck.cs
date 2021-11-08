@@ -121,7 +121,8 @@ namespace gipbakery.mes.processapplication
                 }
                 HasRunSomeDosings = false;
                 if (previousDosings != null)
-                    HasRunSomeDosings = previousDosings.Where(c => c.HasRunSomeDosings).Any();
+                    HasRunSomeDosings = previousDosings.Where(c => c.HasRunSomeDosings 
+                                                                    || c.CurrentACState == ACStateEnum.SMRunning).Any();
                 if (!HasRunSomeDosings.Value)
                 {
                     AckStart();
