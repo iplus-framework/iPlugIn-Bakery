@@ -1701,6 +1701,12 @@ namespace gipbakery.mes.processapplication
                 case "IsEnabledBookNotAvailableFacility":
                     result = IsEnabledBookNotAvailableFacility();
                     return true;
+                case "Abort":
+                    Abort();
+                    return true;
+                case "IsEnabledAbort":
+                    result = IsEnabledAbort();
+                    return true;
             }
 
             return base.HandleExecuteACMethod(out result, invocationMode, acMethodName, acClassMethod, acParameter);
