@@ -548,15 +548,14 @@ namespace gipbakery.mes.processapplication
 
         private Route FindNextSource()
         {
-            IList<Facility> possibleSilos;
+            IList<Facility> possibleSilos = null;
             PAProcessFunction responsibleFunc;
 
             using (Database dbIPlus = new gip.core.datamodel.Database())
             using (DatabaseApp dbApp = new DatabaseApp(dbIPlus))
             {
-                Guid relID = CurrentDosingPos.ValueT;
+                Guid posID = CurrentDosingPos.ValueT;
                 Msg msg = null;
-                ProdOrderPartslistPosRelation relation = dbApp.ProdOrderPartslistPosRelation.FirstOrDefault(c => c.ProdOrderPartslistPosRelationID == relID);
 
                 PAProcessModule module = ParentPWGroup.AccessedProcessModule;
                 ACMethod acMethod = CurrentACMethod.ValueT;
@@ -564,7 +563,20 @@ namespace gipbakery.mes.processapplication
                 RouteQueryParams queryParams = new RouteQueryParams(RouteQueryPurpose.StartDosing,
                     OldestSilo ? ACPartslistManager.SearchMode.OnlyEnabledOldestSilo : ACPartslistManager.SearchMode.SilosWithOutwardEnabled,
                     null, null, ExcludedSilos);
-                IEnumerable<Route> routes = GetRoutes(relation, dbApp, dbIPlus, queryParams, out possibleSilos);
+
+
+                IEnumerable<Route> routes = null;
+
+                if (IsProduction)
+                {
+                    ProdOrderPartslistPosRelation relation = dbApp.ProdOrderPartslistPosRelation.FirstOrDefault(c => c.ProdOrderPartslistPosRelationID == posID);
+                    routes = GetRoutes(relation, dbApp, dbIPlus, queryParams, out possibleSilos);
+                }
+                else if (IsTransport)
+                {
+                    PickingPos pickingPos = dbApp.PickingPos.FirstOrDefault(c => c.PickingPosID == posID);
+                    routes = GetRoutes(pickingPos, dbApp, dbIPlus, queryParams, out possibleSilos);
+                }
 
                 if (routes != null && routes.Any())
                 {
