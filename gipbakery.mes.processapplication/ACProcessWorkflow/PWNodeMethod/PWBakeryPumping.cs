@@ -21,8 +21,8 @@ namespace gipbakery.mes.processapplication
             method = new ACMethod(ACStateConst.SMStarting);
             Dictionary<string, string> paramTranslation = new Dictionary<string, string>();
 
-            method.ParameterValueList.Add(new ACValue("BlockSourceAtEnd ", typeof(bool), false, Global.ParamOption.Required));
-            paramTranslation.Add("BlockSourceAtEnd ", "en{'Block Source when function completes'}de{'Quelle sperren bei Funktionsende'}");
+            method.ParameterValueList.Add(new ACValue("BlockSourceAtEnd", typeof(bool), false, Global.ParamOption.Required));
+            paramTranslation.Add("BlockSourceAtEnd", "en{'Block Source when function completes'}de{'Quelle sperren bei Funktionsende'}");
 
             var wrapper = new ACMethodWrapper(method, "en{'Configuration'}de{'Konfiguration'}", typeof(PWBakeryPumping), paramTranslation, null);
             ACMethod.RegisterVirtualMethod(typeof(PWBakeryPumping), ACStateConst.SMStarting, wrapper);

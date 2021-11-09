@@ -198,7 +198,7 @@ namespace gipbakery.mes.processapplication
             if (ProdOrderManager == null)
             {
                 // Error50167: ProdOrderManager is null.
-                msg = new Msg(this, eMsgLevel.Error, PWClassName, "StartNextProdComponent(1)", 1000, "Error50167");
+                msg = new Msg(this, eMsgLevel.Error, PWClassName, "GetTargetQuantity(1)", 201, "Error50167");
 
                 if (IsAlarmActive(ProcessAlarm, msg.Message) == null)
                     Messages.LogError(this.GetACUrl(), msg.ACIdentifier, msg.InnerMessage);
@@ -224,7 +224,7 @@ namespace gipbakery.mes.processapplication
                     if (pwMethodProduction.CurrentProdOrderBatch == null)
                     {
                         // Error50060: No batch assigned to last intermediate material of this workflow-process
-                        msg = new Msg(this, eMsgLevel.Error, PWClassName, "StartNextProdComponent(2)", 1010, "Error50060");
+                        msg = new Msg(this, eMsgLevel.Error, PWClassName, "GetTargetQuantity(2)", 227, "Error50060");
 
                         if (IsAlarmActive(ProcessAlarm, msg.Message) == null)
                             Messages.LogError(this.GetACUrl(), msg.ACIdentifier, msg.InnerMessage);
@@ -265,7 +265,7 @@ namespace gipbakery.mes.processapplication
                     if (matWFConnection == null)
                     {
                         // Error50059: No relation defined between Workflownode and intermediate material in Materialworkflow
-                        msg = new Msg(this, eMsgLevel.Error, PWClassName, "StartNextProdComponent(3)", 1020, "Error50059");
+                        msg = new Msg(this, eMsgLevel.Error, PWClassName, "GetTargetQuantity(3)", 268, "Error50059");
 
                         if (IsAlarmActive(ProcessAlarm, msg.Message) == null)
                             Messages.LogError(this.GetACUrl(), msg.ACIdentifier, msg.InnerMessage);
@@ -282,7 +282,7 @@ namespace gipbakery.mes.processapplication
                     if (intermediatePosition == null)
                     {
                         // Error50061: Intermediate line not found which is assigned to this Dosing-Workflownode
-                        msg = new Msg(this, eMsgLevel.Error, PWClassName, "StartNextProdComponent(4)", 1030, "Error50061");
+                        msg = new Msg(this, eMsgLevel.Error, PWClassName, "GetTargetQuantity(4)", 285, "Error50061");
 
                         if (IsAlarmActive(ProcessAlarm, msg.Message) == null)
                             Messages.LogError(this.GetACUrl(), msg.ACIdentifier, msg.InnerMessage);
@@ -308,7 +308,7 @@ namespace gipbakery.mes.processapplication
                             msg = ProdOrderManager.BatchCreate(dbApp, intermediatePosition, batch, endBatchPos.BatchFraction, batch.BatchSeqNo, resultNewEntities); // Toleranz ist max. ein Batch mehr
                             if (msg != null)
                             {
-                                Messages.LogException(this.GetACUrl(), "StartNextProdComponent(5)", msg.InnerMessage);
+                                Messages.LogException(this.GetACUrl(), "GetTargetQuantity(5)", msg.InnerMessage);
                                 dbApp.ACUndoChanges();
                                 return null;
                             }
@@ -324,7 +324,7 @@ namespace gipbakery.mes.processapplication
                     if (intermediateChildPos == null)
                     {
                         //Error50165:intermediateChildPos is null.
-                        msg = new Msg(this, eMsgLevel.Error, PWClassName, "StartNextProdComponent(5a)", 1040, "Error50165");
+                        msg = new Msg(this, eMsgLevel.Error, PWClassName, "GetTargetQuantity(5a)", 327, "Error50165");
 
                         OnNewAlarmOccurred(ProcessAlarm, msg, true);
                         return null;
@@ -356,7 +356,7 @@ namespace gipbakery.mes.processapplication
                             if (acMethod == null)
                             {
                                 //Error50154: acMethod is null.
-                                msg = new Msg(this, eMsgLevel.Error, PWClassName, "StartNextProdComponent(9a)", 1120, "Error50154");
+                                msg = new Msg(this, eMsgLevel.Error, PWClassName, "GetTargetQuantity(9a)", 359, "Error50154");
                                 OnNewAlarmOccurred(ProcessAlarm, msg, true);
                                 return null;
                             }
@@ -375,7 +375,7 @@ namespace gipbakery.mes.processapplication
                                 if (responsibleFunc == null)
                                 {
                                     //Error50327: Responsible dosingfunction for ACMethod {0} not found. Please check your logical brige from the InPoints of the processmodule to the InPoint of the dosingfunction.
-                                    msg = new Msg(this, eMsgLevel.Error, PWClassName, "StartNextProdComponent(9b)", 1121, "Error50327", acMethod.ACIdentifier);
+                                    msg = new Msg(this, eMsgLevel.Error, PWClassName, "GetTargetQuantity(9b)", 378, "Error50327", acMethod.ACIdentifier);
                                     OnNewAlarmOccurred(ProcessAlarm, msg, true);
                                     return null;
                                 }
@@ -418,7 +418,7 @@ namespace gipbakery.mes.processapplication
             return null;
         }
 
-        //Lack of material - silo change without abort
+        //Lack of material - silo change without abort on PAFDosing
         public override void OnHandleStateCheckEmptySilo(PAFDosing dosing)
         {
             if (!DosingForFlour)
@@ -513,7 +513,7 @@ namespace gipbakery.mes.processapplication
                             else if (handlingOptions.HasFlag(EmptySiloHandlingOptions.NoSilosAvailable))
                             {
                                 // Warning50005: No Silo/Tank/Container found for component {0}
-                                Msg msg = new Msg(this, eMsgLevel.Warning, PWClassName, "OnHandleStateCheckEmptySilo(100)", 100, "Warning50005",
+                                Msg msg = new Msg(this, eMsgLevel.Warning, PWClassName, "OnHandleStateCheckEmptySilo(110)", 100, "Warning50005",
                                                 silo.MaterialName != null ? silo.MaterialName.ValueT : "");
 
                                 if (IsAlarmActive(ProcessAlarm, msg.Message) == null)
@@ -524,7 +524,7 @@ namespace gipbakery.mes.processapplication
                         else
                         {
                             // Warning50030:  Lack of Material: Stock in Silo / Tank / Container {0} is to high for automatic switching to another Silo / Tank / Container
-                            Msg msg = new Msg(this, eMsgLevel.Warning, PWClassName, "OnHandleStateCheckEmptySilo(101)", 101, "Warning50030",
+                            Msg msg = new Msg(this, eMsgLevel.Warning, PWClassName, "OnHandleStateCheckEmptySilo(120)", 101, "Warning50030",
                                             silo.ACIdentifier);
 
                             if (IsAlarmActive(ProcessAlarm, msg.Message) == null)
@@ -585,7 +585,7 @@ namespace gipbakery.mes.processapplication
                     if (responsibleFunc == null)
                     {
                         //Error50327: Responsible dosingfunction for ACMethod {0} not found. Please check your logical brige from the InPoints of the processmodule to the InPoint of the dosingfunction.
-                        msg = new Msg(this, eMsgLevel.Error, PWClassName, "StartNextProdComponent(9b)", 1121, "Error50327", acMethod.ACIdentifier);
+                        msg = new Msg(this, eMsgLevel.Error, PWClassName, "FindNextSource(10)", 588, "Error50327", acMethod.ACIdentifier);
                         OnNewAlarmOccurred(ProcessAlarm, msg, true);
                         return null;
                     }
@@ -644,7 +644,13 @@ namespace gipbakery.mes.processapplication
 
                 if (outwardFacility == null)
                 {
-                    //TODO: error
+                    Msg msg = new Msg("The Facility is not assigned to the silo: " + currentSilo.ACUrl, this, eMsgLevel.Error, PWClassName, "ZeroBookSource(10)", 647);
+                    if (IsAlarmActive(ProcessAlarm, msg.Message) == null)
+                    {
+                        OnNewAlarmOccurred(ProcessAlarm, msg);
+                        Messages.LogMessageMsg(msg);
+                    }
+
                     return false;
                 }
 
@@ -675,8 +681,8 @@ namespace gipbakery.mes.processapplication
                         {
                             if (!zeroBooking.ValidMessage.IsSucceded())
                                 collectedMessages.AddDetailMessage(resultBooking.ValidMessage);
-                            Messages.LogError(this.GetACUrl(), "DoDosingBookingProd(10)", zeroBooking.ValidMessage.InnerMessage);
-                            OnNewAlarmOccurred(ProcessAlarm, new Msg(zeroBooking.ValidMessage.InnerMessage, this, eMsgLevel.Error, PWClassName, "ZeroBookSource(20)", 465), true);
+                            Messages.LogError(this.GetACUrl(), "ZeroBookSource(20)", zeroBooking.ValidMessage.InnerMessage);
+                            OnNewAlarmOccurred(ProcessAlarm, new Msg(zeroBooking.ValidMessage.InnerMessage, this, eMsgLevel.Error, PWClassName, "ZeroBookSource(30)", 465), true);
                         }
                         else
                             zeroBookSucceeded = true;
