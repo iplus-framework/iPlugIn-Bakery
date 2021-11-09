@@ -87,6 +87,8 @@ namespace gipbakery.mes.processapplication
             return base.ACDeInit(deleteACClassTask);
         }
 
+        public const string ClassName = "PAFBakeryYeastProducing";
+
         public const string MN_GetVirtualStoreACUrl = "GetVirtualStoreACUrl";
         public const string MN_Clean = "Clean";
         public const string MN_SwitchVirtualStoreOutwardEnabled = "SwitchVirtualStoreOutwardEnabled";
@@ -228,11 +230,6 @@ namespace gipbakery.mes.processapplication
                 scale = ACUrlCommand(FermentationStarterScaleACUrl) as PAEScaleBase;
             }
 
-            if (scale == null)
-            {
-                //TODO:Alarm
-            }
-
             return scale;
         }
 
@@ -251,12 +248,25 @@ namespace gipbakery.mes.processapplication
 
             if (source == null)
             {
-                //TODO:error
+                //Error50484: The virtual source store can not be found!
+                Msg msg = new Msg(this, eMsgLevel.Error, ClassName, "FindStores(10)", 252, "Error50484");
+                if (IsAlarmActive(FunctionError, msg.Message) == null)
+                {
+                    OnNewAlarmOccurred(FunctionError, msg);
+                    Messages.LogMessageMsg(msg);
+                }
             }
 
             if (target == null)
             {
-                //TODO:error
+                //Error50485: The virtual target store can not be found!
+                Msg msg = new Msg(this, eMsgLevel.Error, ClassName, "FindStores(20)", 263, "Error50485");
+                if (IsAlarmActive(FunctionError, msg.Message) == null)
+                {
+                    OnNewAlarmOccurred(FunctionError, msg);
+                    Messages.LogMessageMsg(msg);
+                }
+                return;
             }
         }
 

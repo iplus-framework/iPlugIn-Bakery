@@ -360,14 +360,26 @@ namespace gipbakery.mes.processapplication
                 ProdOrderBatch prodOrderBatch = batch.FromAppContext<ProdOrderBatch>(dbApp);
                 if (prodOrderBatch == null)
                 {
-                    //Error
+                    //Error50479: The entity {0} is null!
+                    Msg msg = new Msg(this, eMsgLevel.Error, PWClassName, "CalculateDuration(5)", 364, "Error50479", ProdOrderBatch.ClassName);
+                    if (IsAlarmActive(ProcessAlarm, msg.Message) == null)
+                    {
+                        Messages.LogMessageMsg(msg);
+                    }
+                    OnNewAlarmOccurred(ProcessAlarm, msg, true);
                     return;
                 }
 
                 ProdOrderBatchPlan batchPlan = prodOrderBatch.ProdOrderBatchPlan;
                 if (batchPlan == null)
                 {
-                    //Error;
+                    //Error50479: The entity {0} is null!
+                    Msg msg = new Msg(this, eMsgLevel.Error, PWClassName, "CalculateDuration(6)", 377, "Error50479", ProdOrderBatchPlan.ClassName);
+                    if (IsAlarmActive(ProcessAlarm, msg.Message) == null)
+                    {
+                        Messages.LogMessageMsg(msg);
+                    }
+                    OnNewAlarmOccurred(ProcessAlarm, msg, true);
                     return;
                 }
 
@@ -377,9 +389,12 @@ namespace gipbakery.mes.processapplication
 
             if (plannedEndTime == DateTime.MinValue)
             {
-                //Error
-
-                Msg msg = new Msg(eMsgLevel.Error, "Scheduled end date is not configured!");
+                //Error50478: Scheduled end date is not configured!
+                Msg msg = new Msg(this, eMsgLevel.Error, PWClassName, "CalculateDuration(10)", 393, "Error50478");
+                if (IsAlarmActive(ProcessAlarm, msg.Message) == null)
+                {
+                    Messages.LogMessageMsg(msg);
+                }
                 OnNewAlarmOccurred(ProcessAlarm, msg, true);
                 return;
             }
@@ -395,7 +410,13 @@ namespace gipbakery.mes.processapplication
 
             if (lastNode == null)
             {
-                //todo error
+                //Error50477 : The last node PWBakeryEndOnTime can not be found!
+                Msg msg = new Msg(this, eMsgLevel.Error, PWClassName, "CalculateDuration(20)", 414, "Error50477");
+                if (IsAlarmActive(ProcessAlarm, msg.Message) == null)
+                {
+                    OnNewAlarmOccurred(ProcessAlarm, msg);
+                    Messages.LogMessageMsg(msg);
+                }
                 return;
             }
 
@@ -658,13 +679,25 @@ namespace gipbakery.mes.processapplication
 
                 if (sFacility == null)
                 {
-                    //TODO:Error
+                    //Error50480: The virtual source store can not be found!
+                    msg = new Msg(this, eMsgLevel.Error, PWClassName, "FindVirtualStores(10)", 683, "Error50480");
+                    if (IsAlarmActive(ProcessAlarm, msg.Message) == null)
+                    {
+                        OnNewAlarmOccurred(ProcessAlarm, msg);
+                        Messages.LogMessageMsg(msg);
+                    }
                     return;
                 }
 
                 if (tFacility == null)
                 {
-                    //TODO:Error
+                    //Error50481: The virtual target store can not be found!
+                    msg = new Msg(this, eMsgLevel.Error, PWClassName, "FindVirtualStores(20)", 399, "Error50481");
+                    if (IsAlarmActive(ProcessAlarm, msg.Message) == null)
+                    {
+                        OnNewAlarmOccurred(ProcessAlarm, msg);
+                        Messages.LogMessageMsg(msg);
+                    }
                     return;
                 }
 
@@ -685,7 +718,8 @@ namespace gipbakery.mes.processapplication
 
             if (source == null || target == null)
             {
-                //todo error
+                //Error50482: The source or/and target store can not be found!
+                msg = new Msg(this, eMsgLevel.Error, PWClassName, "FindSourceAndTargetStore(10)", 722, "Error50482");
             }
 
             return msg;

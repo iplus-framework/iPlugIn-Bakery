@@ -617,7 +617,7 @@ namespace gipbakery.mes.processapplication
                 if (msg != null)
                 {
                     collectedMessages.AddDetailMessage(msg);
-                    ActivateProcessAlarmWithLog(new Msg(msg.Message, this, eMsgLevel.Error, PWClassName, "DoManualWeighingBooking(40)", 2020), false);
+                    ActivateProcessAlarmWithLog(new Msg(msg.Message, this, eMsgLevel.Error, PWClassName, "BookFermentationStarter(10)", 620), false);
                     return false;
                 }
                 else if (facilityPreBooking != null)
@@ -626,7 +626,7 @@ namespace gipbakery.mes.processapplication
                     ACMethodEventArgs resultBooking = ACFacilityManager.BookFacilityWithRetry(ref bookingParam, dbApp);
                     if (resultBooking.ResultState == Global.ACMethodResultState.Failed || resultBooking.ResultState == Global.ACMethodResultState.Notpossible)
                     {
-                        msg = new Msg(bookingParam.ValidMessage.InnerMessage, this, eMsgLevel.Error, PWClassName, "DoManualWeighingBooking(60)", 2045);
+                        msg = new Msg(bookingParam.ValidMessage.InnerMessage, this, eMsgLevel.Error, PWClassName, "BookFermentationStarter(20)", 629);
                         ActivateProcessAlarm(msg, false);
                         return false;
                     }
@@ -635,7 +635,7 @@ namespace gipbakery.mes.processapplication
                         if (!bookingParam.ValidMessage.IsSucceded() || bookingParam.ValidMessage.HasWarnings())
                         {
                             collectedMessages.AddDetailMessage(resultBooking.ValidMessage);
-                            msg = new Msg(bookingParam.ValidMessage.InnerMessage, this, eMsgLevel.Error, PWClassName, "DoManualWeighingBooking(70)", 2053);
+                            msg = new Msg(bookingParam.ValidMessage.InnerMessage, this, eMsgLevel.Error, PWClassName, "BookFermentationStarter(30)", 638);
                             ActivateProcessAlarmWithLog(msg, false);
                             return false;
                         }
@@ -647,7 +647,7 @@ namespace gipbakery.mes.processapplication
                             if (msg != null)
                             {
                                 collectedMessages.AddDetailMessage(msg);
-                                msg = new Msg(msg.Message, this, eMsgLevel.Error, PWClassName, "DoManualWeighingBooking(80)", 2065);
+                                msg = new Msg(msg.Message, this, eMsgLevel.Error, PWClassName, "BookFermentationStarter(40)", 650);
                                 ActivateProcessAlarmWithLog(msg, false);
                             }
 
@@ -655,7 +655,7 @@ namespace gipbakery.mes.processapplication
                             if (msg != null)
                             {
                                 collectedMessages.AddDetailMessage(msg);
-                                msg = new Msg(msg.Message, this, eMsgLevel.Error, PWClassName, "DoManualWeighingBooking(90)", 2094);
+                                msg = new Msg(msg.Message, this, eMsgLevel.Error, PWClassName, "BookFermentationStarter(50)", 658);
                                 ActivateProcessAlarmWithLog(msg, false);
                             }
                             else
@@ -672,8 +672,10 @@ namespace gipbakery.mes.processapplication
             }
             catch (Exception e)
             {
-                //TODO:error
-                Messages.LogException(GetACUrl(), "BookFermentationStarter()", e);
+                Msg msg = new Msg(this, eMsgLevel.Exception, PWClassName, "BookFermentationStarter(90)", 675, e.Message);
+                OnNewAlarmOccurred(ProcessAlarm, msg);
+
+                Messages.LogException(GetACUrl(), "BookFermentationStarter(100)", e);
                 return false;
             }
             return true;
@@ -707,7 +709,7 @@ namespace gipbakery.mes.processapplication
                     if (pwGroup == null)
                     {
                         //Error50448: The parent PWGroup is not PWBakeryGroupFermentation. Please switch parent PWGroup to PWBakeryGroupFermentation.
-                        msg = new Msg(this, eMsgLevel.Error, PWClassName, "StartFermentationStarter(80)", 294, "Error50448");
+                        msg = new Msg(this, eMsgLevel.Error, PWClassName, "StartFermentationStarter(80)", 710, "Error50448");
                         return msg;
                     }
 
@@ -717,7 +719,7 @@ namespace gipbakery.mes.processapplication
                     if (sourceFacility == null)
                     {
                         //Error50449: The virtual source facility can not be found!
-                        msg = new Msg(this, eMsgLevel.Error, PWClassName, "StartFermentationStarter(90)", 304, "Error50449");
+                        msg = new Msg(this, eMsgLevel.Error, PWClassName, "StartFermentationStarter(90)", 720, "Error50449");
                         return msg;
                     }
 
@@ -729,9 +731,8 @@ namespace gipbakery.mes.processapplication
                         if (posState == null)
                         {
                             SubscribeToProjectWorkCycle();
-                            //TODO
-                            // Error50265: MDProdOrderPartslistPosState for Completed-State doesn't exist
-                            msg = new Msg(this, eMsgLevel.Error, PWClassName, "DoManualWeighingBooking(1)", 1702, "Error50265");
+                            //Error50483: MDProdOrderPartslistPosState for Completed-State doesn't exist
+                            msg = new Msg(this, eMsgLevel.Error, PWClassName, "StartFermentationStarter(100)", 734, "Error50483");
                             ActivateProcessAlarmWithLog(msg, false);
                             return msg;
                         }
