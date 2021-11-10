@@ -193,6 +193,11 @@ namespace gipbakery.mes.processapplication
 
         #endregion
 
+        public virtual bool IsVirtSourceStoreNecessary
+        {
+            get => true;
+        }
+
         public PAMParkingspace VirtualSourceStore
         {
             get;
@@ -246,7 +251,7 @@ namespace gipbakery.mes.processapplication
                 VirtualTargetStore = target;
             }
 
-            if (source == null)
+            if (source == null && IsVirtSourceStoreNecessary)
             {
                 //Error50484: The virtual source store can not be found!
                 Msg msg = new Msg(this, eMsgLevel.Error, ClassName, "FindStores(10)", 252, "Error50484");
@@ -266,7 +271,6 @@ namespace gipbakery.mes.processapplication
                     OnNewAlarmOccurred(FunctionError, msg);
                     Messages.LogMessageMsg(msg);
                 }
-                return;
             }
         }
 
