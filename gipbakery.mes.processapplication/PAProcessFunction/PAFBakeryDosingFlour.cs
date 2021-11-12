@@ -194,6 +194,13 @@ namespace gipbakery.mes.processapplication
             
         }
 
+        public override void SetAbortReasonEmpty()
+        {
+            if (!IsEnabledSetAbortReasonEmpty())
+                return;
+            DosingAbortReason.ValueT = PADosingAbortReason.EmptySourceNextSource;
+        }
+
         private void StateLackOfMaterial_PropertyChanged(object sender, System.ComponentModel.PropertyChangedEventArgs e)
         {
             IACContainerTNet<PANotifyState> senderProp = sender as IACContainerTNet<PANotifyState>;
