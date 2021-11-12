@@ -28,6 +28,8 @@ namespace gipbakery.mes.processapplication
 
             DosTimeFlour.PropertyChanged += DosTimeFlour_PropertyChanged;
 
+            StateLackOfMaterial.PropertyChanged += StateLackOfMaterial_PropertyChanged; 
+
             if (CurrentScaleForWeighing != null)
             {
                 ActualWeightProp = CurrentScaleForWeighing.ActualWeight;
@@ -37,8 +39,11 @@ namespace gipbakery.mes.processapplication
             return result;
         }
 
+
+
         public override bool ACDeInit(bool deleteACClassTask = false)
         {
+            StateLackOfMaterial.PropertyChanged -= StateLackOfMaterial_PropertyChanged;
             DosTimeFlour.PropertyChanged -= DosTimeFlour_PropertyChanged;
             if(ActualWeightProp != null)
             {
@@ -182,6 +187,20 @@ namespace gipbakery.mes.processapplication
         public string GetFlourDosingScale()
         {
             return CurrentScaleForWeighing?.ACUrl;
+        }
+
+        protected override void OnSourceChangeStoppOrAbort()
+        {
+            
+        }
+
+        private void StateLackOfMaterial_PropertyChanged(object sender, System.ComponentModel.PropertyChangedEventArgs e)
+        {
+            IACContainerTNet<PANotifyState> senderProp = sender as IACContainerTNet<PANotifyState>;
+            if (senderProp != null && senderProp.ValueT == PANotifyState.Off)
+            {
+                DosingAbortReason.ValueT = PADosingAbortReason.NotSet;
+            }
         }
 
         #endregion

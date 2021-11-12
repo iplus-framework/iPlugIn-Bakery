@@ -443,7 +443,8 @@ namespace gipbakery.mes.processapplication
                 if (!ManuallyChangeSource
                     && dosing.StateLackOfMaterial.ValueT != PANotifyState.Off
                     && dosing.CurrentACState == ACStateEnum.SMRunning
-                    && dosing.DosingAbortReason.ValueT == PADosingAbortReason.NotSet)
+                    && (dosing.DosingAbortReason.ValueT == PADosingAbortReason.NotSet 
+                    || dosing.DosingAbortReason.ValueT == PADosingAbortReason.EmptySourceNextSource))
                 {
                     PAMSilo silo = CurrentDosingSilo(null);
                     if (silo == null)
@@ -460,7 +461,7 @@ namespace gipbakery.mes.processapplication
 
                         // Überprüfe Rechnerischen Restbestand des Silos
                         double rest = silo.FillLevel.ValueT - actualQuantity;
-                        if (rest < zeroTolerance)
+                        if (rest < zeroTolerance || dosing.DosingAbortReason.ValueT == PADosingAbortReason.EmptySourceNextSource)
                         {
                             // Falls Methode true zurückgibt
                             EmptySiloHandlingOptions handlingOptions = HandleAbortReasonOnEmptySilo(silo);
@@ -479,6 +480,7 @@ namespace gipbakery.mes.processapplication
                                         if (IsAlarmActive(ProcessAlarm, msg.Message) == null)
                                             Messages.LogError(this.GetACUrl(), msg.ACIdentifier, msg.InnerMessage);
                                         OnNewAlarmOccurred(ProcessAlarm, msg, true);
+                                        OnNextSourceSiloNotFound();
                                     }
                                     else
                                     {
@@ -504,7 +506,7 @@ namespace gipbakery.mes.processapplication
                                                 }
 
                                                 dosing.AcknowledgeAlarms();
-                                                OnNextSourceSiloFound();
+                                                OnNextSourceSiloFound(silo.RouteItemIDAsNum, sourceSilo.RouteItemIDAsNum);
                                             }
                                         }
                                     }
@@ -519,6 +521,7 @@ namespace gipbakery.mes.processapplication
                                 if (IsAlarmActive(ProcessAlarm, msg.Message) == null)
                                     Messages.LogError(this.GetACUrl(), msg.ACIdentifier, msg.InnerMessage);
                                 OnNewAlarmOccurred(ProcessAlarm, msg, true);
+                                OnNextSourceSiloNotFound();
                             }
                         }
                         else
@@ -536,7 +539,7 @@ namespace gipbakery.mes.processapplication
             }
         }
 
-        public virtual void OnNextSourceSiloFound()
+        public virtual void OnNextSourceSiloFound(int oldSourceSilo, int newSourceSilo)
         {
 
         }
