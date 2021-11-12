@@ -268,15 +268,26 @@ namespace gipbakery.mes.processapplication
         {
             if (isConfigInitialization)
             {
+                object valueSource = null;
+                ACValue acValueSource = newACMethod.ParameterValueList.GetACValue("Source");
+                if (acValueSource != null)
+                    valueSource = acValueSource.Value;
+
+                object valueDestination = null;
+                ACValue acValueDestination = newACMethod.ParameterValueList.GetACValue("Destination");
+                if (acValueDestination != null)
+                    valueDestination = acValueDestination.Value;
+
                 newACMethod.ParameterValueList.CopyValues(configACMethod.ParameterValueList);
 
                 try
                 {
-                    newACMethod.ParameterValueList["Source"] = 0;
+                    if (acValueSource != null)
+                        newACMethod.ParameterValueList["Source"] = valueSource;
                     newACMethod.ParameterValueList["Route"] = null;
-                    newACMethod.ParameterValueList["Destination"] = 0;
+                    if (acValueDestination != null)
+                        newACMethod.ParameterValueList["Destination"] = valueDestination;
                     newACMethod.ParameterValueList["TargetQuantity"] = 0.0;
-                    newACMethod.ParameterValueList["Power"] = 0;
                     newACMethod.ParameterValueList["ScaleACUrl"] = "";
                 }
                 catch (Exception ec)
