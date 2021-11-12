@@ -103,6 +103,7 @@ namespace gipbakery.mes.processapplication
             }
             else
             {
+                RecalcTimeInfo();
                 var newMethod = NewACMethodWithConfiguration();
                 CreateNewProgramLog(newMethod, true);
                 CurrentACState = ACStateEnum.SMRunning;
@@ -113,6 +114,8 @@ namespace gipbakery.mes.processapplication
             {
                 fermentationGroup.OnChildPWBakeryEndOnTimeStart(this);
             }
+
+            CheckIsStartTooLate();
         }
 
         public override void SMCompleted()
@@ -124,6 +127,33 @@ namespace gipbakery.mes.processapplication
             }
 
             base.SMCompleted();
+        }
+
+        private void CheckIsStartTooLate()
+        {
+            DateTime? start = TimeInfo.ValueT.ActualTimes?.StartTime;
+            if (!start.HasValue)
+            {
+                start = DateTime.Now;
+            }
+
+            DateTime endTime = EndOnTimeSafe;
+            TimeSpan waitingTime = Duration;
+
+            DateTime targetStartTime = endTime - waitingTime;
+            TimeSpan diff = start.Value - targetStartTime;
+            
+            if (diff.TotalMinutes > 1)
+            {
+                //Error50486 : The production is late. The node was supposed to start at {0} to ensure waiting time of {1}.
+                Msg msg = new Msg(this, eMsgLevel.Error, PWClassName, "CheckIsStartToLate", 148, "Error50486", targetStartTime, waitingTime);
+                if (IsAlarmActive(ProcessAlarm, msg.Message) == null)
+                {
+                    OnNewAlarmOccurred(ProcessAlarm, msg.Message);
+                    Messages.LogMessageMsg(msg);
+                }
+            }
+
         }
 
         public void SetEndOnTime(DateTime dateTime)
