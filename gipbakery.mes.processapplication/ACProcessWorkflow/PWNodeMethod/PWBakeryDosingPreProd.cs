@@ -442,9 +442,8 @@ namespace gipbakery.mes.processapplication
 
                 if (!ManuallyChangeSource
                     && dosing.StateLackOfMaterial.ValueT != PANotifyState.Off
-                    && dosing.CurrentACState == ACStateEnum.SMRunning
-                    && (dosing.DosingAbortReason.ValueT == PADosingAbortReason.NotSet 
-                    || dosing.DosingAbortReason.ValueT == PADosingAbortReason.EmptySourceNextSource))
+                    && ((dosing.CurrentACState == ACStateEnum.SMRunning && dosing.DosingAbortReason.ValueT == PADosingAbortReason.NotSet) 
+                    || ((dosing.CurrentACState == ACStateEnum.SMRunning || dosing.CurrentACState == ACStateEnum.SMPaused) && dosing.DosingAbortReason.ValueT == PADosingAbortReason.EmptySourceNextSource)))
                 {
                     PAMSilo silo = CurrentDosingSilo(null);
                     if (silo == null)
@@ -533,6 +532,7 @@ namespace gipbakery.mes.processapplication
                             if (IsAlarmActive(ProcessAlarm, msg.Message) == null)
                                 Messages.LogError(this.GetACUrl(), msg.ACIdentifier, msg.InnerMessage);
                             OnNewAlarmOccurred(ProcessAlarm, msg, true);
+                            OnNextSourceSiloNotFound();
                         }
                     }
                 }
