@@ -140,17 +140,20 @@ namespace gipbakery.mes.processapplication
             DateTime endTime = EndOnTimeSafe;
             TimeSpan waitingTime = Duration;
 
-            DateTime targetStartTime = endTime - waitingTime;
-            TimeSpan diff = start.Value - targetStartTime;
-            
-            if (diff.TotalMinutes > 1)
+            if (endTime > DateTime.MinValue)
             {
-                //Error50486 : The production is late. The node was supposed to start at {0} to ensure waiting time of {1}.
-                Msg msg = new Msg(this, eMsgLevel.Error, PWClassName, "CheckIsStartToLate", 148, "Error50486", targetStartTime, waitingTime);
-                if (IsAlarmActive(ProcessAlarm, msg.Message) == null)
+                DateTime targetStartTime = endTime - waitingTime;
+                TimeSpan diff = start.Value - targetStartTime;
+
+                if (diff.TotalMinutes > 1)
                 {
-                    OnNewAlarmOccurred(ProcessAlarm, msg.Message);
-                    Messages.LogMessageMsg(msg);
+                    //Error50486 : The production is late. The node was supposed to start at {0} to ensure waiting time of {1}.
+                    Msg msg = new Msg(this, eMsgLevel.Error, PWClassName, "CheckIsStartToLate", 148, "Error50486", targetStartTime, waitingTime);
+                    if (IsAlarmActive(ProcessAlarm, msg.Message) == null)
+                    {
+                        OnNewAlarmOccurred(ProcessAlarm, msg.Message);
+                        Messages.LogMessageMsg(msg);
+                    }
                 }
             }
 
