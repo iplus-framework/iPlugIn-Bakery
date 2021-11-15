@@ -1521,12 +1521,16 @@ namespace gipbakery.mes.processapplication
             CurrentBookParamNotAvailableSilo.MDZeroStockState = MDZeroStockState.DefaultMDZeroStockState(DatabaseApp, MDZeroStockState.ZeroStockStates.BookToZeroStock);
             ACMethodEventArgs result = ACFacilityManager.BookFacility(CurrentBookParamNotAvailableSilo, this.DatabaseApp) as ACMethodEventArgs;
             if (!CurrentBookParamNotAvailableSilo.ValidMessage.IsSucceded() || CurrentBookParamNotAvailableSilo.ValidMessage.HasWarnings())
+            {
                 Messages.Msg(CurrentBookParamNotAvailableSilo.ValidMessage);
+                this.DatabaseApp.ACUndoChanges();
+            }
             else if (result.ResultState == Global.ACMethodResultState.Failed || result.ResultState == Global.ACMethodResultState.Notpossible)
             {
                 if (String.IsNullOrEmpty(result.ValidMessage.Message))
                     result.ValidMessage.Message = result.ResultState.ToString();
                 Messages.Msg(result.ValidMessage);
+                this.DatabaseApp.ACUndoChanges();
             }
         }
 
