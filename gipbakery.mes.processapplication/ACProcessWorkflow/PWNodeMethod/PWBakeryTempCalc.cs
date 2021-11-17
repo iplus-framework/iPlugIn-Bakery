@@ -878,9 +878,9 @@ namespace gipbakery.mes.processapplication
                 }
                 else
                 {
-                    double waterTemp = WaterTemp.Value;
+                    double? waterTemp = WaterTemp.Value;
 
-                    if (waterTemp > 0.00001 || waterTemp < -0.0001)
+                    if (waterTemp.HasValue && (waterTemp > 0.00001 || waterTemp < -0.0001))
                     {
                         suggestedWaterTemperature = WaterTemp.Value;
                     }
@@ -2115,17 +2115,17 @@ namespace gipbakery.mes.processapplication
 
                 if (configStore != null)
                 {
-                    Guid? accessedProcessModuleID = configStore is Picking ? null : ParentPWGroup?.AccessedProcessModule?.ComponentClass?.ACClassID;
+                    //Guid? accessedProcessModuleID = configStore is Picking ? null : ParentPWGroup?.AccessedProcessModule?.ComponentClass?.ACClassID;
 
-                    if (!accessedProcessModuleID.HasValue)
-                    {
-                        Root.Messages.LogMessage(eMsgLevel.Error, this.GetACUrl(), "SaveWorkplaceTemperatureSettings(10)", "AccessedProcessModuleID is null!");
+                    //if (!accessedProcessModuleID.HasValue)
+                    //{
+                    //    Root.Messages.LogMessage(eMsgLevel.Error, this.GetACUrl(), "SaveWorkplaceTemperatureSettings(10)", "AccessedProcessModuleID is null!");
 
-                        return;
-                    }
+                    //    return;
+                    //}
 
-                    var configEntries = configStore.ConfigurationEntries.Where(c => c.PreConfigACUrl == PreValueACUrl && c.LocalConfigACUrl.StartsWith(ConfigACUrl)
-                                                                                                                      && c.VBiACClassID == accessedProcessModuleID);
+                    var configEntries = configStore.ConfigurationEntries.Where(c => c.PreConfigACUrl == PreValueACUrl && c.LocalConfigACUrl.StartsWith(ConfigACUrl))
+                                                                        .OrderBy(x => x.VBiACClassID == null ? "" : x.VBACClass.ACIdentifier);
 
                     if (configEntries != null)
                     {
@@ -2135,7 +2135,7 @@ namespace gipbakery.mes.processapplication
                         IACConfig waterTempConfig = configEntries.FirstOrDefault(c => c.LocalConfigACUrl == propertyACUrl);
                         if (waterTempConfig == null)
                         {
-                            waterTempConfig = InsertTemperatureConfiguration(propertyACUrl, "WaterTemp", accessedProcessModuleID, configStore);
+                            waterTempConfig = InsertTemperatureConfiguration(propertyACUrl, "WaterTemp", configStore);
                         }
 
                         if (waterTempConfig == null)
@@ -2156,7 +2156,7 @@ namespace gipbakery.mes.processapplication
                         IACConfig useOnlyForWaterTempCalculation = configEntries.FirstOrDefault(c => c.LocalConfigACUrl == propertyACUrl);
                         if (useOnlyForWaterTempCalculation == null)
                         {
-                            useOnlyForWaterTempCalculation = InsertTemperatureConfiguration(propertyACUrl, "UseWaterTemp", accessedProcessModuleID, configStore);
+                            useOnlyForWaterTempCalculation = InsertTemperatureConfiguration(propertyACUrl, "UseWaterTemp", configStore);
                         }
 
                         if (useOnlyForWaterTempCalculation == null)
@@ -2195,7 +2195,7 @@ namespace gipbakery.mes.processapplication
             SubscribeToProjectWorkCycle();
         }
 
-        private IACConfig InsertTemperatureConfiguration(string propertyACUrl, string paramACIdentifier, Guid? processModuleID, IACConfigStore configStore)
+        private IACConfig InsertTemperatureConfiguration(string propertyACUrl, string paramACIdentifier, IACConfigStore configStore)
         {
             ACMethod acMethod = ACClassMethods.FirstOrDefault(c => c.ACIdentifier == ACStateConst.SMStarting)?.ACMethod;
             if (acMethod != null)
@@ -2210,7 +2210,7 @@ namespace gipbakery.mes.processapplication
                     ACClassWF = ContentACClassWF
                 };
 
-                IACConfig configParam = ConfigManagerIPlus.ACConfigFactory(configStore, param, PreValueACUrl, propertyACUrl, processModuleID);
+                IACConfig configParam = ConfigManagerIPlus.ACConfigFactory(configStore, param, PreValueACUrl, propertyACUrl, null);
                 param.ConfigurationList.Insert(0, configParam);
 
                 configStore.ConfigurationEntries.Append(configParam);
