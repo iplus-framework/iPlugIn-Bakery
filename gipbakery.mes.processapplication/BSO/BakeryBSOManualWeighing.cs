@@ -7,6 +7,7 @@ using System.Linq;
 using vd = gip.mes.datamodel;
 using System.Text;
 using System.Threading.Tasks;
+using gip.mes.processapplication;
 
 namespace gipbakery.mes.processapplication
 {
@@ -19,6 +20,19 @@ namespace gipbakery.mes.processapplication
             base(acType, content, parentACObject, parameter, acIdentifier)
         {
             
+        }
+
+        public override bool ACInit(Global.ACStartTypes startChildMode = Global.ACStartTypes.Automatic)
+        {
+            return base.ACInit(startChildMode);
+        }
+
+        public override bool ACDeInit(bool deleteACClassTask = false)
+        {
+            _MatNoWarmWater = null;
+            _MatNoColdWater = null;
+
+            return base.ACDeInit(deleteACClassTask);
         }
 
         #endregion
@@ -72,6 +86,8 @@ namespace gipbakery.mes.processapplication
                 OnPropertyChanged("CoverFlourBtnMode");
             }
         }
+
+        private string _MatNoColdWater, _MatNoWarmWater;
 
         #region Properties => Temperature dialog
 
@@ -219,7 +235,7 @@ namespace gipbakery.mes.processapplication
 
             ACClass recvPointClass = null;
 
-            var contextIplus = Database.ContextIPlus;
+            var contextIplus = DatabaseApp.ContextIPlus;
             using (ACMonitor.Lock(contextIplus.QueryLock_1X000))
             {
                 recvPointClass = selectedProcessModule?.ComponentClass.FromIPlusContext<ACClass>(contextIplus);
@@ -847,6 +863,48 @@ namespace gipbakery.mes.processapplication
             }
 
             return null;
+        }
+
+        public override SingleDosingItems OnFilterSingleDosingItems(IEnumerable<SingleDosingItem> items)
+        {
+            if (string.IsNullOrEmpty(_MatNoColdWater) || string.IsNullOrEmpty(_MatNoWarmWater))
+            {
+                ACComponent currentProcessModule = CurrentProcessModule;
+
+                if (currentProcessModule != null)
+                {
+                    ACClass recvPointClass = null;
+                    var contextIplus = DatabaseApp.ContextIPlus;
+                    using (ACMonitor.Lock(contextIplus.QueryLock_1X000))
+                    {
+                        recvPointClass = currentProcessModule?.ComponentClass.FromIPlusContext<ACClass>(contextIplus);
+                    }
+
+                    if (recvPointClass != null && _BakeryRecvPointType.IsAssignableFrom(recvPointClass.ObjectType))
+                    {
+                        MaterialTemperature warmWater, coldWater;
+
+                        ACValueList waters = currentProcessModule.ExecuteMethod("!GetWaterComponentsFromTempService") as ACValueList;
+                        if (waters != null && waters.Any())
+                        {
+                            IEnumerable<MaterialTemperature> waterTemps = waters.Select(c => c.Value as MaterialTemperature);
+                            warmWater = waterTemps.FirstOrDefault(c => c.Water == WaterType.WarmWater);
+                            coldWater = waterTemps.FirstOrDefault(c => c.Water == WaterType.ColdWater);
+
+                            _MatNoWarmWater = warmWater?.MaterialNo;
+                            _MatNoColdWater = coldWater?.MaterialNo;
+                        }
+                    }
+
+                }
+            }
+
+            if (!string.IsNullOrEmpty(_MatNoColdWater) && !string.IsNullOrEmpty(_MatNoWarmWater))
+            {
+                return base.OnFilterSingleDosingItems(items.Where(c => c.MaterialNo != _MatNoColdWater && c.MaterialNo != _MatNoWarmWater));
+            }
+
+            return base.OnFilterSingleDosingItems(items);
         }
 
         #endregion

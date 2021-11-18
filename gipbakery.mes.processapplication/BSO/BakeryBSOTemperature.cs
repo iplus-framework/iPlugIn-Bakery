@@ -157,7 +157,7 @@ namespace gipbakery.mes.processapplication
                 }
 
                 ACComponent tempService = Root.ACUrlCommand(workCenter.BakeryTemperatureServiceACUrl) as ACComponent;
-                if (tempService == null && Root.IsProxy)
+                if (tempService == null)
                 {
                     //Error50460: The bakery temperature service can not be found!
                     Messages.Error(this, "Error50460");
