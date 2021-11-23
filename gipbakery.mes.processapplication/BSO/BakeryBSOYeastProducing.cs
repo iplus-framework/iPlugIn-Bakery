@@ -990,6 +990,11 @@ namespace gipbakery.mes.processapplication
         [ACMethodInfo("", "en{'Clean'}de{'Reinigen'}", 801, true)]
         public void Clean()
         {
+            //if (!IsRoutingServiceAvailable)
+            //{
+            //    return;
+            //}
+
             RoutingResult rResult = ACRoutingService.FindSuccessors(RoutingService, DatabaseApp.ContextIPlus, true, CurrentProcessModule.ComponentClass,
                                                                     BakeryReceivingPoint.SelRuleID_RecvPoint, RouteDirections.Forwards, null, null, null, 0, true, false);
 
@@ -1117,7 +1122,9 @@ namespace gipbakery.mes.processapplication
                     .FirstOrDefault(c => c.ConfigACUrl == acUrl);
                 var wfMethod = wfClass?.ACClassMethod;
 
-                RunWorkflow(wfClass, wfMethod);
+                ACComponent currentProcessModule = CurrentProcessModule;
+
+                RunWorkflow(wfClass, wfMethod, currentProcessModule);
             }
 
             outFacility.OutwardEnabled = outFacilityOutwardEnabled;
@@ -1217,7 +1224,9 @@ namespace gipbakery.mes.processapplication
                                 .FirstOrDefault(c => c.ConfigACUrl == acUrl);
                             var wfMethod = wfClass?.ACClassMethod;
 
-                            RunWorkflow(wfClass, wfMethod);
+                            ACComponent currentProcessModule = CurrentProcessModule;
+
+                            RunWorkflow(wfClass, wfMethod, currentProcessModule);
                         }
                         catch (Exception e)
                         {
@@ -1437,7 +1446,8 @@ namespace gipbakery.mes.processapplication
                 .FirstOrDefault(c => c.ConfigACUrl == acUrl);
             var wfMethod = wfClass?.ACClassMethod;
 
-            RunWorkflow(wfClass, wfMethod);
+            ACComponent currentProcessModule = CurrentProcessModule;
+            RunWorkflow(wfClass, wfMethod, currentProcessModule);
 
             PumpOverTargetQuantity = 0;
             SelectedPumpTarget = null;

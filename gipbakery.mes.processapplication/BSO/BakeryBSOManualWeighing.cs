@@ -8,6 +8,7 @@ using vd = gip.mes.datamodel;
 using System.Text;
 using System.Threading.Tasks;
 using gip.mes.processapplication;
+using gip.mes.facility;
 
 namespace gipbakery.mes.processapplication
 {
@@ -905,6 +906,67 @@ namespace gipbakery.mes.processapplication
             }
 
             return base.OnFilterSingleDosingItems(items);
+        }
+
+        public override MsgWithDetails ValidateSingleDosingStart(ACComponent currentProcessModule)
+        {
+            MsgWithDetails msg = base.ValidateSingleDosingStart(currentProcessModule);
+
+            if (currentProcessModule != null)
+            {
+                ACClass recvPointClass = null;
+                var contextIplus = DatabaseApp.ContextIPlus;
+                using (ACMonitor.Lock(contextIplus.QueryLock_1X000))
+                {
+                    recvPointClass = currentProcessModule?.ComponentClass.FromIPlusContext<ACClass>(contextIplus);
+                }
+
+                if (recvPointClass != null && _BakeryRecvPointType.IsAssignableFrom(recvPointClass.ObjectType))
+                {
+                    MaterialTemperature warmWater = null, coldWater = null, cityWater = null;
+
+                    ACValueList waters = currentProcessModule.ExecuteMethod("!GetWaterComponentsFromTempService") as ACValueList;
+                    if (waters != null && waters.Any())
+                    {
+                        IEnumerable<MaterialTemperature> waterTemps = waters.Select(c => c.Value as MaterialTemperature);
+                        warmWater = waterTemps.FirstOrDefault(c => c.Water == WaterType.WarmWater);
+                        coldWater = waterTemps.FirstOrDefault(c => c.Water == WaterType.ColdWater);
+                        cityWater = waterTemps.FirstOrDefault(c => c.Water == WaterType.CityWater);
+                    }
+
+                    if (cityWater != null && SelectedSingleDosingItem.MaterialNo != cityWater.MaterialNo)
+                        return msg;
+
+                    if (!SingleDosTargetTemperature.HasValue)
+                    {
+                        //Error50489: The water target temperature is missing. Please enter the water target temperature and continue with process.
+                        Msg msg1 = new Msg(this, eMsgLevel.Error, ClassName, "ValidateStart", 943, "Error50489");
+                        if (msg != null)
+                        {
+                            msg.AddDetailMessage(msg1);
+                            return msg;
+                        }
+                        return new MsgWithDetails(new Msg[] { msg1 });
+                    }
+
+                    double minTemp = coldWater != null && coldWater.AverageTemperature.HasValue ? coldWater.AverageTemperature.Value : 1;
+                    double maxTemp = warmWater != null && warmWater.AverageTemperature.HasValue ? warmWater.AverageTemperature.Value : 70;
+
+                    if (SingleDosTargetTemperature < minTemp || SingleDosTargetTemperature > maxTemp)
+                    {
+                        //Error50488 :The target water temperature is {0}°C, but minimum is {1}°C and maximum is {2}°C.
+                        Msg msg1 = new Msg(this, eMsgLevel.Error, ClassName, "ValidateStart", 958, "Error50488", SingleDosTargetTemperature, minTemp, maxTemp);
+                        if (msg != null)
+                        {
+                            msg.AddDetailMessage(msg1);
+                            return msg;
+                        }
+                        return new MsgWithDetails(new Msg[] { msg1 });
+                    }
+                }
+            }
+
+            return msg;
         }
 
         #endregion
