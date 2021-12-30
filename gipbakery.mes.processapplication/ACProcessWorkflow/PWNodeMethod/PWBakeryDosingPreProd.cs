@@ -451,7 +451,7 @@ namespace gipbakery.mes.processapplication
                     //if (silo.MatSensorEmtpy == null
                     //    || (silo.MatSensorEmtpy != null && silo.MatSensorEmtpy.SensorState.ValueT != PANotifyState.Off))
                     {
-                        silo.RefreshFacility();
+                        silo.RefreshFacility(false, null);
                         double zeroTolerance = 10;
                         if (silo.Facility.ValueT != null && silo.Facility.ValueT.ValueT != null)
                             zeroTolerance = silo.Facility.ValueT.ValueT.Tolerance;
