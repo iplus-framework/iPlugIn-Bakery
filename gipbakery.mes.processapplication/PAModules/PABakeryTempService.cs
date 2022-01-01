@@ -43,7 +43,15 @@ namespace gipbakery.mes.processapplication
         {
             if (e.PropertyName == "InitState" && Root.InitState == ACInitState.Initialized)
             {
-                InitializeService();
+                try
+                {
+                    InitializeService();
+                }
+                catch (Exception ex)
+                {
+                    Messages.LogException(this.GetACUrl(), "Root_PropertyChanged(10)", ex);
+                    //OnNewAlarmOccurred();
+                }
                 Root.PropertyChanged -= Root_PropertyChanged;
             }
         }
@@ -106,8 +114,16 @@ namespace gipbakery.mes.processapplication
         [ACMethodInteraction("", "", 700, true)]
         public void InitService()
         {
-            InitializeService();
-            RecalculateAverageTemperature();
+            try
+            {
+                InitializeService();
+                RecalculateAverageTemperature();
+            }
+            catch (Exception ex)
+            {
+                Messages.LogException(this.GetACUrl(), "Root_PropertyChanged(10)", ex);
+                //OnNewAlarmOccurred();
+            }
         }
 
         protected override void RunJob(DateTime now, DateTime lastRun, DateTime nextRun)
@@ -398,13 +414,16 @@ namespace gipbakery.mes.processapplication
                                 materialTempInfo.MaterialNo = materialNo;
                                 materialTempInfo.Material = dbApp.Material.FirstOrDefault(c => c.MaterialNo == materialNo);
                                 materialTempInfo.WaterMinDosingQuantity = dosing.CurrentScaleForWeighing.MinDosingWeight.ValueT;
-                                materialTempInfo.WaterDefaultTemperature = thermometer.TemperatureDefault;
+                                if (thermometer != null)
+                                    materialTempInfo.WaterDefaultTemperature = thermometer.TemperatureDefault;
                                 materialTempInfo.Water = wType;
                                 cacheItem.Value.MaterialTempInfos.Add(materialTempInfo);
                             }
 
                             if (thermometer != null)
+                            {
                                 materialTempInfo.AddThermometer(thermometer);
+                            }
                         }
                     }
                 }
