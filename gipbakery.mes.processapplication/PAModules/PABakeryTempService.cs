@@ -366,6 +366,7 @@ namespace gipbakery.mes.processapplication
                                 OnNewAlarmOccurred(ServiceAlarm, msg);
                                 Root.Messages.LogMessageMsg(msg);
                             }
+                            return;
                         }
 
                         PAFDosing dosing = paPointMatIn.ConnectionList.Where(c => c.TargetParentComponent is PAFDosing)
@@ -405,6 +406,7 @@ namespace gipbakery.mes.processapplication
                                     OnNewAlarmOccurred(ServiceAlarm, msg);
                                     Root.Messages.LogMessageMsg(msg);
                                 }
+                                return;
                             }
 
                             var materialTempInfo = cacheItem.Value.MaterialTempInfos.FirstOrDefault(c => c.MaterialNo == materialNo);
