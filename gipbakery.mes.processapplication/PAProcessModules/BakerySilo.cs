@@ -36,7 +36,7 @@ namespace gipbakery.mes.processapplication
         {
             get
             {
-                if(_Thermometers == null)
+                if (_Thermometers == null)
                 {
                     _Thermometers = FindChildComponents<PAEBakeryThermometer>(c => c is PAEBakeryThermometer).ToArray();
                 }

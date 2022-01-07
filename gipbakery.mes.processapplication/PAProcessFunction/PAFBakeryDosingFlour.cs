@@ -45,7 +45,7 @@ namespace gipbakery.mes.processapplication
         {
             StateLackOfMaterial.PropertyChanged -= StateLackOfMaterial_PropertyChanged;
             DosTimeFlour.PropertyChanged -= DosTimeFlour_PropertyChanged;
-            if(ActualWeightProp != null)
+            if (ActualWeightProp != null)
             {
                 ActualWeightProp.PropertyChanged -= ActualWeight_PropertyChanged;
                 ActualWeightProp = null;
