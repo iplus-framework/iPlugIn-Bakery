@@ -72,6 +72,7 @@
     <Compile Include="ACProcessWorkflow\PWNodeMethod\PWBakeryFlourDischargingAck.cs" />
     <Compile Include="ACProcessWorkflow\PWNodeMethod\PWBakeryWorkKneading.cs" />
     <Compile Include="ACProcessWorkflow\PWNodeMethod\PWBakeryWorkDecoring.cs" />
+    <Compile Include="ACProcessWorkflow\PWNodeMethod\PWBakeryWorkCartoning.cs" />
     <Compile Include="ACProcessWorkflow\PWNodeMethod\PWBakeryWorkPacking.cs" />
     <Compile Include="ACProcessWorkflow\PWNodeMethod\PWBakeryWorkFreezing.cs" />
     <Compile Include="ACProcessWorkflow\PWNodeMethod\PWBakeryWorkBaking.cs" />
@@ -109,6 +110,7 @@
     <Compile Include="PAProcessFunction\PAFBakeryWorkBaking.cs" />
     <Compile Include="PAProcessFunction\PAFBakeryWorkKneading.cs" />
     <Compile Include="PAProcessFunction\PAFBakeryWorkDecoring.cs" />
+    <Compile Include="PAProcessFunction\PAFBakeryWorkCartoning.cs" />
     <Compile Include="PAProcessFunction\PAFBakeryWorkProofing.cs" />
     <Compile Include="PAProcessFunction\PAFBakeryWorkPacking.cs" />
     <Compile Include="PAProcessFunction\PAFBakeryWorkFreezing.cs" />
@@ -117,6 +119,7 @@
     <Compile Include="PAProcessFunction\PAFBakeryYeastProducing.cs" />
     <Compile Include="PAProcessModules\BakeryFreezer.cs" />
     <Compile Include="PAProcessModules\BakeryDecorStation.cs" />
+    <Compile Include="PAProcessModules\BakeryCartoner.cs" />
     <Compile Include="PAProcessModules\BakeryPacker.cs" />
     <Compile Include="PAProcessModules\BakeryOven.cs" />
     <Compile Include="PAProcessModules\BakeryDoughProofer.cs" />
@@ -278,6 +281,9 @@
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
     <None Include="VBControlScripts\2022-01-28 08-56_ihrastinski.zip">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="VBControlScripts\2022-02-04 08-36_dlisak.zip">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
   </ItemGroup>
