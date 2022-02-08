@@ -293,15 +293,23 @@ namespace gipbakery.mes.processapplication
 
             if (module != null)
             {
-                PAPoint pointIn = module.GetPoint(Const.PAPointMatIn1) as PAPoint;
-                PAPoint pointOut = module.GetPoint(Const.PAPointMatOut1) as PAPoint;
-
-                if (pointIn == null || pointOut == null)
+                PAPoint pointIn = module.GetPoint("PAPointMatIn3") as PAPoint;
+                if (pointIn != null)
                 {
-                    return;
+                    source = pointIn.ConnectionList.FirstOrDefault(c => c.SourceParentComponent is PAMParkingspace)?.SourceParentComponent as PAMParkingspace;
+                    if (source == null)
+                    {
+                        pointIn = module.GetPoint(Const.PAPointMatIn1) as PAPoint;
+                        if (pointIn != null)
+                            source = pointIn.ConnectionList.FirstOrDefault(c => c.SourceParentComponent is PAMParkingspace)?.SourceParentComponent as PAMParkingspace;
+                    }
                 }
+                if (source == null)
+                    return;
 
-                source = pointIn.ConnectionList.FirstOrDefault(c => c.SourceParentComponent is PAMParkingspace)?.SourceParentComponent as PAMParkingspace;
+                PAPoint pointOut = module.GetPoint(Const.PAPointMatOut1) as PAPoint;
+                if (pointOut == null)
+                    return;
                 target = pointOut.ConnectionList.FirstOrDefault(c => c.TargetParentComponent is PAMSilo)?.TargetParentComponent as PAMSilo;
             }
         }
