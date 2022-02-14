@@ -370,62 +370,72 @@ namespace gipbakery.mes.processapplication
                         }
 
                         PAFDosing dosing = paPointMatIn.ConnectionList.Where(c => c.TargetParentComponent is PAFDosing)
-                                                                                     .FirstOrDefault()?.TargetParentComponent as PAFDosing;
-                        if (dosing == null)
+                                                                                   .FirstOrDefault()?.TargetParentComponent as PAFDosing;
+
+                        PAEBakeryThermometer bakeryThermometer = null;
+
+                        //try find temperature sensor under water scales/meters
+                        if (dosing != null && dosing.CurrentScaleForWeighing != null)
                         {
-                            //Error50424: The dosing function for {0} can not be found at {1}.
-                            Msg msg = new Msg(this, eMsgLevel.Error, ClassName, "InitializeWaterSensor(20)", 285, "Error50424", wType.ToString(), cacheItem.Key.ComponentClass.ACUrlComponent);
-                            //if (IsAlarmActive(ServiceAlarm, msg.Message) == null)
-                            //{
-                                //OnNewAlarmOccurred(ServiceAlarm, msg);
-                                Root.Messages.LogMessageMsg(msg);
-                            //}
+                            bakeryThermometer = dosing.CurrentScaleForWeighing.FindChildComponents<PAEBakeryThermometer>(c => c is PAEBakeryThermometer, null, 1)
+                                                                              .FirstOrDefault();
+
+                            if (bakeryThermometer != null && bakeryThermometer.DisabledForTempCalculation)
+                                bakeryThermometer = null;
+
                         }
-                        else
+                        
+                        //try find temperature sensor under water tank
+                        if (bakeryThermometer == null)
                         {
-                            if (dosing.CurrentScaleForWeighing == null)
-                            {
-                                //Error50425: Can not found the CurrentScaleForWeighing at the dosing function for the {0}.
-                                Msg msg = new Msg(this, eMsgLevel.Error, ClassName, "InitializeWaterSensor(30)", 297, "Error50425", wType.ToString());
-                                if (IsAlarmActive(ServiceAlarm, msg.Message) == null)
-                                {
-                                    OnNewAlarmOccurred(ServiceAlarm, msg);
-                                    Root.Messages.LogMessageMsg(msg);
-                                }
-                            }
+                            bakeryThermometer = silo.FindChildComponents<PAEBakeryThermometer>(c => c is PAEBakeryThermometer, null, 1)
+                                                    .FirstOrDefault();
 
-                            PAEBakeryThermometer thermometer = dosing.CurrentScaleForWeighing.FindChildComponents<PAEBakeryThermometer>(c => c is PAEBakeryThermometer, null, 1)
-                                                                                             .FirstOrDefault();
+                            if (bakeryThermometer != null && bakeryThermometer.DisabledForTempCalculation)
+                                bakeryThermometer = null;
+                        }
 
-                            if (thermometer == null || thermometer.DisabledForTempCalculation)
-                            {
-                                //Error50426: Can not found the PAEBakeryThermometer under CurrentScaleForWeighing for the {0}.
-                                Msg msg = new Msg(this, eMsgLevel.Error, ClassName, "InitializeWaterSensor(40)", 309, "Error50426", wType.ToString());
-                                if (IsAlarmActive(ServiceAlarm, msg.Message) == null)
-                                {
-                                    OnNewAlarmOccurred(ServiceAlarm, msg);
-                                    Root.Messages.LogMessageMsg(msg);
-                                }
-                                return;
-                            }
-
-                            var materialTempInfo = cacheItem.Value.MaterialTempInfos.FirstOrDefault(c => c.MaterialNo == materialNo);
-                            if (materialTempInfo == null)
-                            {
-                                materialTempInfo = new MaterialTemperature();
-                                materialTempInfo.MaterialNo = materialNo;
-                                materialTempInfo.Material = dbApp.Material.FirstOrDefault(c => c.MaterialNo == materialNo);
+                        var materialTempInfo = cacheItem.Value.MaterialTempInfos.FirstOrDefault(c => c.MaterialNo == materialNo);
+                        if (materialTempInfo == null)
+                        {
+                            materialTempInfo = new MaterialTemperature();
+                            materialTempInfo.MaterialNo = materialNo;
+                            materialTempInfo.Material = dbApp.Material.FirstOrDefault(c => c.MaterialNo == materialNo);
+                            if (dosing != null && dosing.CurrentScaleForWeighing !=  null)
                                 materialTempInfo.WaterMinDosingQuantity = dosing.CurrentScaleForWeighing.MinDosingWeight.ValueT;
-                                if (thermometer != null)
-                                    materialTempInfo.WaterDefaultTemperature = thermometer.TemperatureDefault;
-                                materialTempInfo.Water = wType;
-                                cacheItem.Value.MaterialTempInfos.Add(materialTempInfo);
-                            }
-
-                            if (thermometer != null)
+                            if (bakeryThermometer != null)
                             {
-                                materialTempInfo.AddThermometer(thermometer);
+                                materialTempInfo.WaterDefaultTemperature = bakeryThermometer.TemperatureDefault;
                             }
+                            else
+                            {
+                                ACPropertyExt ext = materialTempInfo.Material.ACProperties.GetOrCreateACPropertyExtByName("Temperature", false);
+                                if (ext != null)
+                                {
+                                    double? value = (ext.Value as double?);
+                                    if (value.HasValue && (value.Value >= 0.00001 || value.Value <= -0.00001))
+                                    {
+                                        materialTempInfo.WaterDefaultTemperature = value.Value;
+                                    }
+                                }
+
+                                if (!materialTempInfo.WaterDefaultTemperature.HasValue)
+                                {
+                                    if (wType == WaterType.CityWater)
+                                        materialTempInfo.WaterDefaultTemperature = 15;
+                                    else if (wType == WaterType.ColdWater)
+                                        materialTempInfo.WaterDefaultTemperature = 3;
+                                    else if (wType == WaterType.WarmWater)
+                                        materialTempInfo.WaterDefaultTemperature = 50;
+                                }
+                            }
+                            materialTempInfo.Water = wType;
+                            cacheItem.Value.MaterialTempInfos.Add(materialTempInfo);
+                        }
+
+                        if (bakeryThermometer != null)
+                        {
+                            materialTempInfo.AddThermometer(bakeryThermometer);
                         }
                     }
                 }
