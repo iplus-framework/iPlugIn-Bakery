@@ -46,27 +46,6 @@ namespace gipbakery.mes.processapplication
 
         #region Properties
 
-        private ACMethod _MyConfiguration;
-        [ACPropertyInfo(9999)]
-        public ACMethod MyConfiguration
-        {
-            get
-            {
-                using (ACMonitor.Lock(_20015_LockValue))
-                {
-                    if (_MyConfiguration != null)
-                        return _MyConfiguration;
-                }
-
-                var myNewConfig = NewACMethodWithConfiguration();
-                using (ACMonitor.Lock(_20015_LockValue))
-                {
-                    _MyConfiguration = myNewConfig;
-                }
-                return myNewConfig;
-            }
-        }
-
         public int? AutoDetectTolerance
         {
             get
