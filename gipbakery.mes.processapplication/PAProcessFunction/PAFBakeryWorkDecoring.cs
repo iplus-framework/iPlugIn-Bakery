@@ -1,5 +1,6 @@
 ﻿using gip.core.autocomponent;
 using gip.core.datamodel;
+using gip.mes.datamodel;
 using gip.mes.processapplication;
 using System;
 using System.Collections.Generic;
@@ -16,7 +17,7 @@ namespace gipbakery.mes.processapplication
 
         static PAFBakeryWorkDecoring()
         {
-            ACMethod.RegisterVirtualMethod(typeof(PAFBakeryWorkDecoring), ACStateConst.TMStart, CreateVirtualMethod("Decoring", "en{'Decoring'}de{'Dekorieren'}", typeof(PWBakeryWorkPacking)));
+            ACMethod.RegisterVirtualMethod(typeof(PAFBakeryWorkDecoring), ACStateConst.TMStart, CreateVirtualMethod("Decoring", "en{'Decoring'}de{'Dekorieren'}", typeof(PWBakeryWorkDecoring)));
             RegisterExecuteHandler(typeof(PAFBakeryWorkDecoring), HandleExecuteACMethod_PAFBakeryWorkDecoring);
         }
 

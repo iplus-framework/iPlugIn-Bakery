@@ -16,7 +16,7 @@ namespace gipbakery.mes.processapplication
 
         static PAFBakeryWorkKneading()
         {
-            ACMethod.RegisterVirtualMethod(typeof(PAFBakeryWorkKneading), ACStateConst.TMStart, CreateVirtualMethod("Kneading", "en{'Kneading-Start'}de{'Kneter-Start'}", typeof(PWBakeryWorkPacking)));
+            ACMethod.RegisterVirtualMethod(typeof(PAFBakeryWorkKneading), ACStateConst.TMStart, CreateVirtualMethod("Kneading", "en{'Kneading-Start'}de{'Kneter-Start'}", typeof(PWBakeryWorkKneading)));
             RegisterExecuteHandler(typeof(PAFBakeryWorkKneading), HandleExecuteACMethod_PAFBakeryWorkKneading);
         }
 
