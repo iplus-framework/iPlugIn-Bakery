@@ -131,8 +131,16 @@ namespace gipbakery.mes.processapplication
                 AverageTemperatureWithOffset = Math.Round(temp.Sum(c => c.CalculateTemperatureWithOffset(roomTemp)) / temp.Count(), 1);
                 return;
             }
-            AverageTemperature = 0.0;
-            AverageTemperatureWithOffset = 0.0;
+            else if (WaterDefaultTemperature.HasValue)
+            {
+                AverageTemperature = WaterDefaultTemperature.Value;
+                AverageTemperatureWithOffset = AverageTemperature;
+            }
+            else
+            {
+                AverageTemperature = 0.0;
+                AverageTemperatureWithOffset = 0.0;
+            }
         }
 
         [DataMember]
