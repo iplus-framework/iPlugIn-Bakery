@@ -52,6 +52,9 @@ namespace gipbakery.mes.processapplication
             method.ParameterValueList.Add(new ACValue("AskUserIsWaterNeeded", typeof(bool), false, Global.ParamOption.Optional));
             paramTranslation.Add("AskUserIsWaterNeeded", "en{'Ask user if is water needed'}de{'Ask user if is water needed'}");
 
+            method.ParameterValueList.Add(new ACValue("CompSequenceNo", typeof(int), (int)0, Global.ParamOption.Optional));
+            paramTranslation.Add("CompSequenceNo", "en{'Sequence-No. for adding into BOM'}de{'Folgenummer beim Hinzufügen in die Rezeptur'}");
+
             var wrapper = new ACMethodWrapper(method, "en{'User Acknowledge'}de{'Benutzerbestätigung'}", typeof(PWBakeryTempCalc), paramTranslation, null);
             ACMethod.RegisterVirtualMethod(typeof(PWBakeryTempCalc), ACStateConst.SMStarting, wrapper);
 
@@ -331,6 +334,22 @@ namespace gipbakery.mes.processapplication
             }
         }
 
+        internal int CompSequenceNo
+        {
+            get
+            {
+                var method = MyConfiguration;
+                if (method != null)
+                {
+                    var acValue = method.ParameterValueList.GetACValue("CompSequenceNo");
+                    if (acValue != null)
+                    {
+                        return acValue.ParamAsInt32;
+                    }
+                }
+                return 0;
+            }
+        }
         #endregion
 
         #endregion
@@ -1514,10 +1533,10 @@ namespace gipbakery.mes.processapplication
                 topRelation = ProdOrderPartslistPosRelation.NewACObject(dbApp, null);
                 topRelation.SourceProdOrderPartslistPos = sourcePos;
                 topRelation.TargetProdOrderPartslistPos = targetPos;
-                topRelation.Sequence = targetPos.ProdOrderPartslistPosRelation_TargetProdOrderPartslistPos
+                topRelation.Sequence = CompSequenceNo <= 0 ? targetPos.ProdOrderPartslistPosRelation_TargetProdOrderPartslistPos
                                                 .Where(c => c.TargetProdOrderPartslistPos.MaterialID == targetPos.MaterialID
                                                          && c.TargetProdOrderPartslistPos.MaterialPosType == GlobalApp.MaterialPosTypes.InwardIntern)
-                                                .Max(x => x.Sequence) + 1;
+                                                .Max(x => x.Sequence) + 1 : CompSequenceNo;
 
                 dbApp.ProdOrderPartslistPosRelation.AddObject(topRelation);
             }
