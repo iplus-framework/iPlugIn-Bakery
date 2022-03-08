@@ -348,7 +348,7 @@ namespace gipbakery.mes.processapplication
 
             GetTemperaturesFromPWBakeryTempCalc(pwNode);
 
-            if (MessagesListSafe.Any(c => c.UserAckPWNode.ValueT.ACIdentifier.Contains(nameof(PWBakeryFlourDischargingAck))))
+            if (MessagesListSafe.Any(c => c.UserAckPWNode != null && c.UserAckPWNode.ValueT.ACIdentifier.Contains(nameof(PWBakeryFlourDischargingAck))))
             {
                 BtnFlourBlink = true;
             }
@@ -1056,7 +1056,7 @@ namespace gipbakery.mes.processapplication
 
         protected override List<MessageItem> OnHandleWFNodesRemoveMessageItems(List<MessageItem> messageItems)
         {
-            if (messageItems.Any(c => c.UserAckPWNode.ValueT.ACIdentifier.Contains(nameof(PWBakeryFlourDischargingAck))))
+            if (messageItems.Any(c => c.UserAckPWNode != null && c.UserAckPWNode.ValueT.ACIdentifier.Contains(nameof(PWBakeryFlourDischargingAck))))
             {
                 BtnFlourBlink = false;
             }
