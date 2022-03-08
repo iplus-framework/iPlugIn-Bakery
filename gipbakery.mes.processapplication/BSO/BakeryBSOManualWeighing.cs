@@ -88,6 +88,24 @@ namespace gipbakery.mes.processapplication
             }
         }
 
+        public bool _BtnFlourBlink;
+        [ACPropertyInfo(9999)]
+        public bool BtnFlourBlink
+        {
+            get => _BtnFlourBlink;
+            set
+            {
+                //if (_BtnFlourBlink && !value)
+                //{
+                //    if (MessagesListSafe.Any(c => c.UserAckPWNode.ValueT.ACIdentifier.Contains(nameof(PWBakeryFlourDischargingAck))))
+                //        return;
+                //}
+
+                _BtnFlourBlink = value;
+                OnPropertyChanged();
+            }
+        }
+
         private string _MatNoColdWater, _MatNoWarmWater;
 
         #region Properties => Temperature dialog
@@ -329,6 +347,11 @@ namespace gipbakery.mes.processapplication
             }
 
             GetTemperaturesFromPWBakeryTempCalc(pwNode);
+
+            if (MessagesListSafe.Any(c => c.UserAckPWNode.ValueT.ACIdentifier.Contains(nameof(PWBakeryFlourDischargingAck))))
+            {
+                BtnFlourBlink = true;
+            }
         }
 
         public override void UnloadWFNode()
@@ -344,6 +367,8 @@ namespace gipbakery.mes.processapplication
                 TempCalcResultMessage.PropertyChanged -= TempCalcResultMessage_PropertyChanged;
                 TempCalcResultMessage = null;
             }
+
+            BtnFlourBlink = false;
 
             base.UnloadWFNode();
         }
@@ -1031,6 +1056,11 @@ namespace gipbakery.mes.processapplication
 
         protected override List<MessageItem> OnHandleWFNodesRemoveMessageItems(List<MessageItem> messageItems)
         {
+            if (messageItems.Any(c => c.UserAckPWNode.ValueT.ACIdentifier.Contains(nameof(PWBakeryFlourDischargingAck))))
+            {
+                BtnFlourBlink = false;
+            }
+
             IACComponentPWNode bakeryTempCalc = CurrentBakeryTempCalc;
             if (bakeryTempCalc != null)
             {
@@ -1046,6 +1076,10 @@ namespace gipbakery.mes.processapplication
             {
                 if (messageItem.UserAckPWNode.ValueT.ACIdentifier.Contains(PWBakeryFlourDischargingAck.PWClassName))
                 {
+                    if (CoverFlourBtnMode == CoverFlourButtonEnum.FlourDischargeVisible)
+                    {
+                        BtnFlourBlink = true;
+                    }
                     messageItem.HandleByAcknowledgeButton = false;
                 }
             }
