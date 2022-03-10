@@ -304,15 +304,6 @@ namespace gipbakery.mes.processapplication
             }    
         }
 
-        public void RunCalcAgain()
-        {
-            //using(ACMonitor.Lock(_20015_LockValue))
-            {
-                IsTimeCalculated.ValueT = false;
-            }
-            SubscribeToProjectWorkCycle();
-        }
-
         public void ChangeStartNextFermentationStageTime(DateTime oldDateTime, DateTime newDateTime)
         {
             using (ACMonitor.Lock(_65100_MemebersLock))
@@ -325,19 +316,16 @@ namespace gipbakery.mes.processapplication
         }
 
 
-        [ACMethodInteractionClient("", "en{'Recalculate prod times'}de{'Neuberechnung der Produktionszeiten'}", 800, true)]
-        public static void RunCalculationAgain(IACComponent acComponent)
+        [ACMethodInteraction("", "en{'Recalculate prod times'}de{'Neuberechnung der Produktionszeiten'}", 800, true)]
+        public void RunCalculationAgain()
         {
-            PWBakeryGroupFermentation group = acComponent as PWBakeryGroupFermentation;
-            if (group != null)
-                group.RunCalcAgain();
+            IsTimeCalculated.ValueT = false;
+            SubscribeToProjectWorkCycle();
         }
 
-        public static bool IsEnabledRunCalculationAgain(IACComponent acComponent)
+    public bool IsEnabledRunCalculationAgain()
         {
-            if (acComponent == null)
-                return false;
-
+            
             return true;
         }
 
@@ -830,19 +818,24 @@ namespace gipbakery.mes.processapplication
 
         #endregion
 
-        public static bool HandleExecuteACMethod_PWBakeryGroupFermentation(out object result, IACComponent acComponent, string acMethodName, gip.core.datamodel.ACClassMethod acClassMethod, params object[] acParameter)
+        protected override bool HandleExecuteACMethod(out object result, AsyncMethodInvocationMode invocationMode, string acMethodName, gip.core.datamodel.ACClassMethod acClassMethod, params object[] acParameter)
         {
             result = null;
             switch (acMethodName)
             {
                 case "RunCalculationAgain":
-                    RunCalculationAgain(acComponent);
+                    RunCalculationAgain();
                     return true;
                 case Const.IsEnabledPrefix + "RunCalculationAgain":
-                    result = IsEnabledRunCalculationAgain(acComponent);
+                    result = IsEnabledRunCalculationAgain();
                     return true;
             }
 
+            return base.HandleExecuteACMethod(out result, invocationMode, acMethodName, acClassMethod, acParameter);
+        }
+
+        public static bool HandleExecuteACMethod_PWBakeryGroupFermentation(out object result, IACComponent acComponent, string acMethodName, gip.core.datamodel.ACClassMethod acClassMethod, params object[] acParameter)
+        {
             return HandleExecuteACMethod_PWGroupVB(out result, acComponent, acMethodName, acClassMethod, acParameter);
         }
     }

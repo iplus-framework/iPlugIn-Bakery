@@ -56,6 +56,10 @@ namespace gipbakery.mes.processapplication
 
         public override void Recycle(IACObject content, IACObject parentACObject, ACValueList parameter, string acIdentifier = "")
         {
+            using (ACMonitor.Lock(_20015_LockValue))
+            {
+                _BookingProcessed = false;
+            }
             StopMonitorSourceStore();
             base.Recycle(content, parentACObject, parameter, acIdentifier);
         }
@@ -480,15 +484,8 @@ namespace gipbakery.mes.processapplication
             UnSubscribeToProjectWorkCycle();
         }
 
-        [ACMethodInteractionClient("", "en{'Restart monitor source store'}de{'Monitor-Quellenspeicher neu starten'}", 650, true)]
-        public static void RestartMonitorSourceStore(ACComponent acComponent)
-        {
-            PWBakeryDischargingPreProd preProd = acComponent as PWBakeryDischargingPreProd;
-            if (preProd != null)
-                preProd.ReStartMonitorSourceStore();
-        }
-
-        public void ReStartMonitorSourceStore()
+        [ACMethodInteraction("", "en{'Restart monitor source store'}de{'Monitor-Quellenspeicher neu starten'}", 650, true)]
+        public void RestartMonitorSourceStore()
         {
             _SourceStoreMonitored = false;
             SubscribeToProjectWorkCycle();
@@ -597,6 +594,20 @@ namespace gipbakery.mes.processapplication
                 SubscribeToProjectWorkCycle();
             }
         }
+
+        protected override bool HandleExecuteACMethod(out object result, AsyncMethodInvocationMode invocationMode, string acMethodName, gip.core.datamodel.ACClassMethod acClassMethod, params object[] acParameter)
+        {
+            result = null;
+            switch (acMethodName)
+            {
+                case "RestartMonitorSourceStore":
+                    RestartMonitorSourceStore();
+                    return true;
+            }
+
+            return base.HandleExecuteACMethod(out result, invocationMode, acMethodName, acClassMethod, acParameter);
+        }
+
 
         private static bool HandleExecuteACMethod_PWBakeryDischargingPreProd(out object result, IACComponent acComponent, string acMethodName, gip.core.datamodel.ACClassMethod acClassMethod, object[] acParameter)
         {
