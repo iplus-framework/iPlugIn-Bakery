@@ -26,7 +26,7 @@ namespace gipbakery.mes.processapplication
         {
             bool result = base.ACPostInit();
 
-            DosTimeWater.PropertyChanged += DosTimeWater_PropertyChanged;
+            (DosTimeWater as IACPropertyNetServer).ValueUpdatedOnReceival += DosTimeWater_ValueUpdatedOnReceival;
 
             if (CurrentScaleForWeighing != null)
             {
@@ -39,7 +39,7 @@ namespace gipbakery.mes.processapplication
 
         public override bool ACDeInit(bool deleteACClassTask = false)
         {
-            DosTimeWater.PropertyChanged -= DosTimeWater_PropertyChanged;
+            (DosTimeWater as IACPropertyNetServer).ValueUpdatedOnReceival -= DosTimeWater_ValueUpdatedOnReceival;
 
             return base.ACDeInit(deleteACClassTask);
         }
@@ -156,18 +156,17 @@ namespace gipbakery.mes.processapplication
             }
         }
 
-        private void DosTimeWater_PropertyChanged(object sender, System.ComponentModel.PropertyChangedEventArgs e)
+        private void DosTimeWater_ValueUpdatedOnReceival(object sender, ACPropertyChangedEventArgs e, ACPropertyChangedPhase phase)
         {
-            if (e.PropertyName == Const.ValueT)
-            {
-                if (DosTimeWaterCorrectionFactor > 1)
-                    DosTimeWaterCorrectionFactor = 1;
-                else if (DosTimeWaterCorrectionFactor < 0.00001)
-                    DosTimeWaterCorrectionFactor = 0.00001;
+            if (phase == ACPropertyChangedPhase.BeforeBroadcast)
+                return;
+            if (DosTimeWaterCorrectionFactor > 1)
+                DosTimeWaterCorrectionFactor = 1;
+            else if (DosTimeWaterCorrectionFactor < 0.00001)
+                DosTimeWaterCorrectionFactor = 0.00001;
 
-                double timeNew = (DosTimeWater.ValueT - DosTimeWaterCorrected) * DosTimeWaterCorrectionFactor;
-                DosTimeWaterCorrected += timeNew;
-            }
+            double timeNew = (DosTimeWater.ValueT - DosTimeWaterCorrected) * DosTimeWaterCorrectionFactor;
+            DosTimeWaterCorrected += timeNew;
         }
 
         public double GetWaterDosingTime()

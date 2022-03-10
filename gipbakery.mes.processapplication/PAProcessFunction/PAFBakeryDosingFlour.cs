@@ -26,8 +26,7 @@ namespace gipbakery.mes.processapplication
         {
             bool result = base.ACPostInit();
 
-            DosTimeFlour.PropertyChanged += DosTimeFlour_PropertyChanged;
-
+            (DosTimeFlour as IACPropertyNetServer).ValueUpdatedOnReceival += DosTimeFlour_ValueUpdatedOnReceival;
             StateLackOfMaterial.PropertyChanged += StateLackOfMaterial_PropertyChanged; 
 
             if (CurrentScaleForWeighing != null)
@@ -39,12 +38,10 @@ namespace gipbakery.mes.processapplication
             return result;
         }
 
-
-
         public override bool ACDeInit(bool deleteACClassTask = false)
         {
             StateLackOfMaterial.PropertyChanged -= StateLackOfMaterial_PropertyChanged;
-            DosTimeFlour.PropertyChanged -= DosTimeFlour_PropertyChanged;
+            (DosTimeFlour as IACPropertyNetServer).ValueUpdatedOnReceival -= DosTimeFlour_ValueUpdatedOnReceival;
             if (ActualWeightProp != null)
             {
                 ActualWeightProp.PropertyChanged -= ActualWeight_PropertyChanged;
@@ -159,18 +156,17 @@ namespace gipbakery.mes.processapplication
             }
         }
 
-        private void DosTimeFlour_PropertyChanged(object sender, System.ComponentModel.PropertyChangedEventArgs e)
+        private void DosTimeFlour_ValueUpdatedOnReceival(object sender, ACPropertyChangedEventArgs e, ACPropertyChangedPhase phase)
         {
-            if (e.PropertyName == Const.ValueT)
-            {
-                if (DosTimeFlourCorrectionFactor > 1)
-                    DosTimeFlourCorrectionFactor = 1;
-                else if (DosTimeFlourCorrectionFactor < 0.00001)
-                    DosTimeFlourCorrectionFactor = 0.00001;
+            if (phase == ACPropertyChangedPhase.BeforeBroadcast)
+                return;
+            if (DosTimeFlourCorrectionFactor > 1)
+                DosTimeFlourCorrectionFactor = 1;
+            else if (DosTimeFlourCorrectionFactor < 0.00001)
+                DosTimeFlourCorrectionFactor = 0.00001;
 
-                double timeNew = (DosTimeFlour.ValueT - DosTimeFlourCorrected) * DosTimeFlourCorrectionFactor;
-                DosTimeFlourCorrected += timeNew;
-            }
+            double timeNew = (DosTimeFlour.ValueT - DosTimeFlourCorrected) * DosTimeFlourCorrectionFactor;
+            DosTimeFlourCorrected += timeNew;
         }
 
         public double GetFlourDosingTime()
