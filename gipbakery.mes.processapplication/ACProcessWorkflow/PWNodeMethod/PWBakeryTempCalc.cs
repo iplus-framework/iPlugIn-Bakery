@@ -650,6 +650,8 @@ namespace gipbakery.mes.processapplication
                                              .SelectMany(x => x.Item2.ProdOrderPartslistPosRelation_TargetProdOrderPartslistPos)
                                              .Where(c => c.SourceProdOrderPartslistPos.IsOutwardRoot).ToArray();
 
+
+
                 ProdOrderPartslistPosRelation cityWaterComp = relations.FirstOrDefault(c => c.SourceProdOrderPartslistPos.Material.MaterialNo == _CityWaterMaterialNo);
                 if (cityWaterComp == null)
                 {
@@ -890,12 +892,12 @@ namespace gipbakery.mes.processapplication
 
             if (calculateWaterTemp)
             {
-                if (isOnlyWater)
-                {
-                    suggestedWaterTemperature = doughTargetTempAfterKneeding;
-                    defaultWaterTemp = doughTargetTempAfterKneeding;
-                }
-                else
+                //if (isOnlyWater)
+                //{
+                //    suggestedWaterTemperature = doughTargetTempAfterKneeding;
+                //    defaultWaterTemp = doughTargetTempAfterKneeding;
+                //}
+                //else
                 {
                     double? waterTemp = WaterTemp.Value;
 
