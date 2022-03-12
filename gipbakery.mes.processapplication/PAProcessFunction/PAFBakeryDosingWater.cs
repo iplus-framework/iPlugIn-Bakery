@@ -1,5 +1,6 @@
 ﻿using gip.core.autocomponent;
 using gip.core.datamodel;
+using gip.mes.facility;
 using gip.mes.processapplication;
 using System;
 using System.Collections.Generic;
@@ -76,6 +77,13 @@ namespace gipbakery.mes.processapplication
 
         [ACPropertyBindingTarget]
         public IACContainerTNet<double> WaterDiffQuantity
+        {
+            get;
+            set;
+        }
+
+        [ACPropertyInfo(801, "", "en{'Last read value [s/kg]'}de{'Zuletzt gelesener Wert [s/kg]'}", IsPersistable = true)]
+        public double LastReadDosTime
         {
             get;
             set;
@@ -160,13 +168,27 @@ namespace gipbakery.mes.processapplication
         {
             if (phase == ACPropertyChangedPhase.BeforeBroadcast)
                 return;
+
+            if (Math.Abs(LastReadDosTime - DosTimeWater.ValueT) <= FacilityConst.C_ZeroCompare)
+                return;
+            if (   DosTimeWater.ValueT > DosTimeWaterMax 
+                || DosTimeWater.ValueT < DosTimeWaterMin)
+                return;
+
             if (DosTimeWaterCorrectionFactor > 1)
                 DosTimeWaterCorrectionFactor = 1;
             else if (DosTimeWaterCorrectionFactor < 0.00001)
                 DosTimeWaterCorrectionFactor = 0.00001;
 
-            double timeNew = (DosTimeWater.ValueT - DosTimeWaterCorrected) * DosTimeWaterCorrectionFactor;
-            DosTimeWaterCorrected += timeNew;
+            // If initial setting
+            if (DosTimeWaterCorrected <= 0.0001)
+                DosTimeWaterCorrected = DosTimeWater.ValueT;
+            else
+            {
+                double timeNew = (DosTimeWater.ValueT - DosTimeWaterCorrected) * DosTimeWaterCorrectionFactor;
+                DosTimeWaterCorrected += timeNew;
+            }
+            LastReadDosTime = DosTimeWater.ValueT;
         }
 
         public double GetWaterDosingTime()

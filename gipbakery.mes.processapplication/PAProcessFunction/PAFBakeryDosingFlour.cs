@@ -1,5 +1,6 @@
 ﻿using gip.core.autocomponent;
 using gip.core.datamodel;
+using gip.mes.facility;
 using gip.mes.processapplication;
 using System;
 using System.Collections.Generic;
@@ -81,28 +82,35 @@ namespace gipbakery.mes.processapplication
             set;
         }
 
-        [ACPropertyInfo(801, "", "en{'Dosing time flour [s/kg]'}de{'Dosierzeit Mehl [s/kg]'}", IsPersistable = true)]
+        [ACPropertyInfo(801, "", "en{'Last read value [s/kg]'}de{'Zuletzt gelesener Wert [s/kg]'}", IsPersistable = true)]
+        public double LastReadDosTime
+        {
+            get;
+            set;
+        }
+
+        [ACPropertyInfo(802, "", "en{'Dosing time flour [s/kg]'}de{'Dosierzeit Mehl [s/kg]'}", IsPersistable = true)]
         public double DosTimeFlourCorrected
         {
             get;
             set;
         }
 
-        [ACPropertyInfo(801, "", "en{'Max dosing time flour [s/kg]'}de{'Max. Dosierzeit für Mehl [s/kg]'}", IsPersistable = true, DefaultValue = 2000.0)]
+        [ACPropertyInfo(803, "", "en{'Max dosing time flour [s/kg]'}de{'Max. Dosierzeit für Mehl [s/kg]'}", IsPersistable = true, DefaultValue = 2000.0)]
         public double DosTimeFlourMax
         {
             get;
             set;
         }
 
-        [ACPropertyInfo(802, "", "en{'Min dosing time flour [s/kg]'}de{'Min. Dosierzeit Mehl [s/kg]'}", IsPersistable = true, DefaultValue = 0.5)]
+        [ACPropertyInfo(804, "", "en{'Min dosing time flour [s/kg]'}de{'Min. Dosierzeit Mehl [s/kg]'}", IsPersistable = true, DefaultValue = 0.5)]
         public double DosTimeFlourMin
         {
             get;
             set;
         }
 
-        [ACPropertyInfo(803, "", "en{'Dosing time flour correction factor [0 - 1]'}de{'Dosierzeit Mehl-Korrekturfaktor [0 - 1]'}", IsPersistable = true, DefaultValue = 0.5)]
+        [ACPropertyInfo(805, "", "en{'Dosing time flour correction factor [0 - 1]'}de{'Dosierzeit Mehl-Korrekturfaktor [0 - 1]'}", IsPersistable = true, DefaultValue = 0.5)]
         public double DosTimeFlourCorrectionFactor
         {
             get;
@@ -160,13 +168,27 @@ namespace gipbakery.mes.processapplication
         {
             if (phase == ACPropertyChangedPhase.BeforeBroadcast)
                 return;
+
+            if (Math.Abs(LastReadDosTime - DosTimeFlour.ValueT) <= FacilityConst.C_ZeroCompare)
+                return;
+            if (   DosTimeFlour.ValueT > DosTimeFlourMax 
+                || DosTimeFlour.ValueT < DosTimeFlourMin)
+                return;
+
             if (DosTimeFlourCorrectionFactor > 1)
                 DosTimeFlourCorrectionFactor = 1;
             else if (DosTimeFlourCorrectionFactor < 0.00001)
                 DosTimeFlourCorrectionFactor = 0.00001;
 
-            double timeNew = (DosTimeFlour.ValueT - DosTimeFlourCorrected) * DosTimeFlourCorrectionFactor;
-            DosTimeFlourCorrected += timeNew;
+            // If initial setting
+            if (DosTimeFlourCorrected <= 0.0001)
+                DosTimeFlourCorrected = DosTimeFlour.ValueT;
+            else
+            {
+                double timeNew = (DosTimeFlour.ValueT - DosTimeFlourCorrected) * DosTimeFlourCorrectionFactor;
+                DosTimeFlourCorrected += timeNew;
+            }
+            LastReadDosTime = DosTimeFlour.ValueT;
         }
 
         public double GetFlourDosingTime()
