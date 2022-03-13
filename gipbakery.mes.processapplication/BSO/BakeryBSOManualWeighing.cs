@@ -966,33 +966,59 @@ namespace gipbakery.mes.processapplication
         {
             MsgWithDetails msg = base.ValidateSingleDosingStart(currentProcessModule);
 
-            if (!SingleDosTargetTemperature.HasValue)
+            if (currentProcessModule != null)
             {
-                //Error50489: The water target temperature is missing. Please enter the water target temperature and continue with process.
-                Msg msg1 = new Msg(this, eMsgLevel.Error, ClassName, "ValidateStart", 943, "Error50489");
-                if (msg != null)
+                ACClass recvPointClass = null;
+                var contextIplus = DatabaseApp.ContextIPlus;
+                using (ACMonitor.Lock(contextIplus.QueryLock_1X000))
                 {
-                    msg.AddDetailMessage(msg1);
-                    return msg;
+                    recvPointClass = currentProcessModule?.ComponentClass.FromIPlusContext<ACClass>(contextIplus);
                 }
-                return new MsgWithDetails(new Msg[] { msg1 });
-            }
 
-            double minTemp = 0;
-            double maxTemp = 60;
-
-            if (SingleDosTargetTemperature < minTemp || SingleDosTargetTemperature > maxTemp)
-            {
-                //Error50488 :The target water temperature is {0}°C, but minimum is {1}°C and maximum is {2}°C.
-                Msg msg1 = new Msg(this, eMsgLevel.Error, ClassName, "ValidateStart", 958, "Error50488", SingleDosTargetTemperature, minTemp, maxTemp);
-                if (msg != null)
+                if (recvPointClass != null && _BakeryRecvPointType.IsAssignableFrom(recvPointClass.ObjectType))
                 {
-                    msg.AddDetailMessage(msg1);
-                    return msg;
-                }
-                return new MsgWithDetails(new Msg[] { msg1 });
-            }
+                    MaterialTemperature warmWater = null, coldWater = null, cityWater = null;
 
+                    ACValueList waters = currentProcessModule.ExecuteMethod("!GetWaterComponentsFromTempService") as ACValueList;
+                    if (waters != null && waters.Any())
+                    {
+                        IEnumerable<MaterialTemperature> waterTemps = waters.Select(c => c.Value as MaterialTemperature);
+                        warmWater = waterTemps.FirstOrDefault(c => c.Water == WaterType.WarmWater);
+                        coldWater = waterTemps.FirstOrDefault(c => c.Water == WaterType.ColdWater);
+                        cityWater = waterTemps.FirstOrDefault(c => c.Water == WaterType.CityWater);
+                    }
+
+                    if (cityWater != null && SelectedSingleDosingItem.MaterialNo != cityWater.MaterialNo)
+                        return msg;
+
+                    if (!SingleDosTargetTemperature.HasValue)
+                    {
+                        //Error50489: The water target temperature is missing. Please enter the water target temperature and continue with process.
+                        Msg msg1 = new Msg(this, eMsgLevel.Error, ClassName, "ValidateStart", 943, "Error50489");
+                        if (msg != null)
+                        {
+                            msg.AddDetailMessage(msg1);
+                            return msg;
+                        }
+                        return new MsgWithDetails(new Msg[] { msg1 });
+                    }
+
+                    double minTemp = 0;
+                    double maxTemp = 60;
+
+                    if (SingleDosTargetTemperature < minTemp || SingleDosTargetTemperature > maxTemp)
+                    {
+                        //Error50488 :The target water temperature is {0}°C, but minimum is {1}°C and maximum is {2}°C.
+                        Msg msg1 = new Msg(this, eMsgLevel.Error, ClassName, "ValidateStart", 958, "Error50488", SingleDosTargetTemperature, minTemp, maxTemp);
+                        if (msg != null)
+                        {
+                            msg.AddDetailMessage(msg1);
+                            return msg;
+                        }
+                        return new MsgWithDetails(new Msg[] { msg1 });
+                    }
+                }
+            }
 
             return msg;
         }

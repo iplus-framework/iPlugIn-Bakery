@@ -2046,7 +2046,11 @@ namespace gipbakery.mes.processapplication
 
             var cityWater = componentTemp.FirstOrDefault(c => c.Material.MaterialNo == matNoCityWater);
             if (cityWater != null)
+            {
                 cityWater.Water = WaterType.CityWater;
+                var cityWaterFromService = tempFromService.FirstOrDefault(c => c.Water == WaterType.CityWater);
+                CopyValuesFromServiceTemp(cityWater, cityWaterFromService);
+            }
 
             var coldWater = componentTemp.FirstOrDefault(c => c.Material.MaterialNo == matNoColdWater);
             if (cityWater != null && coldWater == null)
@@ -2059,6 +2063,10 @@ namespace gipbakery.mes.processapplication
                                             .FirstOrDefault(x => x.KeyACUrl == PABakeryTempService.MaterialTempertureConfigKeyACUrl
                                                               && x.VBiACClassID == recvPointID)?.Value as double?
                 };
+
+                var coldWaterFromService = tempFromService.FirstOrDefault(c => c.Water == WaterType.ColdWater);
+                CopyValuesFromServiceTemp(mt, coldWaterFromService);
+
                 componentTemp.Add(mt);
                 coldWater = mt;
             }
@@ -2077,6 +2085,10 @@ namespace gipbakery.mes.processapplication
                                             .FirstOrDefault(x => x.KeyACUrl == PABakeryTempService.MaterialTempertureConfigKeyACUrl
                                                               && x.VBiACClassID == recvPointID)?.Value as double?
                 };
+
+                var warmWaterFromService = tempFromService.FirstOrDefault(c => c.Water == WaterType.WarmWater);
+                CopyValuesFromServiceTemp(mt, warmWaterFromService);
+
                 componentTemp.Add(mt);
                 warmWater = mt;
             }
