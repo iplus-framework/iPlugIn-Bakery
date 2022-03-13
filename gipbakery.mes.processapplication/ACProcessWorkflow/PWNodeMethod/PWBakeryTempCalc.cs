@@ -1007,13 +1007,13 @@ namespace gipbakery.mes.processapplication
             MaterialTemperature waterForCombinationColder = coldWater;
             MaterialTemperature waterForCombinationWarmer = cityWater;
 
-            if (cityWater.AverageTemperature < coldWater.AverageTemperature && coldWater.AverageTemperature != 9999)
+            if (cityWater.AverageTemperature < coldWater.AverageTemperature && coldWater.WaterDefaultTemperature != 9999)
             {
                 waterForCombinationColder = cityWater;
                 waterForCombinationWarmer = coldWater;
             }
 
-            if (warmWater.AverageTemperature != 9999 && CombineWarmCityWater(warmWater, waterForCombinationWarmer, targetWaterTemperature, totalWaterQuantity))
+            if (warmWater.WaterDefaultTemperature != 9999 && CombineWarmCityWater(warmWater, waterForCombinationWarmer, targetWaterTemperature, totalWaterQuantity))
             {
                 //The calculated water temperature is {0} °C and the target quantity is {1} {2}.
                 TemperatureCalculationResult.ValueT = Root.Environment.TranslateText(this, "TempCalcResult", targetWaterTemperature.ToString("F2"),
@@ -1023,7 +1023,7 @@ namespace gipbakery.mes.processapplication
             }
 
 
-            if (coldWater.AverageTemperature != 9999 && CombineColdCityWater(waterForCombinationColder, waterForCombinationWarmer, targetWaterTemperature, totalWaterQuantity))
+            if (coldWater.WaterDefaultTemperature != 9999 && CombineColdCityWater(waterForCombinationColder, waterForCombinationWarmer, targetWaterTemperature, totalWaterQuantity))
             {
                 //The calculated water temperature is {0} °C and the target quantity is {1} {2}.
                 TemperatureCalculationResult.ValueT = Root.Environment.TranslateText(this, "TempCalcResult", targetWaterTemperature.ToString("F2"),
@@ -1032,7 +1032,7 @@ namespace gipbakery.mes.processapplication
                 return;
             }
 
-            if (coldWater.AverageTemperature == 9999)
+            if (coldWater.WaterDefaultTemperature == 9999)
             {
                 waterForCombinationColder = cityWater;
             }
@@ -1917,7 +1917,11 @@ namespace gipbakery.mes.processapplication
 
             var cityWater = componentTemp.FirstOrDefault(c => c.Material.MaterialNo == matNoCityWater);
             if (cityWater != null)
+            {
                 cityWater.Water = WaterType.CityWater;
+                var cityWaterFromService = tempFromService.FirstOrDefault(c => c.Water == WaterType.CityWater);
+                CopyValuesFromServiceTemp(cityWater, cityWaterFromService);
+            }
 
             var coldWater = componentTemp.FirstOrDefault(c => c.Material.MaterialNo == matNoColdWater);
             if (cityWater != null && coldWater == null)
@@ -1930,6 +1934,10 @@ namespace gipbakery.mes.processapplication
                                             .FirstOrDefault(x => x.KeyACUrl == PABakeryTempService.MaterialTempertureConfigKeyACUrl
                                                               && x.VBiACClassID == recvPointID)?.Value as double?
                 };
+
+                var coldWaterFromService = tempFromService.FirstOrDefault(c => c.Water == WaterType.ColdWater);
+                CopyValuesFromServiceTemp(mt, coldWaterFromService);
+
                 componentTemp.Add(mt);
                 coldWater = mt;
             }
@@ -1948,6 +1956,10 @@ namespace gipbakery.mes.processapplication
                                             .FirstOrDefault(x => x.KeyACUrl == PABakeryTempService.MaterialTempertureConfigKeyACUrl
                                                               && x.VBiACClassID == recvPointID)?.Value as double?
                 };
+
+                var warmWaterFromService = tempFromService.FirstOrDefault(c => c.Water == WaterType.WarmWater);
+                CopyValuesFromServiceTemp(mt, warmWaterFromService);
+
                 componentTemp.Add(mt);
                 warmWater = mt;
             }
@@ -1997,6 +2009,15 @@ namespace gipbakery.mes.processapplication
             SetRoomTemp(componentTemp, recvPoint.RoomTemperature.ValueT, matNoDryIce);
 
             return componentTemp;
+        }
+
+        private void CopyValuesFromServiceTemp(MaterialTemperature matTemp, MaterialTemperature matTempFromService)
+        {
+            if (matTemp != null && matTempFromService != null)
+            {
+                matTemp.WaterDefaultTemperature = matTempFromService.WaterDefaultTemperature;
+                matTemp.WaterMinDosingQuantity = matTempFromService.WaterMinDosingQuantity;
+            }
         }
 
         private List<MaterialTemperature> DetermineComponentsTemperature(Picking picking, BakeryReceivingPoint recvPoint, DatabaseApp dbApp,
