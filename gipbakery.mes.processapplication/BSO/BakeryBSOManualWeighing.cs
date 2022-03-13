@@ -20,7 +20,7 @@ namespace gipbakery.mes.processapplication
         public BakeryBSOManualWeighing(ACClass acType, IACObject content, IACObject parentACObject, ACValueList parameter, string acIdentifier = "") :
             base(acType, content, parentACObject, parameter, acIdentifier)
         {
-            
+
         }
 
         public override bool ACInit(Global.ACStartTypes startChildMode = Global.ACStartTypes.Automatic)
@@ -633,6 +633,12 @@ namespace gipbakery.mes.processapplication
             _ParamChanged = false;
 
             ShowDialog(this, "TemperaturesDialog");
+
+            CityWaterTemp = null;
+            ColdWaterTemp = null;
+            WarmWaterTemp = null;
+            IceTemp = null;
+            KneedingRiseTemp = null;
         }
 
         public bool IsEnabledShowTemperaturesDialog()
@@ -674,7 +680,7 @@ namespace gipbakery.mes.processapplication
                 {
                     //Error50457: The workflow node Bakery temperature calculator is not available.
                     Messages.Error(this, "Error50457");
-                    return;                   
+                    return;
                 }
 
                 ACComponent currentProcessModule = CurrentProcessModule;
@@ -807,31 +813,10 @@ namespace gipbakery.mes.processapplication
                                                                      .FirstOrDefault(c => c.PWACClass.ACIdentifier
                                                                                            .Contains(PWBakeryDischargingSingleDos.PWClassName));
 
+                var dosings = configItem.PWGroup.ACClassWF_ParentACClassWF.Where(c => c.PWACClass.ACIdentifier.Contains(nameof(PWDosing)));
+
                 if (discharging != null)
                 {
-                    ACMethod acMethod = discharging.RefPAACClassMethod.ACMethod;
-
-                    string preConfigACUrl = rootWF.ConfigACUrl + "\\";
-                    string configACUrl = string.Format("{0}\\{1}\\Destination", discharging.ConfigACUrl, acMethod.ACIdentifier);
-
-                    IACConfig targetConfig = picking.ConfigurationEntries.FirstOrDefault(c => c.PreConfigACUrl == preConfigACUrl && c.LocalConfigACUrl == configACUrl);
-
-                    if (targetConfig == null)
-                    {
-                        ACConfigParam param = new ACConfigParam()
-                        {
-                            ACIdentifier = "Destination",
-                            ACCaption = acMethod.GetACCaptionForACIdentifier("Destination"),
-                            ValueTypeACClassID = DatabaseApp.ContextIPlus.GetACType("Int16").ACClassID,
-                            ACClassWF = discharging
-                        };
-
-                        targetConfig = ConfigManagerIPlus.ACConfigFactory(picking, param, preConfigACUrl, configACUrl, null);
-                        param.ConfigurationList.Insert(0, targetConfig);
-
-                        picking.ConfigurationEntries.Append(targetConfig);
-                    }
-
                     ACComponent currentProcessModule = CurrentProcessModule;
                     if (currentProcessModule == null)
                     {
@@ -851,7 +836,15 @@ namespace gipbakery.mes.processapplication
                         return false;
                     }
 
-                    targetConfig.Value = config.Value;
+                    InsertOverHoseConfiguration(discharging, rootWF, picking, config.Value);
+
+                    if (dosings != null)
+                    {
+                        foreach (var dos in dosings)
+                        {
+                            InsertOverHoseConfiguration(dos, rootWF, picking, config.Value);
+                        }
+                    }
 
                     Msg msg = DatabaseApp.ACSaveChanges();
                     if (msg != null)
@@ -861,6 +854,42 @@ namespace gipbakery.mes.processapplication
                     }
                 }
             }
+
+            return true;
+        }
+
+        private bool InsertOverHoseConfiguration(ACClassWF pwNode, ACClassWF rootWF, gip.mes.datamodel.Picking picking, object configValue)
+        {
+            if (pwNode == null || rootWF == null)
+                return false;
+
+            ACMethod acMethod = pwNode.RefPAACClassMethod.ACMethod;
+
+            if (acMethod == null)
+                return false;
+
+            string preConfigACUrl = rootWF.ConfigACUrl + "\\";
+            string configACUrl = string.Format("{0}\\{1}\\Destination", pwNode.ConfigACUrl, acMethod.ACIdentifier);
+
+            IACConfig targetConfig = picking.ConfigurationEntries.FirstOrDefault(c => c.PreConfigACUrl == preConfigACUrl && c.LocalConfigACUrl == configACUrl);
+
+            if (targetConfig == null)
+            {
+                ACConfigParam param = new ACConfigParam()
+                {
+                    ACIdentifier = "Destination",
+                    ACCaption = acMethod.GetACCaptionForACIdentifier("Destination"),
+                    ValueTypeACClassID = DatabaseApp.ContextIPlus.GetACType("Int16").ACClassID,
+                    ACClassWF = pwNode
+                };
+
+                targetConfig = ConfigManagerIPlus.ACConfigFactory(picking, param, preConfigACUrl, configACUrl, null);
+                param.ConfigurationList.Insert(0, targetConfig);
+
+                picking.ConfigurationEntries.Append(targetConfig);
+            }
+
+            targetConfig.Value = configValue;
 
             return true;
         }
@@ -937,61 +966,33 @@ namespace gipbakery.mes.processapplication
         {
             MsgWithDetails msg = base.ValidateSingleDosingStart(currentProcessModule);
 
-            if (currentProcessModule != null)
+            if (!SingleDosTargetTemperature.HasValue)
             {
-                ACClass recvPointClass = null;
-                var contextIplus = DatabaseApp.ContextIPlus;
-                using (ACMonitor.Lock(contextIplus.QueryLock_1X000))
+                //Error50489: The water target temperature is missing. Please enter the water target temperature and continue with process.
+                Msg msg1 = new Msg(this, eMsgLevel.Error, ClassName, "ValidateStart", 943, "Error50489");
+                if (msg != null)
                 {
-                    recvPointClass = currentProcessModule?.ComponentClass.FromIPlusContext<ACClass>(contextIplus);
+                    msg.AddDetailMessage(msg1);
+                    return msg;
                 }
-
-                if (recvPointClass != null && _BakeryRecvPointType.IsAssignableFrom(recvPointClass.ObjectType))
-                {
-                    MaterialTemperature warmWater = null, coldWater = null, cityWater = null;
-
-                    ACValueList waters = currentProcessModule.ExecuteMethod("!GetWaterComponentsFromTempService") as ACValueList;
-                    if (waters != null && waters.Any())
-                    {
-                        IEnumerable<MaterialTemperature> waterTemps = waters.Select(c => c.Value as MaterialTemperature);
-                        warmWater = waterTemps.FirstOrDefault(c => c.Water == WaterType.WarmWater);
-                        coldWater = waterTemps.FirstOrDefault(c => c.Water == WaterType.ColdWater);
-                        cityWater = waterTemps.FirstOrDefault(c => c.Water == WaterType.CityWater);
-                    }
-
-                    if (cityWater != null && SelectedSingleDosingItem.MaterialNo != cityWater.MaterialNo)
-                        return msg;
-
-                    if (!SingleDosTargetTemperature.HasValue)
-                    {
-                        //Error50489: The water target temperature is missing. Please enter the water target temperature and continue with process.
-                        Msg msg1 = new Msg(this, eMsgLevel.Error, ClassName, "ValidateStart", 943, "Error50489");
-                        if (msg != null)
-                        {
-                            msg.AddDetailMessage(msg1);
-                            return msg;
-                        }
-                        return new MsgWithDetails(new Msg[] { msg1 });
-                    }
-
-                    double minTemp = coldWater != null && coldWater.AverageTemperature.HasValue ? coldWater.AverageTemperature.Value : 1;
-                    double maxTemp = warmWater != null && warmWater.AverageTemperature.HasValue ? warmWater.AverageTemperature.Value : 70;
-                    //double minTemp = coldWater != null && coldWater.AverageTemperature.HasValue ? coldWater.AverageTemperature.Value : 1;
-                    //double maxTemp = warmWater != null && warmWater.AverageTemperature.HasValue ? warmWater.AverageTemperature.Value : 70;
-
-                    if (SingleDosTargetTemperature < minTemp || SingleDosTargetTemperature > maxTemp)
-                    {
-                        //Error50488 :The target water temperature is {0}°C, but minimum is {1}°C and maximum is {2}°C.
-                        Msg msg1 = new Msg(this, eMsgLevel.Error, ClassName, "ValidateStart", 958, "Error50488", SingleDosTargetTemperature, minTemp, maxTemp);
-                        if (msg != null)
-                        {
-                            msg.AddDetailMessage(msg1);
-                            return msg;
-                        }
-                        return new MsgWithDetails(new Msg[] { msg1 });
-                    }
-                }
+                return new MsgWithDetails(new Msg[] { msg1 });
             }
+
+            double minTemp = 0;
+            double maxTemp = 60;
+
+            if (SingleDosTargetTemperature < minTemp || SingleDosTargetTemperature > maxTemp)
+            {
+                //Error50488 :The target water temperature is {0}°C, but minimum is {1}°C and maximum is {2}°C.
+                Msg msg1 = new Msg(this, eMsgLevel.Error, ClassName, "ValidateStart", 958, "Error50488", SingleDosTargetTemperature, minTemp, maxTemp);
+                if (msg != null)
+                {
+                    msg.AddDetailMessage(msg1);
+                    return msg;
+                }
+                return new MsgWithDetails(new Msg[] { msg1 });
+            }
+
 
             return msg;
         }
@@ -1006,7 +1007,7 @@ namespace gipbakery.mes.processapplication
         protected override bool HandleExecuteACMethod(out object result, AsyncMethodInvocationMode invocationMode, string acMethodName, ACClassMethod acClassMethod, params object[] acParameter)
         {
             result = null;
-            switch(acMethodName)
+            switch (acMethodName)
             {
                 case "RecvPointCoverUpDown":
                     RecvPointCoverUpDown();
