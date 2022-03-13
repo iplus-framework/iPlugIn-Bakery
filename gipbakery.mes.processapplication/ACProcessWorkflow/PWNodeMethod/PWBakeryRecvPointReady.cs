@@ -33,6 +33,9 @@ namespace gipbakery.mes.processapplication
             method.ParameterValueList.Add(new ACValue("AckScaleWeight", typeof(double), 0, Global.ParamOption.Optional));
             paramTranslation.Add("AckScaleWeight", "en{'Scale weight for auto acknowledge [kg]'}de{'Waagengewicht für automatische Quittierung [kg]'}");
 
+            method.ParameterValueList.Add(new ACValue("PasswordDlg", typeof(bool), false, Global.ParamOption.Required));
+            paramTranslation.Add("PasswordDlg", "en{'With password dialogue'}de{'Mit Passwort-Dialog'}");
+
             var wrapper = new ACMethodWrapper(method, "en{'Receiving point ready'}de{'Abnahmestelle bereit'}", typeof(PWBakeryRecvPointReady), paramTranslation, null);
             ACMethod.RegisterVirtualMethod(typeof(PWBakeryRecvPointReady), ACStateConst.SMStarting, wrapper);
         }
@@ -105,6 +108,7 @@ namespace gipbakery.mes.processapplication
         [ACMethodState("en{'Executing'}de{'Ausführend'}", 20, true)]
         public override void SMStarting()
         {
+            AttachToRecvPointReadyScale();
             base.SMStarting();
         }
 
@@ -120,11 +124,18 @@ namespace gipbakery.mes.processapplication
                 }
             }
 
+            AttachToRecvPointReadyScale();
+
+            base.SMRunning();
+        }
+
+        public void AttachToRecvPointReadyScale()
+        {
             if (!_DischargeOverHose.HasValue)
                 _DischargeOverHose = false;
 
-            if (    AckOverScale 
-                && (AckScaleWeight > 0.0000001 || AckScaleWeight < -0.0000001) 
+            if (AckOverScale
+                && (AckScaleWeight > 0.0000001 || AckScaleWeight < -0.0000001)
                 && _AckScale == null)
             {
                 BakeryReceivingPoint recvPoint = ParentPWGroup?.AccessedProcessModule as BakeryReceivingPoint;
@@ -160,8 +171,6 @@ namespace gipbakery.mes.processapplication
                 }
                 UnSubscribeToProjectWorkCycle();
             }
-
-            base.SMRunning();
         }
 
         private void ActualValue_PropertyChanged(object sender, System.ComponentModel.PropertyChangedEventArgs e)
