@@ -1007,14 +1007,13 @@ namespace gipbakery.mes.processapplication
             MaterialTemperature waterForCombinationColder = coldWater;
             MaterialTemperature waterForCombinationWarmer = cityWater;
 
-            if (cityWater.AverageTemperature < coldWater.AverageTemperature)
+            if (cityWater.AverageTemperature < coldWater.AverageTemperature && coldWater.AverageTemperature != 9999)
             {
                 waterForCombinationColder = cityWater;
                 waterForCombinationWarmer = coldWater;
             }
 
-
-            if (CombineWarmCityWater(warmWater, waterForCombinationWarmer, targetWaterTemperature, totalWaterQuantity))
+            if (warmWater.AverageTemperature != 9999 && CombineWarmCityWater(warmWater, waterForCombinationWarmer, targetWaterTemperature, totalWaterQuantity))
             {
                 //The calculated water temperature is {0} °C and the target quantity is {1} {2}.
                 TemperatureCalculationResult.ValueT = Root.Environment.TranslateText(this, "TempCalcResult", targetWaterTemperature.ToString("F2"),
@@ -1023,13 +1022,19 @@ namespace gipbakery.mes.processapplication
                 return;
             }
 
-            if (CombineColdCityWater(waterForCombinationColder, waterForCombinationWarmer, targetWaterTemperature, totalWaterQuantity))
+
+            if (coldWater.AverageTemperature != 9999 && CombineColdCityWater(waterForCombinationColder, waterForCombinationWarmer, targetWaterTemperature, totalWaterQuantity))
             {
                 //The calculated water temperature is {0} °C and the target quantity is {1} {2}.
                 TemperatureCalculationResult.ValueT = Root.Environment.TranslateText(this, "TempCalcResult", targetWaterTemperature.ToString("F2"),
                                                                                                              totalWaterQuantity.ToString("F2"), "kg");
                 WaterCalcResult.ValueT = targetWaterTemperature;
                 return;
+            }
+
+            if (coldWater.AverageTemperature == 9999)
+            {
+                waterForCombinationColder = cityWater;
             }
 
             if (!CombineWatersWithDryIce(waterForCombinationColder, dryIce, targetWaterTemperature, totalWaterQuantity, defaultWaterTemp, isOnlyWaterCompInPartslist, 
@@ -1328,6 +1333,8 @@ namespace gipbakery.mes.processapplication
 
             return false;
         }
+
+
 
         #endregion
 
