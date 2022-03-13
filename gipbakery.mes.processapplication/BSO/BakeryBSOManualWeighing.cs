@@ -976,6 +976,8 @@ namespace gipbakery.mes.processapplication
 
                     double minTemp = coldWater != null && coldWater.AverageTemperature.HasValue ? coldWater.AverageTemperature.Value : 1;
                     double maxTemp = warmWater != null && warmWater.AverageTemperature.HasValue ? warmWater.AverageTemperature.Value : 70;
+                    //double minTemp = coldWater != null && coldWater.AverageTemperature.HasValue ? coldWater.AverageTemperature.Value : 1;
+                    //double maxTemp = warmWater != null && warmWater.AverageTemperature.HasValue ? warmWater.AverageTemperature.Value : 70;
 
                     if (SingleDosTargetTemperature < minTemp || SingleDosTargetTemperature > maxTemp)
                     {
