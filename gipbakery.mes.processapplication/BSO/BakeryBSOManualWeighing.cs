@@ -1023,6 +1023,13 @@ namespace gipbakery.mes.processapplication
             return msg;
         }
 
+        [ACMethodInfo("", "en{'Single dosing'}de{'Einzeldosierung'}", 660)]
+        public override void ShowSingleDosingDialog()
+        {
+            DischargeOverHose = false;
+            base.ShowSingleDosingDialog();
+        }
+
         #endregion
 
         public override Global.ControlModes OnGetControlModes(IVBContent vbControl)
