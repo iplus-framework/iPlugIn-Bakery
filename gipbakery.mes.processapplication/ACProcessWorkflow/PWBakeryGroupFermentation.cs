@@ -195,10 +195,17 @@ namespace gipbakery.mes.processapplication
                 calculated = IsTimeCalculated.ValueT;
             }
 
-            if (!calculated)
+            bool findStores = false;
+            using (ACMonitor.Lock(_20015_LockValue))
             {
+                findStores = SourceFacility == null || TargetFacility == null;
+            }
+
+            if (findStores)
                 FindVirtualStores();
 
+            if (!calculated)
+            {
                 CalculateDuration();
 
                 //ActivatePreProdFunctions();
@@ -317,7 +324,6 @@ namespace gipbakery.mes.processapplication
             }
         }
 
-
         [ACMethodInteraction("", "en{'Recalculate prod times'}de{'Neuberechnung der Produktionszeiten'}", 800, true)]
         public void RunCalculationAgain()
         {
@@ -325,9 +331,8 @@ namespace gipbakery.mes.processapplication
             SubscribeToProjectWorkCycle();
         }
 
-    public bool IsEnabledRunCalculationAgain()
+        public bool IsEnabledRunCalculationAgain()
         {
-            
             return true;
         }
 
