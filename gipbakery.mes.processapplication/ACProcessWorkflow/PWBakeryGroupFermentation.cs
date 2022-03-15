@@ -75,6 +75,8 @@ namespace gipbakery.mes.processapplication
         public override void Recycle(IACObject content, IACObject parentACObject, ACValueList parameter, string acIdentifier = "")
         {
             EndOnTimeNodes = null;
+            TargetFacility = null;
+            SourceFacility = null;
             base.Recycle(content, parentACObject, parameter, acIdentifier);
         }
 
@@ -811,7 +813,7 @@ namespace gipbakery.mes.processapplication
             {
                 xmlChild = doc.CreateElement("TargetFacility");
                 if (xmlChild != null)
-                    xmlChild.InnerText = TargetFacility.ToString();
+                    xmlChild.InnerText = TargetFacility?.ToString();
                 xmlACPropertyList.AppendChild(xmlChild);
             }
         }

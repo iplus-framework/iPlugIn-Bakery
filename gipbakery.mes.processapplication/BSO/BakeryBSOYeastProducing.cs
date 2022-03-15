@@ -969,15 +969,16 @@ namespace gipbakery.mes.processapplication
                 MessageItem msgItem = MessagesList.FirstOrDefault(c => c.UserAckPWNode != null && c.UserAckPWNode.ValueT == fermentationStarter);
                 if (msgItem != null)
                 {
-                    bool? result = fermentationStarter.ExecuteMethod(PWBakeryFermentationStarter.MN_AckFermentationStarter, false) as bool?;
-                    if (result.HasValue && !result.Value)
-                    {
-                        //The starter were not added to the container!Do you still want to start production?
-                        if (Messages.Question(this, "Question50063") == Global.MsgResult.Yes)
-                        {
-                            fermentationStarter.ExecuteMethod(PWBakeryFermentationStarter.MN_AckFermentationStarter, true);
-                        }
-                    }
+                    fermentationStarter.ExecuteMethod(PWBakeryFermentationStarter.MN_AckFermentationStarter, true);
+                    //bool result = (bool) fermentationStarter.ExecuteMethod(PWBakeryFermentationStarter.MN_AckFermentationStarter, false);
+                    //if (!result)
+                    //{
+                    //    //The starter were not added to the container!Do you still want to start production?
+                    //    if (Messages.Question(this, "Question50063") == Global.MsgResult.Yes)
+                    //    {
+                    //        fermentationStarter.ExecuteMethod(PWBakeryFermentationStarter.MN_AckFermentationStarter, true);
+                    //    }
+                    //}
                 }
             }
         }
@@ -1241,8 +1242,11 @@ namespace gipbakery.mes.processapplication
                         //Question50068: The dosing readiness of the container is interrupted. Do you want to reactivate the dosing readiness?
                         if (Messages.Question(this, "Question50068") == Global.MsgResult.Yes)
                         {
-                            DischargingACStateProp.ValueT = ACStateEnum.SMRunning;
-                            DischargingState = (short)DischargingACStateProp.ValueT;
+                            if (DischargingACStateProp.ParentACComponent != null)
+                                DischargingACStateProp.ParentACComponent.ExecuteMethod(ACStateConst.TMResume);
+
+                            //DischargingACStateProp.ValueT = ACStateEnum.SMRunning;
+                            //DischargingState = (short)DischargingACStateProp.ValueT;
                         }
                     }
                 }
@@ -1276,8 +1280,10 @@ namespace gipbakery.mes.processapplication
 
                         else if (questionResult == Global.MsgResult.No && DischargingACStateProp != null)
                         {
-                            DischargingACStateProp.ValueT = ACStateEnum.SMPaused;
-                            DischargingState = (short)DischargingACStateProp.ValueT;
+                            if (DischargingACStateProp.ParentACComponent != null)
+                                DischargingACStateProp.ParentACComponent.ExecuteMethod(ACStateConst.TMPause);
+                            //DischargingACStateProp.ValueT = ACStateEnum.SMPaused;
+                            //DischargingState = (short)DischargingACStateProp.ValueT;
                         }
 
                         else if (questionResult == Global.MsgResult.Cancel)
@@ -1289,8 +1295,10 @@ namespace gipbakery.mes.processapplication
                         var questionResult = Messages.Question(this, "Question50070");
                         if (questionResult == Global.MsgResult.Yes)
                         {
-                            DischargingACStateProp.ValueT = ACStateEnum.SMPaused;
-                            DischargingState = (short)DischargingACStateProp.ValueT;
+                            if (DischargingACStateProp.ParentACComponent != null)
+                                DischargingACStateProp.ParentACComponent.ExecuteMethod(ACStateConst.TMPause);
+                            //DischargingACStateProp.ValueT = ACStateEnum.SMPaused;
+                            //DischargingState = (short)DischargingACStateProp.ValueT;
                         }
                         else
                             return;
@@ -1317,7 +1325,7 @@ namespace gipbakery.mes.processapplication
             if (DischargingACStateProp != null)
             {
                 if (DischargingACStateProp.ParentACComponent != null)
-                    DischargingACStateProp.ParentACComponent.ACUrlCommand(ACUrlHelper.Delimiter_InvokeMethod + ACStateConst.TMAbort);
+                    DischargingACStateProp.ParentACComponent.ExecuteMethod(ACStateConst.TMAbort);
                 //DischargingACStateProp.ValueT = ACStateEnum.SMCompleted;
                 //DischargingState = (short)DischargingACStateProp.ValueT;
             }

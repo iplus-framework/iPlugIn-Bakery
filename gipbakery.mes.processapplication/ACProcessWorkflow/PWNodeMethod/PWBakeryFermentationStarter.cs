@@ -37,8 +37,32 @@ namespace gipbakery.mes.processapplication
         {
         }
 
-        public const string PWClassName = "PWBakeryFermentationStarter";
+        public override bool ACDeInit(bool deleteACClassTask = false)
+        {
+            if (deleteACClassTask)
+            {
+                ResetLocalProperties();
+            }
+            return base.ACDeInit(deleteACClassTask);
+        }
 
+        public override void Recycle(IACObject content, IACObject parentACObject, ACValueList parameter, string acIdentifier = "")
+        {
+            ResetLocalProperties();
+            base.Recycle(content, parentACObject, parameter, acIdentifier);
+        }
+
+        private void ResetLocalProperties()
+        {
+            _IsUserAck = false;
+            _ScaleDetectMode = ScaleDetectModeEnum.Gross;
+            _BookParamNotAvailableClone = null;
+            StoredScaleValue = 0;
+            FSTargetQuantity.ValueT = null;
+            CurrentProdOrderPartslistRel = null;
+        }
+
+        public const string PWClassName = "PWBakeryFermentationStarter";
         public const string PN_FSTargetQuantity = "FSTargetQuantity";
         public const string MN_AckFermentationStarter = "AckFermentationStarter";
 
@@ -64,8 +88,8 @@ namespace gipbakery.mes.processapplication
             }
         }
 
-        [ACPropertyInfo(true, 9999)]
-        private double ScaleActualValue
+        [ACPropertyInfo(true, 500, "", "en{'Stored gross weight of conatiner'}de{'Gespeicheter Bruttowert des Behälters'}")]
+        public double StoredScaleValue
         {
             get;
             set;
@@ -113,7 +137,6 @@ namespace gipbakery.mes.processapplication
 
         private bool _IsUserAck = false;
         private ScaleDetectModeEnum _ScaleDetectMode;
-
         private ACMethodBooking _BookParamNotAvailableClone;
 
         #endregion
@@ -135,15 +158,7 @@ namespace gipbakery.mes.processapplication
 
         public override void SMIdle()
         {
-            CurrentProdOrderPartslistRel = null;
-            FSTargetQuantity.ValueT = null;
-            ScaleActualValue = 0;
-            _ScaleDetectMode = ScaleDetectModeEnum.Gross;
-
-            using (ACMonitor.Lock(_20015_LockValue))
-            {
-                _IsUserAck = false;
-            }
+            ResetLocalProperties();
             base.SMIdle();
         }
 
@@ -184,7 +199,7 @@ namespace gipbakery.mes.processapplication
 
             if (CurrentProdOrderPartslistRel == null && !FSTargetQuantity.ValueT.HasValue)
             {
-                ScaleActualValue = scale.ActualValue.ValueT;
+                StoredScaleValue = scale.ActualValue.ValueT;
 
                 using (var dbIPlus = new Database())
                 {
@@ -669,7 +684,7 @@ namespace gipbakery.mes.processapplication
             bool isStarterQuantityInTank = scaleWeight >= targetQuantity;
             if (_ScaleDetectMode == ScaleDetectModeEnum.Difference)
             {
-                double diff = scaleWeight - ScaleActualValue;
+                double diff = scaleWeight - StoredScaleValue;
                 isStarterQuantityInTank = diff >= targetQuantity;
             }
             else if (_ScaleDetectMode == ScaleDetectModeEnum.Skip)
@@ -679,6 +694,8 @@ namespace gipbakery.mes.processapplication
 
             if (isStarterQuantityInTank)
             {
+                if (prodRelation == null)
+                    return null;
                 using (DatabaseApp dbApp = new DatabaseApp())
                 {
                     ProdOrderPartslistPosRelation rel = prodRelation.FromAppContext<ProdOrderPartslistPosRelation>(dbApp);
@@ -754,13 +771,25 @@ namespace gipbakery.mes.processapplication
             return msg;
         }
 
-        [ACMethodInfo("", "", 700)]
-        public void AckFermentationStarter(bool force)
+        [ACMethodInfo("", "en{'Acknowledge fermentation starter'}de{'Anstellgut quittieren'}", 700)]
+        public bool AckFermentationStarter(bool force)
         {
-            using (ACMonitor.Lock(_20015_LockValue))
+            _IsUserAck = force;
+            return true;
+        }
+
+        protected override bool HandleExecuteACMethod(out object result, AsyncMethodInvocationMode invocationMode, string acMethodName, gip.core.datamodel.ACClassMethod acClassMethod, params object[] acParameter)
+        {
+            result = null;
+            switch (acMethodName)
             {
-                _IsUserAck = true;
+                case nameof(AckFermentationStarter):
+                    result = AckFermentationStarter((bool)acParameter[0]);
+                    return true;
+
             }
+
+            return base.HandleExecuteACMethod(out result, invocationMode, acMethodName, acClassMethod, acParameter);
         }
 
         private static bool HandleExecuteACMethod_PWBakeryFermentationStarter(out object result, IACComponent acComponent, string acMethodName, gip.core.datamodel.ACClassMethod acClassMethod, object[] acParameter)
@@ -787,6 +816,15 @@ namespace gipbakery.mes.processapplication
                 xmlChild = doc.CreateElement("IsUserAck");
                 if (xmlChild != null)
                     xmlChild.InnerText = _IsUserAck.ToString();
+                xmlACPropertyList.AppendChild(xmlChild);
+            }
+
+            xmlChild = xmlACPropertyList["ScaleDetectMode"];
+            if (xmlChild == null)
+            {
+                xmlChild = doc.CreateElement("ScaleDetectMode");
+                if (xmlChild != null)
+                    xmlChild.InnerText = _ScaleDetectMode.ToString();
                 xmlACPropertyList.AppendChild(xmlChild);
             }
         }

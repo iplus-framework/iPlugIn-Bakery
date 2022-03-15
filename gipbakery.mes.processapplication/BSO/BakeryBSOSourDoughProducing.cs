@@ -576,14 +576,15 @@ namespace gipbakery.mes.processapplication
                 MessageItem msgItem = MessagesList.FirstOrDefault(c => c.UserAckPWNode != null && c.UserAckPWNode.ValueT == fermentationStarter);
                 if (msgItem != null)
                 {
-                    bool? result = fermentationStarter.ExecuteMethod(PWBakeryFermentationStarter.MN_AckFermentationStarter, false) as bool?;
-                    if (result.HasValue && !result.Value)
-                    {
-                        if (Messages.Question(this, "Question50063") == Global.MsgResult.Yes)
-                        {
-                            fermentationStarter.ExecuteMethod(PWBakeryFermentationStarter.MN_AckFermentationStarter, true);
-                        }
-                    }
+                    fermentationStarter.ExecuteMethod(PWBakeryFermentationStarter.MN_AckFermentationStarter, true);
+                    //bool result = (bool)fermentationStarter.ExecuteMethod(PWBakeryFermentationStarter.MN_AckFermentationStarter, false);
+                    //if (!result)
+                    //{
+                    //    if (Messages.Question(this, "Question50063") == Global.MsgResult.Yes)
+                    //    {
+                    //        fermentationStarter.ExecuteMethod(PWBakeryFermentationStarter.MN_AckFermentationStarter, true);
+                    //    }
+                    //}
                 }
             }
         }
