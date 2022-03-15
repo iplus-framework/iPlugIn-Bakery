@@ -108,28 +108,25 @@ namespace gipbakery.mes.processapplication
         [ACMethodState("en{'Executing'}de{'Ausführend'}", 20, true)]
         public override void SMStarting()
         {
+            bool ack = AckRecvPointReadyOverTempCalc();
+            if (ack)
+                AckStart();
+
             AttachToRecvPointReadyScale();
             base.SMStarting();
         }
 
         public override void SMRunning()
         {
-            if (!_DischargeOverHose.HasValue)
-            {
-                bool complete = IsDischargeOverHose();
-                if (complete)
-                {
-                    CurrentACState = ACStateEnum.SMCompleted;
-                    return;
-                }
-            }
+            bool ack = AckRecvPointReadyOverTempCalc();
+            if (ack)
+                AckStart();
 
             AttachToRecvPointReadyScale();
-
             base.SMRunning();
         }
 
-        public void AttachToRecvPointReadyScale()
+        private void AttachToRecvPointReadyScale()
         {
             if (!_DischargeOverHose.HasValue)
                 _DischargeOverHose = false;
@@ -170,6 +167,27 @@ namespace gipbakery.mes.processapplication
                     }
                 }
                 UnSubscribeToProjectWorkCycle();
+            }
+        }
+
+        private bool AckRecvPointReadyOverTempCalc()
+        {
+            if (!AckOverScale)
+                return false;
+
+            PWBakeryTempCalc bakeryTempCalc = ParentPWGroup.FindChildComponents<PWBakeryTempCalc>(c => c is PWBakeryTempCalc).FirstOrDefault();
+            if (bakeryTempCalc == null)
+                return false;
+
+            if (AckScaleWeight > 0.000001)
+            {
+                bool? result = bakeryTempCalc.IsFirstItemForDosingInPicking();
+                return result.HasValue && !result.Value;
+            }
+            else
+            {
+                bool? result = bakeryTempCalc.IsLastItemForDosingInPicking();
+                return result.HasValue && !result.Value;
             }
         }
 

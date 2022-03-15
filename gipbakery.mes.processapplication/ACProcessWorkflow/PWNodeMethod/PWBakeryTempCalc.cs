@@ -417,6 +417,12 @@ namespace gipbakery.mes.processapplication
                         calcMode = _CalculatorMode;
                     }
 
+                    bool? isFirstItem = IsFirstItemForDosingInPicking();
+                    if (isFirstItem.HasValue && !isFirstItem.Value)
+                    {
+                        CurrentACState = ACStateEnum.SMCompleted;
+                    }
+
                     if (calcMode == TempCalcMode.Calcuate)
                     {
                         CalculateTargetTemperature();
@@ -727,7 +733,7 @@ namespace gipbakery.mes.processapplication
                 Material cityWaterComp = pickingPos.Material.MaterialNo == _CityWaterMaterialNo ? pickingPos.Material : null;
                 if (cityWaterComp == null)
                 {
-                    CurrentACState = ACStateEnum.SMCompleted;
+                    //CurrentACState = ACStateEnum.SMCompleted;
                     return;
                 }
 
@@ -1765,6 +1771,8 @@ namespace gipbakery.mes.processapplication
             pos.Sequence = picking.PickingPos_Picking.Max(c => c.Sequence) + 1;
             pos.FromFacility = source;
             pos.ToFacility = toFacility;
+            pos.MDDelivPosLoadState = dbApp.MDDelivPosLoadState.FirstOrDefault(c => c.MDDelivPosLoadStateIndex == (short)MDDelivPosLoadState.DelivPosLoadStates.ReadyToLoad);
+
             picking.PickingPos_Picking.Add(pos);
             dbApp.PickingPos.AddObject(pos);
 
@@ -2402,6 +2410,46 @@ namespace gipbakery.mes.processapplication
                 return thisComponent.AskUserIsWaterNeeded;
             }
             return false;
+        }
+
+        public bool? IsFirstItemForDosingInPicking()
+        {
+            PWMethodRelocation pwMethodRelocation = ParentPWMethod<PWMethodRelocation>();
+            if (pwMethodRelocation == null)
+                return null;
+
+            using(DatabaseApp dbApp = new DatabaseApp())
+            {
+                Picking picking = pwMethodRelocation.CurrentPicking.FromAppContext<Picking>(dbApp);
+
+                if (picking == null)
+                    return null;
+
+                if (picking.PickingPos_Picking.Any(c => c.MDDelivPosLoadState != null && c.MDDelivPosLoadState.DelivPosLoadState == MDDelivPosLoadState.DelivPosLoadStates.LoadToTruck))
+                    return false;
+
+                return true;
+            }
+        }
+
+        public bool? IsLastItemForDosingInPicking()
+        {
+            PWMethodRelocation pwMethodRelocation = ParentPWMethod<PWMethodRelocation>();
+            if (pwMethodRelocation == null)
+                return null;
+
+            using (DatabaseApp dbApp = new DatabaseApp())
+            {
+                Picking picking = pwMethodRelocation.CurrentPicking.FromAppContext<Picking>(dbApp);
+
+                if (picking == null)
+                    return null;
+
+                if (!picking.PickingPos_Picking.Any(c => c.MDDelivPosLoadState.DelivPosLoadState < MDDelivPosLoadState.DelivPosLoadStates.LoadToTruck))
+                    return true;
+
+                return false;
+            }
         }
 
         protected override void DumpPropertyList(XmlDocument doc, XmlElement xmlACPropertyList)
