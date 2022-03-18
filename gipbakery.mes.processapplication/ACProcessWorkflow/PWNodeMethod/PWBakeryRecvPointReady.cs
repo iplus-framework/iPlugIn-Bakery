@@ -204,11 +204,12 @@ namespace gipbakery.mes.processapplication
             if (AckScale == null)
                 return false;
 
-            if ((AckScaleWeight > 0.0000001 && AckScale.ActualValue.ValueT >= AckScaleWeight)
-             || (AckScaleWeight < -0.0000001 && AckScale.ActualValue.ValueT < Math.Abs(AckScaleWeight))
+            if ( (   (AckScaleWeight > 0.0000001 && AckScale.ActualValue.ValueT >= AckScaleWeight)
+                  || (AckScaleWeight < -0.0000001 && AckScale.ActualValue.ValueT < Math.Abs(AckScaleWeight)))
+                 &&  !AckScale.NotStandStill.ValueT
                 )
             {
-                AckStart(); //TODO:calming time
+                AckStart(); 
                 return true;
             }
             return false;
