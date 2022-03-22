@@ -871,14 +871,14 @@ namespace gipbakery.mes.processapplication
 
                     var fermentationStarterRef = new ACRef<IACComponentPWNode>(pwNode, this);
 
-                    fermentationQuantityProp = fermentationStarterRef.ValueT.GetPropertyNet(PWBakeryFermentationStarter.PN_FSTargetQuantity) as IACContainerTNet<double?>;
+                    fermentationQuantityProp = fermentationStarterRef.ValueT.GetPropertyNet(nameof(PWBakeryFermentationStarter.FSTargetQuantity)) as IACContainerTNet<double?>;
                     if (fermentationQuantityProp == null)
                     {
                         pwGroupFermentation.Detach();
                         fermentationStarterRef.Detach();
 
                         //Error50464: Initialization is not complete. The property {0} can not be found!
-                        Messages.Error(this, "Error50463", false, PWBakeryFermentationStarter.PN_FSTargetQuantity);
+                        Messages.Error(this, "Error50463", false, nameof(PWBakeryFermentationStarter.FSTargetQuantity));
                         return;
                     }
 
@@ -969,7 +969,7 @@ namespace gipbakery.mes.processapplication
                 MessageItem msgItem = MessagesList.FirstOrDefault(c => c.UserAckPWNode != null && c.UserAckPWNode.ValueT == fermentationStarter);
                 if (msgItem != null)
                 {
-                    fermentationStarter.ExecuteMethod(PWBakeryFermentationStarter.MN_AckFermentationStarter, true);
+                    fermentationStarter.ExecuteMethod(nameof(PWBakeryFermentationStarter.AckFermentationStarter), false);
                     //bool result = (bool) fermentationStarter.ExecuteMethod(PWBakeryFermentationStarter.MN_AckFermentationStarter, false);
                     //if (!result)
                     //{
@@ -1474,12 +1474,63 @@ namespace gipbakery.mes.processapplication
             if (!IsEnabledAbort())
                 return;
 
-            ParentBSOWCS?.SelectExtraDisTargetOnPWGroup();
+            ShowDialog(this, "AbortDialog");
         }
 
         public bool IsEnabledAbort()
         {
             return true; //ComponentPWNode != null;
+        }
+
+        [ACMethodInfo("", "en{'Abort'}de{'Abbrechen'}", 606)]
+        public virtual void AbortFermStarter()
+        {
+            IACComponentPWNode fermentationStarter = null;
+            using (ACMonitor.Lock(_70100_MembersLock))
+            {
+                fermentationStarter = FermentationStarterRef?.ValueT;
+            }
+
+            if (fermentationStarter == null)
+            {
+                //Error50553: The fermentation starter currently isn't active!
+                Messages.Error(this, "Error50553");
+                return;
+            }
+
+            fermentationStarter.ExecuteMethod(nameof(PWBakeryFermentationStarter.AbortFermentationStarter));
+
+            CloseTopDialog();
+        }
+
+        [ACMethodInfo("", "en{'Abort and switch to emptying mode'}de{'Abbrechen und leerfahren'}", 606)]
+        public virtual void AbortFermStarterAndSwitchToEmptyingMode()
+        {
+            IACComponentPWNode fermentationStarter = null;
+            using (ACMonitor.Lock(_70100_MembersLock))
+            {
+                fermentationStarter = FermentationStarterRef?.ValueT;
+            }
+
+            if (fermentationStarter == null)
+            {
+                //Error50553: The fermentation starter currently isn't active!
+                Messages.Error(this, "Error50553");
+            }
+
+            if (fermentationStarter != null)
+                fermentationStarter.ExecuteMethod(nameof(PWBakeryFermentationStarter.AbortFermentationStarter));
+
+            CloseTopDialog();
+
+            ParentBSOWCS?.SelectExtraDisTargetOnPWGroup();
+        }
+
+        [ACMethodInfo("", "en{'Switch to emptying mode'}de{'Leerfahren'}", 606)]
+        public virtual void SwitchToEmptyingMode()
+        {
+            CloseTopDialog();
+            ParentBSOWCS?.SelectExtraDisTargetOnPWGroup();
         }
 
         #endregion

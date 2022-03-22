@@ -4,6 +4,7 @@ using gip.core.processapplication;
 using gip.mes.datamodel;
 using gip.mes.facility;
 using gip.mes.processapplication;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Xml;
@@ -515,7 +516,11 @@ namespace gipbakery.mes.processapplication
                 if (sourceFacility == null || targetFacility == null)
                     return;
 
-                FacilityCharge[] quantsInSource = sourceFacility.FacilityCharge_Facility.Where(c => !c.NotAvailable && c.MaterialID == targetFacility.MaterialID).ToArray();
+                FacilityCharge[] quantsInSource = sourceFacility.FacilityCharge_Facility
+                                                                .Where(c => !c.NotAvailable 
+                                                                          && c.MaterialID == targetFacility.MaterialID
+                                                                          && c.FacilityBookingCharge_InwardFacilityCharge.FirstOrDefault()?.FacilityBookingType != GlobalApp.FacilityBookingType.InventoryNewQuant)
+                                                                .ToArray();
 
                 foreach (FacilityCharge quant in quantsInSource)
                 {
