@@ -46,6 +46,8 @@ namespace gipbakery.mes.processapplication
             paramTranslation.Add("BookTargetQIfZero", "en{'Post target quantity when actual = 0'}de{'Sollmenge buchen wenn Istgewicht = 0'}");
             method.ParameterValueList.Add(new ACValue("DoseFromFillingSilo", typeof(bool?), null, Global.ParamOption.Optional));
             paramTranslation.Add("DoseFromFillingSilo", "en{'Dose from silo that is filling'}de{'Dosiere aus Silo das befüllt wird'}");
+            method.ParameterValueList.Add(new ACValue("FacilityNoSort", typeof(string), null, Global.ParamOption.Optional));
+            paramTranslation.Add("FacilityNoSort", "en{'Priorization order container number'}de{'Priorisierungsreihenfolge Silonummer'}");
 
             method.ParameterValueList.Add(new ACValue("DosingForFlour", typeof(bool), false, Global.ParamOption.Optional));
             paramTranslation.Add("DosingForFlour", "en{'Dosing for flour'}de{'Dosieren für Mehl'}");
