@@ -915,7 +915,9 @@ namespace gipbakery.mes.processapplication
                 case nameof(AckFermentationStarter):
                     AckFermentationStarter();
                     return true;
-
+                case nameof(AbortFermentationStarter):
+                    AbortFermentationStarter();
+                    return true;
             }
 
             return base.HandleExecuteACMethod(out result, invocationMode, acMethodName, acClassMethod, acParameter);
@@ -960,6 +962,8 @@ namespace gipbakery.mes.processapplication
 
         #endregion
 
+        #region Enums
+
         private enum ScaleDetectModeEnum : short
         {
             Gross = 0, //Gross weight must be greather than autodetect quantity
@@ -974,5 +978,7 @@ namespace gipbakery.mes.processapplication
             UserAckWithoutToleranceCheck = 20,
             UserAbort = 30
         }
+
+        #endregion
     }
 }

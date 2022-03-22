@@ -1717,68 +1717,74 @@ namespace gipbakery.mes.processapplication
 
             switch (acMethodName)
             {
-                case "Acknowledge":
+                case nameof(Acknowledge):
                     Acknowledge();
                     return true;
-                case "IsEnabledAcknowledge":
+                case nameof(IsEnabledAcknowledge):
                     result = IsEnabledAcknowledge();
                     return true;
-                case "Clean":
+                case nameof(Clean):
                     Clean();
                     return true;
-                case "IsEnabledClean":
+                case nameof(IsEnabledClean):
                     result = IsEnabledClean();
                     return true;
-                case "StartClean":
+                case nameof(StartClean):
                     StartClean();
                     return true;
-                case "IsEnabledStartClean":
+                case nameof(IsEnabledStartClean):
                     result = IsEnabledStartClean();
                     return true;
-                case "StoreOutwardEnabledOn":
+                case nameof(StoreOutwardEnabledOn):
                     StoreOutwardEnabledOn();
                     return true;
-                case "IsEnabledStoreOutwardEnabledOn":
+                case nameof(IsEnabledStoreOutwardEnabledOn):
                     result = IsEnabledStoreOutwardEnabledOn();
                     return true;
-                case "StoreOutwardEnabledOff":
+                case nameof(StoreOutwardEnabledOff):
                     StoreOutwardEnabledOff();
                     return true;
-                case "IsEnabledStoreOutwardEnabledOff":
+                case nameof(IsEnabledStoreOutwardEnabledOff):
                     result = IsEnabledStoreOutwardEnabledOff();
                     return true;
-                case "FinishOrder":
+                case nameof(FinishOrder):
                     FinishOrder();
                     return true;
-                case "PumpOver":
+                case nameof(PumpOver):
                     PumpOver();
                     return true;
-                case "IsEnabledPumpOver":
+                case nameof(IsEnabledPumpOver):
                     result = IsEnabledPumpOver();
                     return true;
-                case "PumpOverStart":
+                case nameof(PumpOverStart):
                     PumpOverStart();
                     return true;
-                case "IsEnabledPumpOverStart":
+                case nameof(IsEnabledPumpOverStart):
                     result = IsEnabledPumpOverStart();
                     return true;
-                case "BookNotAvailableFacilityCharge":
+                case nameof(BookNotAvailableFacilityCharge):
                     BookNotAvailableFacilityCharge();
                     return true;
-                case "IsEnabledBookNotAvailableFacilityCharge":
+                case nameof(IsEnabledBookNotAvailableFacilityCharge):
                     result = IsEnabledBookNotAvailableFacilityCharge();
                     return true;
-                case "BookNotAvailableFacility":
+                case nameof(BookNotAvailableFacility):
                     BookNotAvailableFacility();
                     return true;
-                case "IsEnabledBookNotAvailableFacility":
+                case nameof(IsEnabledBookNotAvailableFacility):
                     result = IsEnabledBookNotAvailableFacility();
                     return true;
-                case "Abort":
+                case nameof(Abort):
                     Abort();
                     return true;
-                case "IsEnabledAbort":
+                case nameof(IsEnabledAbort):
                     result = IsEnabledAbort();
+                    return true;
+                case nameof(AbortFermStarter):
+                    AbortFermStarter();
+                    return true;
+                case nameof(AbortFermStarterAndSwitchToEmptyingMode):
+                    AbortFermStarterAndSwitchToEmptyingMode();
                     return true;
             }
 
