@@ -444,8 +444,9 @@ namespace gipbakery.mes.processapplication
 
                 if (!ManuallyChangeSource
                     && dosing.StateLackOfMaterial.ValueT != PANotifyState.Off
-                    && ((dosing.CurrentACState == ACStateEnum.SMRunning && dosing.DosingAbortReason.ValueT == PADosingAbortReason.NotSet) 
-                    || ((dosing.CurrentACState == ACStateEnum.SMRunning || dosing.CurrentACState == ACStateEnum.SMPaused) && dosing.DosingAbortReason.ValueT == PADosingAbortReason.EmptySourceNextSource)))
+                    && (   (dosing.CurrentACState == ACStateEnum.SMRunning && dosing.DosingAbortReason.ValueT == PADosingAbortReason.NotSet) 
+                        || (   (dosing.CurrentACState == ACStateEnum.SMRunning || dosing.CurrentACState == ACStateEnum.SMPaused) 
+                            && (dosing.DosingAbortReason.ValueT == PADosingAbortReason.EmptySourceNextSource || dosing.DosingAbortReason.ValueT == PADosingAbortReason.MachineMalfunction) )))
                 {
                     PAMSilo silo = CurrentDosingSilo(null);
                     if (silo == null)
@@ -462,13 +463,17 @@ namespace gipbakery.mes.processapplication
 
                         // Überprüfe Rechnerischen Restbestand des Silos
                         double rest = silo.FillLevel.ValueT - actualQuantity;
-                        if (rest < zeroTolerance || dosing.DosingAbortReason.ValueT == PADosingAbortReason.EmptySourceNextSource)
+                        bool doZeroBooking = rest < zeroTolerance || dosing.DosingAbortReason.ValueT == PADosingAbortReason.EmptySourceNextSource;
+                        if (   doZeroBooking
+                            || dosing.DosingAbortReason.ValueT == PADosingAbortReason.MachineMalfunction)
                         {
                             // Falls Methode true zurückgibt
                             EmptySiloHandlingOptions handlingOptions = HandleAbortReasonOnEmptySilo(silo);
                             if (handlingOptions.HasFlag(EmptySiloHandlingOptions.OtherSilosAvailable))
                             {
-                                bool zeroBookSucceeded = ZeroBookSource(silo);
+                                bool zeroBookSucceeded = true;
+                                if (doZeroBooking)
+                                    zeroBookSucceeded = ZeroBookSource(silo);
                                 if (zeroBookSucceeded)
                                 {
                                     Route nextDosingSource = FindNextSource();
