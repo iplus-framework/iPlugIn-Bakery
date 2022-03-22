@@ -136,6 +136,21 @@ namespace gipbakery.mes.processapplication
             CheckIsStartTooLate();
         }
 
+        public override void SMRunning()
+        {
+            if (ACOperationMode == ACOperationModes.Live)
+            {
+                if (ParentPWGroup != null)
+                {
+                    var processModule = ParentPWGroup.AccessedProcessModule;
+                    if (processModule != null)
+                        processModule.RefreshPWNodeInfo();
+                }
+            }
+
+            base.SMRunning();
+        }
+
         public override void SMCompleted()
         {
             PWBakeryGroupFermentation fermentationGroup = ParentPWGroup as PWBakeryGroupFermentation;
