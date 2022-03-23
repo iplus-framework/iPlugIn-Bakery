@@ -836,6 +836,11 @@ namespace gipbakery.mes.processapplication
                 case Const.IsEnabledPrefix + "RunCalculationAgain":
                     result = IsEnabledRunCalculationAgain();
                     return true;
+                case nameof(GetSourceFacilityID):
+                    result = GetSourceFacilityID();
+                    return true;
+                default:
+                    break;
             }
 
             return base.HandleExecuteACMethod(out result, invocationMode, acMethodName, acClassMethod, acParameter);

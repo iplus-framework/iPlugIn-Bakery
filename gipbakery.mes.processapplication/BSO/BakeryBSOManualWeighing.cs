@@ -578,7 +578,7 @@ namespace gipbakery.mes.processapplication
 
         #region Methods => Temperature dialog
 
-        [ACMethodInfo("", "", 800)]
+        [ACMethodInfo("", "en{'Temperature Dialog'}de{'Temperatur-Dialog'}", 800)]
         public void ShowTemperaturesDialog()
         {
             ACComponent currentProcessModule = CurrentProcessModule;
@@ -646,25 +646,25 @@ namespace gipbakery.mes.processapplication
             return !IsCurrentProcessModuleNull;
         }
 
-        [ACMethodInfo("", "", 880, true)]
+        [ACMethodInfo("", "en{'Increase Dough-temperature'}de{'Erhöhe Teigtemperatur'}", 880, true)]
         public void DoughTempCorrPlus()
         {
             DoughCorrTemperature++;
         }
 
-        [ACMethodInfo("", "", 880, true)]
+        [ACMethodInfo("", "en{'Reduce Dough-temperature'}de{'Reduziere Teigtemperatur'}", 880, true)]
         public void DoughTempCorrMinus()
         {
             DoughCorrTemperature--;
         }
 
-        [ACMethodInfo("", "", 880, true)]
+        [ACMethodInfo("", "en{'Increase Water-temperature'}de{'Erhöhe Wassertemperatur'}", 880, true)]
         public void WaterTempPlus()
         {
             WaterTargetTemperature++;
         }
 
-        [ACMethodInfo("", "", 880, true)]
+        [ACMethodInfo("", "en{'Reduce Water-temperature'}de{'Reduziere Wassertemperatur'}", 880, true)]
         public void WaterTempMinus()
         {
             WaterTargetTemperature--;

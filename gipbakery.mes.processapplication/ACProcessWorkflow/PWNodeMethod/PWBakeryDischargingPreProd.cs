@@ -605,7 +605,7 @@ namespace gipbakery.mes.processapplication
             result = null;
             switch (acMethodName)
             {
-                case "RestartMonitorSourceStore":
+                case nameof(RestartMonitorSourceStore):
                     RestartMonitorSourceStore();
                     return true;
             }

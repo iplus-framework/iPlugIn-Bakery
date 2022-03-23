@@ -2353,6 +2353,11 @@ namespace gipbakery.mes.processapplication
             SubscribeToProjectWorkCycle();
         }
 
+        public bool IsEnabledUserResponseYes()
+        {
+            return AskUserIsWaterNeeded;
+        }
+
         [ACMethodInfo("", "", 9999)]
         public void UserResponseNo()
         {
@@ -2363,6 +2368,11 @@ namespace gipbakery.mes.processapplication
             SubscribeToProjectWorkCycle();
         }
 
+        public bool IsEnabledUserResponseNo()
+        {
+            return AskUserIsWaterNeeded;
+        }
+
         [ACMethodInfo("", "", 9999)]
         public bool? GetUserResponse()
         {
@@ -2370,46 +2380,6 @@ namespace gipbakery.mes.processapplication
             {
                 return _UserResponse;
             }
-        }
-
-        [ACMethodInteractionClient("", "en{'Water is needed'}de{'Wasser wird benötigt'}", 650,true)]
-        public static void ResponseYes(ACComponent acComponent)
-        {
-            PWBakeryTempCalc thisComponent = acComponent as PWBakeryTempCalc;
-            if (thisComponent != null)
-            {
-                thisComponent.UserResponseYes();
-            }
-        }
-
-        public static bool IsEnabledResponseYes(ACComponent acComponent)
-        {
-            PWBakeryTempCalc thisComponent = acComponent as PWBakeryTempCalc;
-            if (thisComponent != null)
-            {
-                return thisComponent.AskUserIsWaterNeeded;
-            }
-            return false;
-        }
-
-        [ACMethodInteractionClient("", "en{'Water is not needed'}de{'Wasser wird nicht benötigt'}", 651, true)]
-        public static void ResponseNo(ACComponent acComponent)
-        {
-            PWBakeryTempCalc thisComponent = acComponent as PWBakeryTempCalc;
-            if (thisComponent != null)
-            {
-                thisComponent.UserResponseNo();
-            }
-        }
-
-        public static bool IsEnabledResponseNo(ACComponent acComponent)
-        {
-            PWBakeryTempCalc thisComponent = acComponent as PWBakeryTempCalc;
-            if (thisComponent != null)
-            {
-                return thisComponent.AskUserIsWaterNeeded;
-            }
-            return false;
         }
 
         public bool? IsFirstItemForDosingInPicking()
@@ -2594,7 +2564,6 @@ namespace gipbakery.mes.processapplication
                 case "SaveWorkplaceTemperatureSettings":
                     SaveWorkplaceTemperatureSettings((double)acParameter[0], (bool)acParameter[1]);
                     return true;
-
                 case "GetTemperaturesUsedInCalc":
                     result = GetTemperaturesUsedInCalc();
                     return true;
@@ -2606,6 +2575,12 @@ namespace gipbakery.mes.processapplication
                     return true;
                 case "GetUserResponse":
                     result = GetUserResponse();
+                    return true;
+                case nameof(IsEnabledUserResponseYes):
+                    result = IsEnabledUserResponseYes();
+                    return true;
+                case nameof(IsEnabledUserResponseNo):
+                    result = IsEnabledUserResponseNo();
                     return true;
             }
             return base.HandleExecuteACMethod(out result, invocationMode, acMethodName, acClassMethod, acParameter);

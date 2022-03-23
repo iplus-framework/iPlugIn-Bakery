@@ -533,6 +533,30 @@ namespace gipbakery.mes.processapplication
             }
         }
 
+        protected override bool HandleExecuteACMethod(out object result, AsyncMethodInvocationMode invocationMode, string acMethodName, gip.core.datamodel.ACClassMethod acClassMethod, params object[] acParameter)
+        {
+            result = null;
+
+            switch (acMethodName)
+            {
+                case nameof(GetTemperaturesInfo):
+                    result = GetTemperaturesInfo((Guid)acParameter[0]);
+                    return true;
+                case nameof(GetAverageTemperatures):
+                    result = GetAverageTemperatures((Guid)acParameter[0]);
+                    return true;
+                case nameof(GetWaterMaterialNo):
+                    result = GetWaterMaterialNo((Guid)acParameter[0]);
+                    return true;
+                case nameof(InitService):
+                    InitService();
+                    return true;
+                default:
+                    break;
+            }
+            return base.HandleExecuteACMethod(out result, invocationMode, acMethodName, acClassMethod, acParameter);
+        }
+
         #endregion
     }
 
@@ -544,4 +568,6 @@ namespace gipbakery.mes.processapplication
         WarmWater = 30,
         DryIce = 40
     }
+
+    
 }
