@@ -55,6 +55,9 @@ namespace gipbakery.mes.processapplication
             method.ParameterValueList.Add(new ACValue("CompSequenceNo", typeof(int), (int)0, Global.ParamOption.Optional));
             paramTranslation.Add("CompSequenceNo", "en{'Sequence-No. for adding into BOM'}de{'Folgenummer beim Hinzufügen in die Rezeptur'}");
 
+            method.ParameterValueList.Add(new ACValue("WeighIceInPicking", typeof(bool), false, Global.ParamOption.Optional));
+            paramTranslation.Add("WeighIceInPicking", "en{'Weigh ice in picking'}de{'Eis beim Kommissionieren wiegen'}");
+
             var wrapper = new ACMethodWrapper(method, "en{'User Acknowledge'}de{'Benutzerbestätigung'}", typeof(PWBakeryTempCalc), paramTranslation, null);
             ACMethod.RegisterVirtualMethod(typeof(PWBakeryTempCalc), ACStateConst.SMStarting, wrapper);
 
@@ -350,6 +353,24 @@ namespace gipbakery.mes.processapplication
                 return 0;
             }
         }
+
+        internal bool WeighIceInPicking
+        {
+            get
+            {
+                var method = MyConfiguration;
+                if (method != null)
+                {
+                    var acValue = method.ParameterValueList.GetACValue("WeighIceInPicking");
+                    if (acValue != null)
+                    {
+                        return acValue.ParamAsBoolean;
+                    }
+                }
+                return false;
+            }
+        }
+
         #endregion
 
         #endregion
@@ -695,7 +716,7 @@ namespace gipbakery.mes.processapplication
                                                                                 doughTargetTempBeforeKneeding, componentsQ, waterTargetQuantity, out defaultWaterTemp);
 
                 CalculateWaterTypes(compTemps, suggestedWaterTemp, waterTargetQuantity.Value, defaultWaterTemp, componentsQ, isOnlyWaterCompsInPartslist, doughTargetTempBeforeKneeding,
-                                    kneedingRiseTemperature);
+                                    kneedingRiseTemperature, false);
             }
         }
 
@@ -761,7 +782,7 @@ namespace gipbakery.mes.processapplication
                 double suggestedWaterTemp = CalculateWaterTemperatureSuggestion(UseWaterTemp, isOnlyWaterCompsInPartslist, cityWaterComp, WaterTemp.Value, 0,
                                                                                 0, waterTargetQuantity, out defaultWaterTemp);
 
-                CalculateWaterTypes(compTemps, suggestedWaterTemp, waterTargetQuantity.Value, defaultWaterTemp, 0, isOnlyWaterCompsInPartslist, 0, null);
+                CalculateWaterTypes(compTemps, suggestedWaterTemp, waterTargetQuantity.Value, defaultWaterTemp, 0, isOnlyWaterCompsInPartslist, 0, null, true);
             }
         }
 
@@ -932,7 +953,7 @@ namespace gipbakery.mes.processapplication
 
 
         private void CalculateWaterTypes(IEnumerable<MaterialTemperature> componentTemperatures, double targetWaterTemperature, double totalWaterQuantity, double defaultWaterTemp,
-                                         double componentsQ, bool isOnlyWaterCompInPartslist, double doughTempBeforeKneeding, double? kneedingRiseTemp)
+                                         double componentsQ, bool isOnlyWaterCompInPartslist, double doughTempBeforeKneeding, double? kneedingRiseTemp, bool isForPicking)
         {
             MaterialTemperature coldWater = componentTemperatures.FirstOrDefault(c => c.Water == WaterType.ColdWater);
             MaterialTemperature cityWater = componentTemperatures.FirstOrDefault(c => c.Water == WaterType.CityWater);
@@ -1044,7 +1065,7 @@ namespace gipbakery.mes.processapplication
             }
 
             if (!CombineWatersWithDryIce(waterForCombinationColder, dryIce, targetWaterTemperature, totalWaterQuantity, defaultWaterTemp, isOnlyWaterCompInPartslist, 
-                                         componentsQ, doughTempBeforeKneeding))
+                                         componentsQ, doughTempBeforeKneeding, isForPicking))
             {
                 // The calculated water temperature of {0} °C can not be reached, the ice is {1} °C and the target quantity is {2} {3}. 
                 TemperatureCalculationResult.ValueT = Root.Environment.TranslateText(this, "TempCalcResultMin", targetWaterTemperature.ToString("F2"), dryIce.AverageTemperature,
@@ -1137,7 +1158,7 @@ namespace gipbakery.mes.processapplication
         }
 
         private bool CombineWatersWithDryIce(MaterialTemperature water, MaterialTemperature dryIce, double targetWaterTemperature, double totalWaterQuantity,
-                                             double defaultWaterTemp, bool isOnlyWaterCompInPartslist, double componentsQ, double doughTempBeforeKneeding)
+                                             double defaultWaterTemp, bool isOnlyWaterCompInPartslist, double componentsQ, double doughTempBeforeKneeding, bool isForPicking)
         {
             if (IncludeMeltingHeat == MeltingHeatOptionEnum.Off
                 || (IncludeMeltingHeat == MeltingHeatOptionEnum.OnlyForDoughTempCalc && CalculateWaterTypesWithComponentsQ(defaultWaterTemp, isOnlyWaterCompInPartslist)))
@@ -1161,23 +1182,48 @@ namespace gipbakery.mes.processapplication
                         dryIceQuantity = 0;
                     }
 
-                    if (water.Water == WaterType.ColdWater)
-                        ColdWaterQuantity.ValueT = coldWaterQuantity;
-                    else if (water.Water == WaterType.CityWater)
-                        CityWaterQuantity.ValueT = coldWaterQuantity;
+                    if (isForPicking && !WeighIceInPicking)
+                    {
+                        if (water.Water == WaterType.ColdWater)
+                            ColdWaterQuantity.ValueT = coldWaterQuantity + dryIceQuantity;
+                        else if (water.Water == WaterType.CityWater)
+                            CityWaterQuantity.ValueT = coldWaterQuantity + dryIceQuantity;
 
-                    DryIceQuantity.ValueT = dryIceQuantity;
+                        DryIceQuantity.ValueT = 0;
+                    }
+                    else
+                    {
+                        if (water.Water == WaterType.ColdWater)
+                            ColdWaterQuantity.ValueT = coldWaterQuantity;
+                        else if (water.Water == WaterType.CityWater)
+                            CityWaterQuantity.ValueT = coldWaterQuantity;
+
+                        DryIceQuantity.ValueT = dryIceQuantity;
+                    }
 
                     return true;
                 }
                 else
                 {
-                    if (water.Water == WaterType.ColdWater)
-                        ColdWaterQuantity.ValueT = 0;
-                    else if (water.Water == WaterType.CityWater)
-                        CityWaterQuantity.ValueT = 0;
+                    //There is no weigh for ice in picking, assign all quantity to colder water
+                    if (isForPicking && !WeighIceInPicking)
+                    {
+                        if (water.Water == WaterType.ColdWater)
+                            ColdWaterQuantity.ValueT = totalWaterQuantity;
+                        else if (water.Water == WaterType.CityWater)
+                            CityWaterQuantity.ValueT = totalWaterQuantity;
 
-                    DryIceQuantity.ValueT = totalWaterQuantity;
+                        DryIceQuantity.ValueT = 0;
+                    }
+                    else
+                    {
+                        if (water.Water == WaterType.ColdWater)
+                            ColdWaterQuantity.ValueT = 0;
+                        else if (water.Water == WaterType.CityWater)
+                            CityWaterQuantity.ValueT = 0;
+
+                        DryIceQuantity.ValueT = totalWaterQuantity;
+                    }
                     return false;
                 }
             }
