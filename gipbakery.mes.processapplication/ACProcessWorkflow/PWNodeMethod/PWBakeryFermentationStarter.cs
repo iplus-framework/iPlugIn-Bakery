@@ -14,7 +14,7 @@ using System.Xml;
 namespace gipbakery.mes.processapplication
 {
     [ACClassInfo(Const.PackName_VarioAutomation, "en{'Fermentation starter'}de{'Anstellgut'}", Global.ACKinds.TPWNodeStatic, Global.ACStorableTypes.Optional, false, "PWProcessFunction", true, "", "", 9999)]
-    public class PWBakeryFermentationStarter : PWNodeProcessMethod
+    public class PWBakeryFermentationStarter : PWBaseNodeProcess
     {
         #region c'tors
 
@@ -168,6 +168,10 @@ namespace gipbakery.mes.processapplication
         [ACMethodState("en{'Executing'}de{'Ausführend'}", 20, true)]
         public override void SMStarting()
         {
+            ACMethod paramMethod = MyConfiguration;
+            RecalcTimeInfo();
+            CreateNewProgramLog(paramMethod);
+
             base.SMStarting();
         }
 
@@ -925,7 +929,7 @@ namespace gipbakery.mes.processapplication
 
         private static bool HandleExecuteACMethod_PWBakeryFermentationStarter(out object result, IACComponent acComponent, string acMethodName, gip.core.datamodel.ACClassMethod acClassMethod, object[] acParameter)
         {
-            return HandleExecuteACMethod_PWNodeProcessMethod(out result, acComponent, acMethodName, acClassMethod, acParameter);
+            return HandleExecuteACMethod_PWBaseNodeProcess(out result, acComponent, acMethodName, acClassMethod, acParameter);
         }
 
         protected override void DumpPropertyList(XmlDocument doc, XmlElement xmlACPropertyList)
