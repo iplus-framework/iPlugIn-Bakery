@@ -67,6 +67,23 @@ namespace gipbakery.mes.processapplication
         }
         #endregion
 
+        #region Properties
+        private bool _CanCountPieces;
+        [ACPropertyInfo(true, 202, "", "en{'Can count pieces'}de{'Stückzählung möglich'}", "", true)]
+        public bool CanCountPieces
+        {
+            get
+            {
+                return _CanCountPieces;
+            }
+            set
+            {
+                _CanCountPieces = value;
+                OnPropertyChanged("CanCountPieces");
+            }
+        }
+        #endregion
+
 
         #region Execute-Helper-Handlers
         public static bool HandleExecuteACMethod_BakeryPackMachine(out object result, IACComponent acComponent, string acMethodName, gip.core.datamodel.ACClassMethod acClassMethod, params object[] acParameter)
