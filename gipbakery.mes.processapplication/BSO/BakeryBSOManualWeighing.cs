@@ -210,6 +210,39 @@ namespace gipbakery.mes.processapplication
             set;
         }
 
+        private double _NewWaterQuantity;
+        [ACPropertyInfo(808)]
+        public double NewWaterQuantity
+        {
+            get => _NewWaterQuantity;
+            set
+            {
+                if (_NewWaterQuantity != value)
+                {
+                    double diff = Math.Abs(_NewWaterQuantity - value);
+
+                    if (diff <= WaterCorrectionDiffMax)
+                    {
+                        _NewWaterQuantity = value;
+                        OnPropertyChanged();
+                        _ParamChanged = true;
+                    }
+                }
+            }
+        }
+
+        public double WaterQCorrectionStep
+        {
+            get;
+            set;
+        }
+
+        public double WaterCorrectionDiffMax
+        {
+            get;
+            set;
+        }
+
         #endregion
 
         #region Properties => SingleDosing dialog
@@ -510,14 +543,30 @@ namespace gipbakery.mes.processapplication
                 {
                     IsOnlyWaterTemperatureCalculation = onlyForWaterCalc.ParamAsBoolean;
                     if (IsOnlyWaterTemperatureCalculation)
-                    {
                         IsDoughTemperatureCalculation = false;
-                    }
                     else
-                    {
                         IsDoughTemperatureCalculation = true;
+                }
+
+                ACValue corrStep = config.ParameterValueList.GetACValue("WaterQCorrectionStep");
+                if (corrStep != null)
+                    WaterQCorrectionStep = corrStep.ParamAsDouble;
+                else
+                    WaterQCorrectionStep = 0.5;
+
+                //TODO: maximum water correction difference depends on original quantity
+                ACValue corrMax = config.ParameterValueList.GetACValue("MaxWaterCorrectionDiff");
+                if (corrMax != null)
+                {
+                    WaterCorrectionDiffMax = corrMax.ParamAsDouble;
+                    if (WaterQCorrectionStep > WaterCorrectionDiffMax)
+                    {
+                        WaterQCorrectionStep = WaterCorrectionDiffMax;
                     }
                 }
+                else
+                    WaterCorrectionDiffMax = 10;
+                
             }
         }
 
@@ -596,7 +645,7 @@ namespace gipbakery.mes.processapplication
 
             IACComponentPWNode tempCalc = CurrentBakeryTempCalc;
 
-            ACValueList watersTempInCalc = tempCalc?.ExecuteMethod("GetTemperaturesUsedInCalc") as ACValueList;
+            ACValueList watersTempInCalc = tempCalc?.ExecuteMethod(nameof(PWBakeryTempCalc.GetTemperaturesUsedInCalc)) as ACValueList;
             if (watersTempInCalc != null)
             {
                 var cityWater = watersTempInCalc.GetACValue(WaterType.CityWater.ToString());
@@ -628,6 +677,12 @@ namespace gipbakery.mes.processapplication
                 {
                     KneedingRiseTemp = kneedingRiseTemp.Value as double?;
                 }
+            }
+
+            double? waterTotalQ = tempCalc?.ACUrlCommand(nameof(PWBakeryTempCalc.WaterTotalQuantity)) as double?;
+            if (waterTotalQ.HasValue)
+            {
+                _NewWaterQuantity = waterTotalQ.Value;
             }
 
             _ParamChanged = false;
@@ -693,7 +748,7 @@ namespace gipbakery.mes.processapplication
                 }
 
                 currentProcessModule.ACUrlCommand("DoughCorrTemp", DoughCorrTemperature); //Save dough correct temperature on bakery recieving point
-                tempCalc.ExecuteMethod("SaveWorkplaceTemperatureSettings", WaterTargetTemperature, IsOnlyWaterTemperatureCalculation);//TODO parameters
+                tempCalc.ExecuteMethod(nameof(PWBakeryTempCalc.SaveWorkplaceTemperatureSettings), WaterTargetTemperature, IsOnlyWaterTemperatureCalculation, NewWaterQuantity);//TODO parameters
             }
             CloseTopDialog();
             _ParamChanged = false;
@@ -725,13 +780,25 @@ namespace gipbakery.mes.processapplication
             }
 
             currentProcessModule.ACUrlCommand("DoughCorrTemp", DoughCorrTemperature); //Save dough correct temperature on bakery recieving point
-            tempCalc.ExecuteMethod("SaveWorkplaceTemperatureSettings", WaterTargetTemperature, IsOnlyWaterTemperatureCalculation);//TODO parameters
+            tempCalc.ExecuteMethod(nameof(PWBakeryTempCalc.SaveWorkplaceTemperatureSettings), WaterTargetTemperature, IsOnlyWaterTemperatureCalculation, NewWaterQuantity);//TODO parameters
             _ParamChanged = false;
         }
 
         public bool IsEnabledRecalcTemperatures()
         {
             return _IsTempCalcNotNull && !IsCurrentProcessModuleNull && _ParamChanged;
+        }
+
+        [ACMethodInfo("", "en{'Increase Water quantity'}de{'Erhöhe Wassermenge'}", 880, true)]
+        public void WaterQuantityPlus()
+        {
+            NewWaterQuantity += WaterQCorrectionStep;
+        }
+
+        [ACMethodInfo("", "en{'Reduce Water quantity'}de{'Reduziere Wassermenge'}", 880, true)]
+        public void WaterQuantityMinus()
+        {
+            NewWaterQuantity -= WaterQCorrectionStep;
         }
 
         #endregion

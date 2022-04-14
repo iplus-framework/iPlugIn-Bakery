@@ -58,6 +58,12 @@ namespace gipbakery.mes.processapplication
             method.ParameterValueList.Add(new ACValue("WeighIceInPicking", typeof(bool), false, Global.ParamOption.Optional));
             paramTranslation.Add("WeighIceInPicking", "en{'Weigh ice in picking'}de{'Eis beim Kommissionieren wiegen'}");
 
+            method.ParameterValueList.Add(new ACValue("WaterQCorrectionStep", typeof(double), 0.5, Global.ParamOption.Optional));
+            paramTranslation.Add("WaterQCorrectionStep", "en{'Water quantity correction step'}de{'Schritt zur Korrektur der Wassermenge'}");
+
+            method.ParameterValueList.Add(new ACValue("MaxWaterCorrectionDiff", typeof(double), 10, Global.ParamOption.Optional));
+            paramTranslation.Add("MaxWaterCorrectionDiff", "en{'Max water correction difference'}de{'Maximale Wasserkorrekturdifferenz'}");
+
             var wrapper = new ACMethodWrapper(method, "en{'User Acknowledge'}de{'Benutzerbestätigung'}", typeof(PWBakeryTempCalc), paramTranslation, null);
             ACMethod.RegisterVirtualMethod(typeof(PWBakeryTempCalc), ACStateConst.SMStarting, wrapper);
 
@@ -177,6 +183,7 @@ namespace gipbakery.mes.processapplication
         private bool _RecalculateTemperatures = true;
 
         private bool? _UserResponse = null;
+        private double? _NewWaterQuantity = null;
 
         private string _CityWaterMaterialNo;
         private string _ColdWaterMaterialNo;
@@ -685,6 +692,26 @@ namespace gipbakery.mes.processapplication
                     // If partslist not contains city water, skip node
                     CurrentACState = ACStateEnum.SMCompleted;
                     return;
+                }
+
+                // Modify prodorder with new water quantity
+                if (_NewWaterQuantity.HasValue)
+                {
+                    if (_NewWaterQuantity.Value > 0.00001)
+                    {
+                        var topRelation = cityWaterComp.TopParentPartslistPosRelation;
+                        if (topRelation != null)
+                        {
+                            double topRelationNewQ = topRelation.TargetQuantityUOM / cityWaterComp.TargetQuantityUOM * _NewWaterQuantity.Value;
+                            topRelation.TargetQuantityUOM = topRelationNewQ;
+                        }
+
+                        cityWaterComp.TargetQuantityUOM = _NewWaterQuantity.Value;
+
+                        dbApp.ACSaveChanges();
+                    }
+
+                    _NewWaterQuantity = null;
                 }
 
                 ProdOrderPartslistPosRelation coldWaterComp = relations.FirstOrDefault(c => c.SourceProdOrderPartslistPos.Material.MaterialNo == _ColdWaterMaterialNo);
@@ -2260,7 +2287,7 @@ namespace gipbakery.mes.processapplication
         }
 
         [ACMethodInfo("", "", 9999, true)]
-        public void SaveWorkplaceTemperatureSettings(double waterTemperature, bool isOnlyForWaterTempCalculation)
+        public void SaveWorkplaceTemperatureSettings(double waterTemperature, bool isOnlyForWaterTempCalculation, double newWaterQuantity)
         {
             using (DatabaseApp dbApp = new DatabaseApp())
             {
@@ -2273,15 +2300,6 @@ namespace gipbakery.mes.processapplication
 
                 if (configStore != null)
                 {
-                    //Guid? accessedProcessModuleID = configStore is Picking ? null : ParentPWGroup?.AccessedProcessModule?.ComponentClass?.ACClassID;
-
-                    //if (!accessedProcessModuleID.HasValue)
-                    //{
-                    //    Root.Messages.LogMessage(eMsgLevel.Error, this.GetACUrl(), "SaveWorkplaceTemperatureSettings(10)", "AccessedProcessModuleID is null!");
-
-                    //    return;
-                    //}
-
                     var configEntries = configStore.ConfigurationEntries.Where(c => c.PreConfigACUrl == PreValueACUrl && c.LocalConfigACUrl.StartsWith(ConfigACUrl))
                                                                         .OrderBy(x => x.VBiACClassID == null ? "" : x.VBACClass.ACIdentifier);
 
@@ -2342,10 +2360,15 @@ namespace gipbakery.mes.processapplication
 
                 RootPW.ReloadConfig();
 
-                ResetMembers(false);
+                if (WaterTotalQuantity.ValueT != newWaterQuantity)
+                {
+                    using(ACMonitor.Lock(_20015_LockValue))
+                        _NewWaterQuantity = newWaterQuantity;
+                }
 
+                ResetMembers(false);
             }
-            //ConfigManagerIPlus.ACConfigFactory(CurrentConfigStore, )
+
             using (ACMonitor.Lock(_20015_LockValue))
             {
                 _RecalculateTemperatures = true;
@@ -2581,7 +2604,7 @@ namespace gipbakery.mes.processapplication
             }
         }
 
-        private void ResetMembers(bool resetUserResponse = true)
+        private void ResetMembers(bool completeReset = true)
         {
             TemperatureCalculationResult.ValueT = null;
             ColdWaterQuantity.ValueT = 0;
@@ -2593,8 +2616,11 @@ namespace gipbakery.mes.processapplication
             {
                 _RecalculateTemperatures = true;
                 _CalculatorMode = TempCalcMode.Calcuate;
-                if (resetUserResponse)
+                if (completeReset)
+                {
                     _UserResponse = null;
+                    _NewWaterQuantity = null;
+                }
             }
         }
 
@@ -2608,7 +2634,7 @@ namespace gipbakery.mes.processapplication
             switch (acMethodName)
             {
                 case "SaveWorkplaceTemperatureSettings":
-                    SaveWorkplaceTemperatureSettings((double)acParameter[0], (bool)acParameter[1]);
+                    SaveWorkplaceTemperatureSettings((double)acParameter[0], (bool)acParameter[1], (double)acParameter[2]);
                     return true;
                 case "GetTemperaturesUsedInCalc":
                     result = GetTemperaturesUsedInCalc();
