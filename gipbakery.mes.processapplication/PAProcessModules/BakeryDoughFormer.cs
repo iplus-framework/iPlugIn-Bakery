@@ -60,6 +60,12 @@ namespace gipbakery.mes.processapplication
                 return _PAPointMatOut1;
             }
         }
+
+        public override uint OnGetSemaphoreCapacity()
+        {
+            return 0; // Infinite
+        }
+
         #endregion
 
 
