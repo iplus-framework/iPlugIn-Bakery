@@ -163,6 +163,7 @@ namespace gipbakery.mes.processapplication
                             }
 
                             AckScale.ActualValue.PropertyChanged += ActualValue_PropertyChanged;
+                            AckScale.NotStandStill.PropertyChanged += ActualValue_PropertyChanged;
                         }
                     }
                 }
@@ -232,7 +233,10 @@ namespace gipbakery.mes.processapplication
             if (_AckScale != null)
             {
                 if (AckScale != null)
+                {
                     AckScale.ActualValue.PropertyChanged -= ActualValue_PropertyChanged;
+                    AckScale.NotStandStill.PropertyChanged -= ActualValue_PropertyChanged;
+                }
                 _AckScale.Detach();
                 _AckScale = null;
             }
