@@ -57,6 +57,7 @@
     <Reference Include="WindowsBase" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="ACProcessWorkflow\PWBakeryWaitWaterM.cs" />
     <Compile Include="ACProcessWorkflow\PWBakeryEndOnTime.cs" />
     <Compile Include="ACProcessWorkflow\PWBakeryGroupFermentation.cs" />
     <Compile Include="ACProcessWorkflow\PWNodeMethod\PWBakeryCleaning.cs" />

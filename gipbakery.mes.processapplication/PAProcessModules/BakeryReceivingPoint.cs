@@ -49,9 +49,13 @@ namespace gipbakery.mes.processapplication
 
         public override bool ACPostInit()
         {
-            var temp = RecvPointReadyScaleACUrl;
-            bool temp1 = WithCover;
-            int temp2 = HoseDestination;
+            //IACPropertyNetTarget tProp = MeasureWaterOnNewBatch as IACPropertyNetTarget;
+            //if (tProp != null && tProp.Source != null)
+            //    tProp.ValueUpdatedOnReceival += MeasureWater_ValueUpdatedOnReceival;
+
+            _ = RecvPointReadyScaleACUrl;
+            _ = WithCover;
+            _ = HoseDestination;
             return base.ACPostInit();
         }
 
@@ -114,7 +118,12 @@ namespace gipbakery.mes.processapplication
             set;
         }
 
-
+        [ACPropertyBindingTarget(600, "", "en{'Measure water temperature on new batch'}de{'Wassertemperaturen messen bei neuem Batch'}", "", false)]
+        public IACContainerTNet<bool> MeasureWaterOnNewBatch
+        {
+            get;
+            set;
+        }
 
         /// <summary>
         /// Represents the room temperature. It can be fix defined or can be bounded to the sensor.
@@ -227,6 +236,28 @@ namespace gipbakery.mes.processapplication
 
             return false;
         }
+
+
+        public bool WaitIfMeasureWaterIsBound(PWBakeryWaitWaterM requester)
+        {
+            IACPropertyNetTarget tProp = MeasureWaterOnNewBatch as IACPropertyNetTarget;
+            if (tProp == null || tProp.Source == null)
+                return false;
+            MeasureWaterOnNewBatch.ValueT = true;
+            return true;
+        }
+
+        //private void MeasureWater_ValueUpdatedOnReceival(object sender, ACPropertyChangedEventArgs e, ACPropertyChangedPhase phase)
+        //{
+        //    if (phase == ACPropertyChangedPhase.BeforeBroadcast)
+        //        return;
+        //    if (e.PropertyName == nameof(MeasureWaterOnNewBatch))
+        //    {
+        //        if (MeasureWaterOnNewBatch.ValueT == false)
+        //        {
+        //        }
+        //    }
+        //}
 
         #endregion
 
