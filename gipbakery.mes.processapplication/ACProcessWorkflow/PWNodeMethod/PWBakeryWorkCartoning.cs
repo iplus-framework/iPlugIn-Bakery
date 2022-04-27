@@ -1,5 +1,6 @@
 ﻿using gip.core.autocomponent;
 using gip.core.datamodel;
+using gip.mes.facility;
 using gip.mes.processapplication;
 using System;
 using System.Collections.Generic;
@@ -22,8 +23,16 @@ namespace gipbakery.mes.processapplication
             ACMethod method;
             method = new ACMethod(ACStateConst.SMStarting);
             Dictionary<string, string> paramTranslation = new Dictionary<string, string>();
+
             method.ParameterValueList.Add(new ACValue("Capacity", typeof(int), 0, Global.ParamOption.Required));
             paramTranslation.Add("Capacity", "en{'Capacity'}de{'Kapazität'}");
+
+            method.ParameterValueList.Add(new ACValue("PostingQuantitySuggestionMode", typeof(PostingQuantitySuggestionMode), gip.mes.facility.PostingQuantitySuggestionMode.OrderQuantity, Global.ParamOption.Optional));
+            paramTranslation.Add("PostingQuantitySuggestionMode", "en{'Posting quantity suggestion mode'}de{'Buchungsmengen-Vorschlagsmodus'}");
+
+            method.ParameterValueList.Add(new ACValue("OrderQuantityOnInwardPosting", typeof(bool), false, Global.ParamOption.Optional));
+            paramTranslation.Add("OrderQuantityOnInwardPosting", "en{'Order quantity on inward posting'}de{'Order quantity on inward posting'}");
+
             var wrapper = new ACMethodWrapper(method, "en{'Configuration'}de{'Konfiguration'}", typeof(PWBakeryWorkCartoning), paramTranslation, null);
             ACMethod.RegisterVirtualMethod(typeof(PWBakeryWorkCartoning), ACStateConst.SMStarting, wrapper);
             RegisterExecuteHandler(typeof(PWBakeryWorkCartoning), HandleExecuteACMethod_PWBakeryWorkCartoning);
