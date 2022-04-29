@@ -237,7 +237,6 @@ namespace gipbakery.mes.processapplication
             return false;
         }
 
-
         public bool WaitIfMeasureWaterIsBound(PWBakeryWaitWaterM requester)
         {
             IACPropertyNetTarget tProp = MeasureWaterOnNewBatch as IACPropertyNetTarget;
@@ -245,6 +244,91 @@ namespace gipbakery.mes.processapplication
                 return false;
             MeasureWaterOnNewBatch.ValueT = true;
             return true;
+        }
+
+        public override SingleDosingItems GetDosableComponents(bool withFacilityCombination = true)
+        {
+            using (Database db = new gip.core.datamodel.Database())
+            {
+                gip.core.datamodel.ACClass compClass = null;
+
+                using (ACMonitor.Lock(gip.core.datamodel.Database.GlobalDatabase.QueryLock_1X000))
+                {
+                    compClass = ComponentClass.FromIPlusContext<gip.core.datamodel.ACClass>(db);
+                }
+
+                RoutingResult routeResult = ACRoutingService.FindSuccessorsFromPoint(RoutingService, Database.ContextIPlus, false, compClass, PAPointMatIn1.PropertyInfo, PAMHopperscale.SelRuleID_Hopperscale, RouteDirections.Backwards,
+                                                                     null, null, null, 0, true, true);
+
+                RoutingResult rResult = ACRoutingService.FindSuccessors(RoutingService, db, false, compClass, PAMSilo.SelRuleID_SiloDirect, RouteDirections.Backwards,
+                                                        null, null, null, 0, true, true);
+
+                List<Route> routes = new List<Route>();
+
+                if (rResult != null && rResult.Routes != null && rResult.Routes.Any())
+                {
+                    routes.AddRange(rResult.Routes);
+                }
+
+                if (routeResult != null && routeResult.Routes != null && routeResult.Routes.Any())
+                {
+                    RouteItem item = routeResult.Routes.FirstOrDefault()?.GetRouteSource();
+
+                    if (item != null)
+                    {
+                        ACComponent sourceComp = item.SourceACComponent as ACComponent;
+
+                        if (sourceComp != null)
+                        {
+                            RoutingResult rr = ACRoutingService.FindSuccessors(RoutingService, db, false, sourceComp, PAMSilo.SelRuleID_SiloDirect, RouteDirections.Backwards,
+                                                                null, null, null, 0, true, true);
+
+                            if (rr != null && rr.Routes.Any())
+                            {
+                                routes.AddRange(rr.Routes);
+                            }
+                        }
+                    }
+                }
+
+                if (!routes.Any())
+                {
+                    if (rResult == null)
+                    {
+                        return new SingleDosingItems() { Error = new Msg(eMsgLevel.Error, "Routing result is null!") };
+                    }
+
+                    if (rResult.Message != null && rResult.Message.MessageLevel == eMsgLevel.Error)
+                    {
+                        return new SingleDosingItems() { Error = rResult.Message };
+                    }
+                }
+
+                SingleDosingItems result = new SingleDosingItems();
+
+                foreach (Route route in routes)
+                {
+                    RouteItem rItem = route.GetRouteSource();
+                    if (rItem == null)
+                        continue;
+
+                    PAMSilo silo = rItem.SourceACComponent as PAMSilo;
+                    if (silo == null || !silo.OutwardEnabled.ValueT || string.IsNullOrEmpty(silo.Facility?.ValueT?.ValueT?.FacilityNo) || string.IsNullOrEmpty(silo.MaterialNo?.ValueT))
+                        continue;
+
+                    if (!withFacilityCombination && result.Any(c => c.MaterialNo == silo.MaterialNo.ValueT))
+                        continue;
+
+                    result.Add(new SingleDosingItem()
+                    {
+                        FacilityNo = withFacilityCombination ? silo.Facility.ValueT.ValueT.FacilityNo : "",
+                        MaterialName = silo.MaterialName?.ValueT,
+                        MaterialNo = silo.MaterialNo.ValueT
+                    });
+                }
+
+                return result;
+            }
         }
 
         //private void MeasureWater_ValueUpdatedOnReceival(object sender, ACPropertyChangedEventArgs e, ACPropertyChangedPhase phase)
