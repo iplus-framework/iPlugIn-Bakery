@@ -304,8 +304,8 @@ namespace gipbakery.mes.processapplication
                             source = pointIn.ConnectionList.FirstOrDefault(c => c.SourceParentComponent is PAMParkingspace)?.SourceParentComponent as PAMParkingspace;
                     }
                 }
-                if (source == null)
-                    return;
+                //if (source == null)
+                //    return;
 
                 PAPoint pointOut = module.GetPoint(Const.PAPointMatOut1) as PAPoint;
                 if (pointOut == null)
