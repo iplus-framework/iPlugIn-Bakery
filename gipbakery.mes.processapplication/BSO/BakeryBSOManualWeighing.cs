@@ -1071,7 +1071,7 @@ namespace gipbakery.mes.processapplication
                     }
 
                     double minTemp = 0;
-                    double maxTemp = 60;
+                    double maxTemp = 80;
 
                     if (SingleDosTargetTemperature < minTemp || SingleDosTargetTemperature > maxTemp)
                     {
