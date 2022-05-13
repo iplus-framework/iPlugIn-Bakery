@@ -1188,7 +1188,7 @@ namespace gipbakery.mes.processapplication
                                              double defaultWaterTemp, bool isOnlyWaterCompInPartslist, double componentsQ, double doughTempBeforeKneeding, bool isForPicking)
         {
             if (IncludeMeltingHeat == MeltingHeatOptionEnum.Off
-                || (IncludeMeltingHeat == MeltingHeatOptionEnum.OnlyForDoughTempCalc && CalculateWaterTypesWithComponentsQ(defaultWaterTemp, isOnlyWaterCompInPartslist)))
+                || (IncludeMeltingHeat == MeltingHeatOptionEnum.OnlyForDoughTempCalc && !CalculateWaterTypesWithComponentsQ(defaultWaterTemp, isOnlyWaterCompInPartslist)))
             {
                 if (targetWaterTemperature <= water.AverageTemperature && targetWaterTemperature > dryIce.AverageTemperature)
                 {
@@ -1405,7 +1405,7 @@ namespace gipbakery.mes.processapplication
 
         private bool CalculateWaterTypesWithComponentsQ(double defaultWaterTemp, bool isOnlyWaterCompInPartslist)
         {
-            if (defaultWaterTemp < 0.00001 && !isOnlyWaterCompInPartslist)
+            if (!UseWaterTemp /*&& defaultWaterTemp < 0.00001*/ && !isOnlyWaterCompInPartslist)
             {
                 return true;
             }
