@@ -280,7 +280,7 @@ namespace gipbakery.mes.processapplication
 
                         if (sourceComp != null)
                         {
-                            RoutingResult rr = ACRoutingService.FindSuccessors(RoutingService, db, false, sourceComp, PAMSilo.SelRuleID_SiloDirect, RouteDirections.Backwards,
+                            RoutingResult rr = ACRoutingService.FindSuccessors(RoutingService, db, false, sourceComp, PAMSilo.SelRuleID_Silo, RouteDirections.Backwards,
                                                                 null, null, null, 0, true, true);
 
                             if (rr != null && rr.Routes.Any())
