@@ -439,7 +439,7 @@ namespace gipbakery.mes.processapplication
                     break;
                 }
 
-                IEnumerable<ACComponent> parallelNodes = FindParallelNodes(prevEndOnTime);
+                IEnumerable<IACComponentPWNode> parallelNodes = FindParallelNodes(prevEndOnTime);
 
                 List<PWBakeryDosingPreProd> pwDosings = FindVariableDurationNodes(currentNode, prevEndOnTime, parallelNodes);
                 List<PWBaseNodeProcess> fixDurationNodes = FindFixedDurationNodes(currentNode, prevEndOnTime, parallelNodes);
@@ -485,14 +485,14 @@ namespace gipbakery.mes.processapplication
             }
         }
 
-        public IEnumerable<ACComponent> FindParallelNodes(PWBaseInOut pwNode)
+        public IEnumerable<IACComponentPWNode> FindParallelNodes(PWBaseInOut pwNode)
         {
             var prevEndSources = pwNode.PWPointIn.ConnectionList.Select(c => c.ValueT).Cast<PWBaseInOut>();
 
             if (prevEndSources != null && prevEndSources.Any())
-                return prevEndSources.SelectMany(c => c.PWPointOut.ConnectionList.Select(x => x.ValueT)).Distinct();
+                return prevEndSources.SelectMany(c => c.PWPointOut.ConnectionList.Select(x => x.ValueT as IACComponentPWNode)).Distinct();
 
-            return new List<ACComponent>();
+            return new List<IACComponentPWNode>();
         }
 
         public virtual PWBakeryEndOnTime FindPrevEndOnTimeNode(PWBase currentNode)
@@ -517,7 +517,7 @@ namespace gipbakery.mes.processapplication
             return null;
         }
 
-        public virtual List<PWBakeryDosingPreProd> FindVariableDurationNodes(PWBakeryEndOnTime currentEndNode, PWBakeryEndOnTime prevEndNode, IEnumerable<ACComponent> parallelNodes)
+        public virtual List<PWBakeryDosingPreProd> FindVariableDurationNodes(PWBakeryEndOnTime currentEndNode, PWBakeryEndOnTime prevEndNode, IEnumerable<IACComponentPWNode> parallelNodes)
         {
             // PWNodeEndOnTime has parallel workflow nodes
             if (parallelNodes.Count() > 1)
@@ -529,7 +529,7 @@ namespace gipbakery.mes.processapplication
 
         }
 
-        public virtual List<PWBaseNodeProcess> FindFixedDurationNodes(PWBakeryEndOnTime currentEndNode, PWBakeryEndOnTime prevEndNode, IEnumerable<ACComponent> parallelNodes)
+        public virtual List<PWBaseNodeProcess> FindFixedDurationNodes(PWBakeryEndOnTime currentEndNode, PWBakeryEndOnTime prevEndNode, IEnumerable<IACComponentPWNode> parallelNodes)
         {
             // PWNodeEndOnTime has parallel workflow nodes
             if (parallelNodes.Count() > 1)

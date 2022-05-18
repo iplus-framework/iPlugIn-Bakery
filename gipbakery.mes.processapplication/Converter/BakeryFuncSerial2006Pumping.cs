@@ -51,7 +51,7 @@ namespace gipbakery.mes.processapplication
                 int iOffset = 0;
 
                 iOffset += gip.core.communication.ISOonTCP.Types.Real.Length; // TargetQuantity
-                iOffset += 32;
+                iOffset += 30;
                 iOffset += gip.core.communication.ISOonTCP.Types.Int.Length; //Power
                 iOffset += 4;
                 iOffset += gip.core.communication.ISOonTCP.Types.Int.Length; // Source
@@ -72,7 +72,7 @@ namespace gipbakery.mes.processapplication
 
                 response.ParameterValueList.GetACValue("TargetQuantity").Value = gip.core.communication.ISOonTCP.Types.Real.FromByteArray(readPackage1, iOffset);
                 iOffset += gip.core.communication.ISOonTCP.Types.Real.Length;
-                iOffset += 32;
+                iOffset += 30;
 
                 response.ParameterValueList.GetACValue("Power").Value = gip.core.communication.ISOonTCP.Types.Int.FromByteArray(readPackage1, iOffset);
                 iOffset += gip.core.communication.ISOonTCP.Types.Int.Length;
@@ -115,7 +115,7 @@ namespace gipbakery.mes.processapplication
             int iOffset = 0;
 
             iOffset += gip.core.communication.ISOonTCP.Types.Real.Length; // TargetQuantity
-            iOffset += 32;
+            iOffset += 30;
 
             iOffset += gip.core.communication.ISOonTCP.Types.Int.Length; //Power
             iOffset += 4;
@@ -136,7 +136,7 @@ namespace gipbakery.mes.processapplication
             Array.Copy(gip.core.communication.ISOonTCP.Types.Real.ToByteArray(request.ParameterValueList.GetDouble("TargetQuantity")),
                 0, sendPackage1, iOffset, gip.core.communication.ISOonTCP.Types.Real.Length);
             iOffset += gip.core.communication.ISOonTCP.Types.Real.Length;
-            iOffset += 32;
+            iOffset += 30;
 
             Array.Copy(gip.core.communication.ISOonTCP.Types.Int.ToByteArray(request.ParameterValueList.GetInt16("Power")),
                 0, sendPackage1, iOffset, gip.core.communication.ISOonTCP.Types.Int.Length);

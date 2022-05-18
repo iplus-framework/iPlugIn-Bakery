@@ -24,6 +24,11 @@ namespace gipbakery.mes.processapplication
             Dictionary<string, string> paramTranslation = new Dictionary<string, string>();
             method.ParameterValueList.Add(new ACValue("SkipIfCountComp", typeof(int), 0, Global.ParamOption.Required));
             paramTranslation.Add("SkipIfCountComp", "en{'Skip if count components lower than'}de{'Überspringe wenn Komponentenanzahl kleiner als'}");
+
+            method.ParameterValueList.Add(new ACValue("TempRiseFix", typeof(double), 0, Global.ParamOption.Optional));
+            paramTranslation.Add("TempRiseFix", "en{'Temperature rising fix °C'}de{'Erwärmung Fix °C'}");
+            method.ParameterValueList.Add(new ACValue("KneadingProgram", typeof(string), 0, Global.ParamOption.Optional));
+            paramTranslation.Add("KneadingProgram", "en{'Kneading program no.'}de{'Knetprogramm'}");
             method.ParameterValueList.Add(new ACValue("KneadingTimeSlow", typeof(TimeSpan), TimeSpan.Zero, Global.ParamOption.Required));
             paramTranslation.Add("KneadingTimeSlow", "en{'Kneadingtime slow'}de{'Knetzeit langsam'}");
             method.ParameterValueList.Add(new ACValue("KneadingTimeFast", typeof(TimeSpan), TimeSpan.Zero, Global.ParamOption.Required));
@@ -133,6 +138,43 @@ namespace gipbakery.mes.processapplication
                 return 0.0;
             }
         }
+
+        protected double TempRiseFix
+        {
+            get
+            {
+                var method = MyConfiguration;
+                if (method != null)
+                {
+                    var acValue = method.ParameterValueList.GetACValue("TempRiseFix");
+                    if (acValue != null)
+                    {
+                        return acValue.ParamAsDouble;
+                    }
+                }
+                return 0.0;
+            }
+        }
+
+        protected string KneadingProgram
+        {
+            get
+            {
+                var method = MyConfiguration;
+                if (method != null)
+                {
+                    var acValue = method.ParameterValueList.GetACValue("KneadingProgram");
+                    if (acValue != null)
+                    {
+                        return acValue.ParamAsString;
+                    }
+                }
+                return null;
+            }
+        }
+
+        // KneadingProgram
+
         #endregion
 
         #region Methods
