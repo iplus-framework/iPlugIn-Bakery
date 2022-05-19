@@ -2,6 +2,7 @@
 using gip.core.datamodel;
 using gip.core.processapplication;
 using gip.mes.datamodel;
+using gip.mes.facility;
 using gip.mes.processapplication;
 using System;
 using System.Collections.Generic;
@@ -23,6 +24,9 @@ namespace gipbakery.mes.processapplication
 
             method.ParameterValueList.Add(new ACValue("BlockSourceAtEnd", typeof(bool), false, Global.ParamOption.Required));
             paramTranslation.Add("BlockSourceAtEnd", "en{'Block Source when function completes'}de{'Quelle sperren bei Funktionsende'}");
+
+            method.ParameterValueList.Add(new ACValue("RelocateToFinalDest", typeof(bool), false, Global.ParamOption.Required));
+            paramTranslation.Add("RelocateToFinalDest", "en{'Post quant into virtual destination bin'}de{'Quant direkt in virtuellen Zielbehälter umbuchen'}");
 
             var wrapper = new ACMethodWrapper(method, "en{'Configuration'}de{'Konfiguration'}", typeof(PWBakeryPumping), paramTranslation, null);
             ACMethod.RegisterVirtualMethod(typeof(PWBakeryPumping), ACStateConst.SMStarting, wrapper);
@@ -91,6 +95,23 @@ namespace gipbakery.mes.processapplication
                 if (method != null)
                 {
                     var acValue = method.ParameterValueList.GetACValue("BlockSourceAtEnd");
+                    if (acValue != null)
+                    {
+                        return acValue.ParamAsBoolean;
+                    }
+                }
+                return false;
+            }
+        }
+
+        public bool RelocateToFinalDest
+        {
+            get
+            {
+                var method = MyConfiguration;
+                if (method != null)
+                {
+                    var acValue = method.ParameterValueList.GetACValue("RelocateToFinalDest");
                     if (acValue != null)
                     {
                         return acValue.ParamAsBoolean;
@@ -303,6 +324,55 @@ namespace gipbakery.mes.processapplication
 
             if (msg != null && msg.MessageLevel >= eMsgLevel.Failure)
                 return msg;
+
+            if (RelocateToFinalDest && pickingPos.Material != null && ACFacilityManager != null)
+            {
+                ACComponent virtStoreComp = dischargingDest.TargetACComponent as ACComponent;
+                if (virtStoreComp != null)
+                {
+                    PAProcessModule tModule = null;
+                    using (Database db = new Database())
+                    {
+                        RoutingResult rResult = ACRoutingService.FindSuccessors(RoutingService, db, false, virtStoreComp,
+                                                                  PAMSilo.SelRuleID_Storage, RouteDirections.Forwards, null, null, null, 0,
+                                                                  true, true);
+
+                        tModule = rResult?.Routes?.FirstOrDefault()?.GetRouteTarget()?.TargetACComponent as PAProcessModule;
+                        if (tModule != null)
+                        {
+                            Facility virtDestStore = dbApp.Facility.Where(c => c.VBiFacilityACClassID == tModule.ComponentClass.ACClassID).FirstOrDefault();
+                            if (    virtDestStore != null
+                                && (!virtDestStore.MaterialID.HasValue || virtDestStore.MaterialID == pickingPos.Material.MaterialID))
+                            {
+                                foreach (FacilityBookingCharge fbc in dbApp.FacilityBookingCharge
+                                                                            .Include(c => c.InwardFacilityCharge)
+                                                                            .Where(c => c.PickingPosID == pickingPos.PickingPosID)
+                                                                            .ToArray())
+                                {
+                                    if (fbc.InwardFacilityCharge == null)
+                                        continue;
+                                    ACMethodBooking relocationPosting = ACFacilityManager.ACUrlACTypeSignature("!" + GlobalApp.FBT_Relocation_FacilityCharge_Facility.ToString(), gip.core.datamodel.Database.GlobalDatabase) as ACMethodBooking;
+                                    if (relocationPosting != null)
+                                        relocationPosting = relocationPosting.Clone() as ACMethodBooking;
+                                    if (relocationPosting != null)
+                                    {
+                                        relocationPosting.OutwardFacilityCharge = fbc.InwardFacilityCharge;
+                                        relocationPosting.InwardFacility = virtDestStore;
+                                        relocationPosting.OutwardQuantity = fbc.InwardQuantityUOM;
+                                        relocationPosting.InwardQuantity = fbc.InwardQuantityUOM;
+                                        ACMethodEventArgs resultBooking = ACFacilityManager.BookFacilityWithRetry(ref relocationPosting, dbApp);
+                                        if (resultBooking.ResultState == Global.ACMethodResultState.Failed || resultBooking.ResultState == Global.ACMethodResultState.Notpossible)
+                                        {
+                                            msg = new Msg(resultBooking.ValidMessage.InnerMessage, this, eMsgLevel.Error, PWClassName, "BookFermentationStarter(20)", 629);
+                                            ActivateProcessAlarm(msg, false);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
 
             MDDelivPosLoadState loadToTruck = DatabaseApp.s_cQry_GetMDDelivPosLoadState(dbApp, MDDelivPosLoadState.DelivPosLoadStates.LoadToTruck).FirstOrDefault();
             MDDelivPosState completed = DatabaseApp.s_cQry_GetMDDelivPosState(dbApp, MDDelivPosState.DelivPosStates.CompletelyAssigned).FirstOrDefault();

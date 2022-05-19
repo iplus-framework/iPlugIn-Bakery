@@ -66,6 +66,7 @@
     <Compile Include="ACProcessWorkflow\PWNodeMethod\PWBakeryDosing.cs" />
     <Compile Include="ACProcessWorkflow\PWNodeMethod\PWBakeryDosingPreProd.cs" />
     <Compile Include="ACProcessWorkflow\PWNodeMethod\PWBakeryFermentationStarter.cs" />
+    <Compile Include="ACProcessWorkflow\PWNodeMethod\PWBakeryYeastEmptyAck.cs" />
     <Compile Include="ACProcessWorkflow\PWNodeMethod\PWBakeryManualWeighing.cs" />
     <Compile Include="ACProcessWorkflow\PWNodeMethod\PWBakeryMixingPreProd.cs" />
     <Compile Include="ACProcessWorkflow\PWNodeMethod\PWBakeryPumping.cs" />
@@ -315,9 +316,6 @@
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
     <None Include="VBControlScripts\2022-04-20 15-52_ihrastinski.zip">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
-    <None Include="VBControlScripts\2022-05-17 09-27_aagincic.zip">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
   </ItemGroup>
