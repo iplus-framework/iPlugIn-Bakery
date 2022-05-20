@@ -970,16 +970,21 @@ namespace gipbakery.mes.processapplication
                 if (msgItem != null)
                 {
                     fermentationStarter.ExecuteMethod(nameof(PWBakeryFermentationStarter.AckFermentationStarter), false);
-                    //bool result = (bool) fermentationStarter.ExecuteMethod(PWBakeryFermentationStarter.MN_AckFermentationStarter, false);
-                    //if (!result)
-                    //{
-                    //    //The starter were not added to the container!Do you still want to start production?
-                    //    if (Messages.Question(this, "Question50063") == Global.MsgResult.Yes)
-                    //    {
-                    //        fermentationStarter.ExecuteMethod(PWBakeryFermentationStarter.MN_AckFermentationStarter, true);
-                    //    }
-                    //}
+                    return;
                 }
+            }
+
+            var messagesToAck = MessagesList.Where(c => !c.IsAlarmMessage && c.HandleByAcknowledgeButton).ToList();
+            if (messagesToAck.Count > 1 || messagesToAck.Any(x => x.MessageLevel == eMsgLevel.Question))
+            {
+                AckMessageList = messagesToAck;
+                ShowDialog(this, "MsgAckDialog");
+            }
+            else
+            {
+                var messageToAck = messagesToAck.FirstOrDefault();
+                if (messageToAck != null)
+                    messageToAck.AcknowledgeMsg();
             }
         }
 
@@ -1531,6 +1536,54 @@ namespace gipbakery.mes.processapplication
         {
             CloseTopDialog();
             ParentBSOWCS?.SelectExtraDisTargetOnPWGroup();
+        }
+
+        [ACMethodInfo("", "en{'Acknowledge'}de{'Quittieren'}", 602, true)]
+        public void AcknowledgeMsg(MessageItem item)
+        {
+            if (item != null)
+            {
+                item.AcknowledgeMsg();
+                AckMessageList.Remove(item);
+                AckMessageList = AckMessageList.ToList();
+
+                if (!AckMessageList.Any())
+                {
+                    CloseTopDialog();
+                }
+            }
+        }
+
+        [ACMethodInfo("", "en{'Yes'}de{'Ja'}", 602, true)]
+        public void QuestionYes(MessageItem item)
+        {
+            if (item != null)
+            {
+                item.QuestionYes();
+                AckMessageList.Remove(item);
+                AckMessageList = AckMessageList.ToList();
+
+                if (!AckMessageList.Any())
+                {
+                    CloseTopDialog();
+                }
+            }
+        }
+
+        [ACMethodInfo("", "en{'No'}de{'Nein'}", 602, true)]
+        public void QuestionNo(MessageItem item)
+        {
+            if (item != null)
+            {
+                item.QuestionNo();
+                AckMessageList.Remove(item);
+                AckMessageList = AckMessageList.ToList();
+
+                if (!AckMessageList.Any())
+                {
+                    CloseTopDialog();
+                }
+            }
         }
 
         #endregion
