@@ -30,6 +30,9 @@ namespace gipbakery.mes.processapplication
             method.ParameterValueList.Add(new ACValue("DoughTemp", typeof(double?), false, Global.ParamOption.Required));
             paramTranslation.Add("DoughTemp", "en{'Doughtemperature °C'}de{'Teigtemperatur °C'}");
 
+            method.ParameterValueList.Add(new ACValue("ExcludeKneedingTemp", typeof(bool), false, Global.ParamOption.Required));
+            paramTranslation.Add("ExcludeKneedingTemp", "en{'Exclude kneeding temperature'}de{'Knettemperatur ausschließen'}");
+
             method.ParameterValueList.Add(new ACValue("WaterTemp", typeof(double?), false, Global.ParamOption.Required));
             paramTranslation.Add("WaterTemp", "en{'Watertemperature °C'}de{'Wassertemperatur °C'}");
 
@@ -207,6 +210,23 @@ namespace gipbakery.mes.processapplication
                     }
                 }
                 return null;
+            }
+        }
+
+        protected bool ExcludeKneedingTemp
+        {
+            get
+            {
+                var method = MyConfiguration;
+                if (method != null)
+                {
+                    var acValue = method.ParameterValueList.GetACValue("ExcludeKneedingTemp");
+                    if (acValue != null)
+                    {
+                        return acValue.ParamAsBoolean;
+                    }
+                }
+                return false;
             }
         }
 
@@ -591,9 +611,12 @@ namespace gipbakery.mes.processapplication
 
                 if (!UseWaterTemp)
                 {
-                    bool kneedingTempResult = GetKneedingRiseTemperature(dbApp, endBatchPos.TargetQuantityUOM, out kneedingRiseTemperature);
-                    if (!kneedingTempResult)
-                        return;
+                    if (!ExcludeKneedingTemp)
+                    {
+                        bool kneedingTempResult = GetKneedingRiseTemperature(dbApp, endBatchPos.TargetQuantityUOM, out kneedingRiseTemperature);
+                        if (!kneedingTempResult)
+                            return;
+                    }
 
                     recvPointCorrTemp = recvPoint.DoughCorrTemp.ValueT;
 
