@@ -13,9 +13,11 @@ namespace gipbakery.mes.processapplication
     [ACClassInfo(Const.PackName_VarioAutomation, "en{'Dough temperature calculation'}de{'Teigtemperaturberechnung'}", Global.ACKinds.TPWNodeStatic, Global.ACStorableTypes.Optional, false, PWMethodVBBase.PWClassName, true)]
     public class PWBakeryTempCalc : PWNodeUserAck
     {
-        public new const string PWClassName = "PWBakeryTempCalc";
+        public new const string PWClassName = nameof(PWBakeryTempCalc);
 
         public const string KneedingRiseTemp = "KneedingRiseTemp";
+
+        public const string ParamPLWaterTQ = "PLWaterTQ";
 
         #region Constructors
 
@@ -744,6 +746,8 @@ namespace gipbakery.mes.processapplication
 
                 CalculateWaterTypes(compTemps, suggestedWaterTemp, waterTargetQuantity.Value, defaultWaterTemp, componentsQ, isOnlyWaterCompsInPartslist, doughTargetTempBeforeKneeding,
                                     kneedingRiseTemperature, false);
+
+                FillInfoForBSO(compTemps, kneedingRiseTemperature, cityWaterComp, endBatchPos);
             }
         }
 
@@ -810,6 +814,8 @@ namespace gipbakery.mes.processapplication
                                                                                 0, waterTargetQuantity, out defaultWaterTemp);
 
                 CalculateWaterTypes(compTemps, suggestedWaterTemp, waterTargetQuantity.Value, defaultWaterTemp, 0, isOnlyWaterCompsInPartslist, 0, null, true);
+
+                FillInfoForBSO(compTemps, null, null, null);
             }
         }
 
@@ -1035,14 +1041,14 @@ namespace gipbakery.mes.processapplication
                 return;
             }
 
-            ACValueList temperaturesUsedInCalc = new ACValueList(componentTemperatures.Where(c => c.Water != WaterType.NotWater).Select(x => new ACValue(x.Water.ToString(), x.AverageTemperature)).ToArray());
-            if (kneedingRiseTemp.HasValue)
-            {
-                ACValue acValue = new ACValue(KneedingRiseTemp, kneedingRiseTemp.Value);
-                temperaturesUsedInCalc.Add(acValue);
-            }
+            //ACValueList temperaturesUsedInCalc = new ACValueList(componentTemperatures.Where(c => c.Water != WaterType.NotWater).Select(x => new ACValue(x.Water.ToString(), x.AverageTemperature)).ToArray());
+            //if (kneedingRiseTemp.HasValue)
+            //{
+            //    ACValue acValue = new ACValue(KneedingRiseTemp, kneedingRiseTemp.Value);
+            //    temperaturesUsedInCalc.Add(acValue);
+            //}
 
-            WaterTemperaturesUsedInCalc = temperaturesUsedInCalc;
+            //WaterTemperaturesUsedInCalc = temperaturesUsedInCalc;
             WaterTotalQuantity.ValueT = totalWaterQuantity;
 
             //check warm water 
@@ -1413,7 +1419,32 @@ namespace gipbakery.mes.processapplication
             return false;
         }
 
+        private void FillInfoForBSO(IEnumerable<MaterialTemperature> componentTemperatures, double? kneedingRiseTemp, ProdOrderPartslistPosRelation cityWaterComp,
+                                    ProdOrderPartslistPos endBatchPos)
+        {
+            ACValueList temperaturesUsedInCalc = new ACValueList(componentTemperatures.Where(c => c.Water != WaterType.NotWater).Select(x => new ACValue(x.Water.ToString(), x.AverageTemperature)).ToArray());
+            if (kneedingRiseTemp.HasValue)
+            {
+                ACValue acValue = new ACValue(KneedingRiseTemp, kneedingRiseTemp.Value);
+                temperaturesUsedInCalc.Add(acValue);
+            }
 
+            if (cityWaterComp != null && endBatchPos != null)
+            {
+                PartslistPos waterPos = cityWaterComp.SourceProdOrderPartslistPos.BasedOnPartslistPos;
+
+                double factor = waterPos.TargetQuantityUOM / waterPos.Partslist.TargetQuantityUOM;
+                double? tQuantity = factor * endBatchPos.TargetQuantityUOM;
+
+                if (tQuantity.HasValue)
+                {
+                    ACValue acValue = new ACValue(ParamPLWaterTQ, tQuantity.Value);
+                    temperaturesUsedInCalc.Add(acValue);
+                }
+            }
+
+            WaterTemperaturesUsedInCalc = temperaturesUsedInCalc;
+        }
 
         #endregion
 

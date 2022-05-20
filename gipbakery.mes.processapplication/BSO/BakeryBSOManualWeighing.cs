@@ -219,7 +219,11 @@ namespace gipbakery.mes.processapplication
             {
                 if (_NewWaterQuantity != value)
                 {
-                    double diff = Math.Abs(_NewWaterQuantity - value);
+                    double valueForCompare = _NewWaterQuantity;
+                    if (WaterQuantityFromPartslist > 0.0001)
+                        valueForCompare = WaterQuantityFromPartslist;
+
+                    double diff = Math.Abs(valueForCompare - value);
 
                     if (diff <= WaterCorrectionDiffMax)
                     {
@@ -238,6 +242,12 @@ namespace gipbakery.mes.processapplication
         }
 
         public double WaterCorrectionDiffMax
+        {
+            get;
+            set;
+        }
+
+        private double WaterQuantityFromPartslist
         {
             get;
             set;
@@ -676,6 +686,12 @@ namespace gipbakery.mes.processapplication
                 if (kneedingRiseTemp != null)
                 {
                     KneedingRiseTemp = kneedingRiseTemp.Value as double?;
+                }
+
+                var waterTargetQFromPL = watersTempInCalc.GetACValue(PWBakeryTempCalc.ParamPLWaterTQ);
+                if (waterTargetQFromPL != null)
+                {
+                    WaterQuantityFromPartslist = waterTargetQFromPL.ParamAsDouble;
                 }
             }
 
