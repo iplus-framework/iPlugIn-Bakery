@@ -120,6 +120,20 @@ namespace gipbakery.mes.processapplication
             set
             {
                 _IsOnlyWaterTemperatureCalculation = value;
+
+                if (WaterTargetTemperature < 0.0001 && WaterTargetTemperature > -0.0001)
+                {
+                    var bakeryTempCalc = CurrentBakeryTempCalc;
+                    if (bakeryTempCalc != null)
+                    {
+                        var temp = bakeryTempCalc.ACUrlCommand(nameof(PWBakeryTempCalc.WaterCalcResult)) as double?;
+                        if (temp != null && temp.Value > 0.001)
+                        {
+                            WaterTargetTemperature = temp.Value;
+                        }
+                    }
+                }
+
                 OnPropertyChanged("IsOnlyWaterTemperatureCalculation");
             }
         }
