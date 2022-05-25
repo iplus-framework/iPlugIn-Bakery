@@ -332,7 +332,7 @@ namespace gipbakery.mes.processapplication
             get;
             protected set;
         }
-        private bool _IsOrderInfoEmpy = true;
+        private bool _IsOrderInfoEmpty = true;
 
         protected ACRef<IACComponentPWNode> PWGroupFermentation
         {
@@ -368,6 +368,8 @@ namespace gipbakery.mes.processapplication
                 OnPropertyChanged("DischargingState");
             }
         }
+
+        public bool FinishOrderOnPumping { get; set; }
 
         #region Properties => Clean
 
@@ -569,7 +571,7 @@ namespace gipbakery.mes.processapplication
                     return;
                 }
 
-                string scaleACUrl = GetConfigValue(funcClass, PAFBakeryYeastProducing.PN_FermentationStarterScaleACUrl) as string;
+                string scaleACUrl = GetConfigValue(funcClass, nameof(PAFBakeryYeastProducing.FermentationStarterScaleACUrl)) as string;
 
                 ACComponent scale = PAFPreProducing?.ACUrlCommand(scaleACUrl) as ACComponent;
                 if (scale != null)
@@ -589,7 +591,7 @@ namespace gipbakery.mes.processapplication
                     Messages.Error(this, "Error50463");
                 }
 
-                string storeACUrl = PAFPreProducing.ExecuteMethod(PAFBakeryYeastProducing.MN_GetVirtualStoreACUrl) as string;
+                string storeACUrl = PAFPreProducing.ExecuteMethod(nameof(PAFBakeryYeastProducing.GetVirtualStoreACUrl)) as string;
                 ACComponent store = PAFPreProducing?.ACUrlCommand(storeACUrl) as ACComponent;
                 if (store != null)
                 {
@@ -608,7 +610,7 @@ namespace gipbakery.mes.processapplication
                     Messages.Error(this, "Error50463");
                 }
 
-                string pumpOverModuleACUrl = GetConfigValue(funcClass, PAFBakeryYeastProducing.PN_PumpOverProcessModuleACUrl) as string;
+                string pumpOverModuleACUrl = GetConfigValue(funcClass, nameof(PAFBakeryYeastProducing.PumpOverProcessModuleACUrl)) as string;
                 if (!string.IsNullOrEmpty(pumpOverModuleACUrl))
                 {
                     ACComponent pumpOverProcessModule = Root.ACUrlCommand(pumpOverModuleACUrl) as ACComponent;
@@ -634,7 +636,7 @@ namespace gipbakery.mes.processapplication
                     }
                 }
 
-                string tempSensorACUrl = GetConfigValue(funcClass, PAFBakeryYeastProducing.PN_TemperatureSensorACUrl) as string;
+                string tempSensorACUrl = GetConfigValue(funcClass, nameof(PAFBakeryYeastProducing.TemperatureSensorACUrl)) as string;
                 if (!string.IsNullOrEmpty(tempSensorACUrl))
                 {
                     ACComponent tempSensor = Root.ACUrlCommand(tempSensorACUrl) as ACComponent;
@@ -645,6 +647,9 @@ namespace gipbakery.mes.processapplication
                         _TempSensorActualValue.PropertyChanged += TempSensorActualValue_PropertyChanged;
                     }
                 }
+
+                object configVal = GetConfigValue(funcClass, nameof(PAFBakeryYeastProducing.FinishOrderOnPumping));
+                FinishOrderOnPumping = GetConfigValue(funcClass, nameof(PAFBakeryYeastProducing.FinishOrderOnPumping)) != null ? (bool)configVal : false;
             }
 
             ACChildInstanceInfo dischFunc = childInstances.FirstOrDefault(c => _PAFDischargingType.IsAssignableFrom(c.ACType.ValueT.ObjectType));
@@ -680,7 +685,7 @@ namespace gipbakery.mes.processapplication
 
             ProcessModuleOrderInfo.PropertyChanged += ProcessModuleOrderInfo_PropertyChanged;
 
-            VirtualSourceStoreID = PAFPreProducing?.ExecuteMethod(PAFBakeryYeastProducing.MN_GetSourceVirtualStoreID) as Guid?;
+            VirtualSourceStoreID = PAFPreProducing?.ExecuteMethod(nameof(PAFBakeryYeastProducing.GetSourceVirtualStoreID)) as Guid?;
 
             if (VirtualSourceStoreID.HasValue)
             {
@@ -830,7 +835,7 @@ namespace gipbakery.mes.processapplication
         protected void HandleOrderInfoPropChanged(string orderInfo)
         {
             bool isOrderEmpty = string.IsNullOrEmpty(orderInfo);
-            _IsOrderInfoEmpy = isOrderEmpty;
+            _IsOrderInfoEmpty = isOrderEmpty;
 
             if (isOrderEmpty)
             {
@@ -1048,7 +1053,7 @@ namespace gipbakery.mes.processapplication
 
         public bool IsEnabledClean()
         {
-            return _IsOrderInfoEmpy && PAFPreProducing != null;
+            return _IsOrderInfoEmpty && PAFPreProducing != null;
         }
 
         [ACMethodInfo("", "en{'Start cleaning'}de{'Starte Reinigungsprogramm'}", 801, true)]
@@ -1062,11 +1067,11 @@ namespace gipbakery.mes.processapplication
                 return;
             }
 
-            var config = pafClass.ConfigurationEntries.FirstOrDefault(c => c.KeyACUrl == pafClass.ACConfigKeyACUrl && c.LocalConfigACUrl == PAFBakeryYeastProducing.PN_CleaningMode);
+            var config = pafClass.ConfigurationEntries.FirstOrDefault(c => c.KeyACUrl == pafClass.ACConfigKeyACUrl && c.LocalConfigACUrl == nameof(PAFBakeryYeastProducing.CleaningMode));
             if (config == null)
             {
                 //Error50468: Can not find the configuration for {0} on the PAFPreProducing function. 
-                Messages.Error(this, "Error50468", false, PAFBakeryYeastProducing.PN_CleaningMode);
+                Messages.Error(this, "Error50468", false, nameof(PAFBakeryYeastProducing.CleaningMode));
                 return;
             }
 
@@ -1105,7 +1110,7 @@ namespace gipbakery.mes.processapplication
 
             if (mode.Value == BakeryPreProdCleaningMode.OverBits)
             {
-                Msg resultMsg = PAFPreProducing.ExecuteMethod(PAFBakeryYeastProducing.MN_Clean, (short)11) as Msg;
+                Msg resultMsg = PAFPreProducing.ExecuteMethod(nameof(PAFBakeryYeastProducing.Clean), (short)11) as Msg;
                 if (resultMsg != null)
                 {
                     Messages.Msg(resultMsg);
@@ -1118,11 +1123,11 @@ namespace gipbakery.mes.processapplication
                 CurrentBookParamRelocation.InwardQuantity = 0.0001;
                 CurrentBookParamRelocation.OutwardQuantity = 0.0001;
 
-                config = pafClass.ConfigurationEntries.FirstOrDefault(c => c.KeyACUrl == pafClass.ACConfigKeyACUrl && c.LocalConfigACUrl == PAFBakeryYeastProducing.PN_CleaningProdACClassWF);
+                config = pafClass.ConfigurationEntries.FirstOrDefault(c => c.KeyACUrl == pafClass.ACConfigKeyACUrl && c.LocalConfigACUrl == nameof(PAFBakeryYeastProducing.CleaningProdACClassWF));
                 if (config == null)
                 {
                     //Error50468: Can not find the configuration for {0} on the PAFPreProducing function. 
-                    Messages.Error(this, "Error50468", false, PAFBakeryYeastProducing.PN_CleaningProdACClassWF);
+                    Messages.Error(this, "Error50468", false, nameof(PAFBakeryYeastProducing.CleaningProdACClassWF));
                     return;
                 }
 
@@ -1159,16 +1164,16 @@ namespace gipbakery.mes.processapplication
         {
             if (IsEnabledStoreOutwardEnabledOn())
             {
-                if (!_IsOrderInfoEmpy && DischargingState != (short)ACStateEnum.SMRunning && DischargingState != (short)ACStateEnum.SMPaused)
+                if (!_IsOrderInfoEmpty && DischargingState != (short)ACStateEnum.SMRunning && DischargingState != (short)ACStateEnum.SMPaused)
                 {
                     //The product is not yet ready to be dosed.Are you sure that you want to release the container?
                     if (Messages.Question(this, "Question50069") == Global.MsgResult.No)
                         return;
                 }
 
-                PAFPreProducing?.ExecuteMethod(PAFBakeryYeastProducing.MN_SwitchVirtualStoreOutwardEnabled);
+                PAFPreProducing?.ExecuteMethod(nameof(PAFBakeryYeastProducing.SwitchVirtualStoreOutwardEnabled));
 
-                if (_IsOrderInfoEmpy)//process module is not mapped
+                if (_IsOrderInfoEmpty)//process module is not mapped
                 {
                     //There is no order in the container. Do you want to reactivate the dosing process and temperature control ?
                     if (Messages.Question(this, "Question50066") == Global.MsgResult.Yes)
@@ -1320,7 +1325,7 @@ namespace gipbakery.mes.processapplication
                     }
                 }
 
-                PAFPreProducing?.ExecuteMethod(PAFBakeryYeastProducing.MN_SwitchVirtualStoreOutwardEnabled);
+                PAFPreProducing?.ExecuteMethod(nameof(PAFBakeryYeastProducing.SwitchVirtualStoreOutwardEnabled));
             }
         }
 
@@ -1373,7 +1378,7 @@ namespace gipbakery.mes.processapplication
                 }
             }
             
-            ACValueList targets = PAFPreProducing?.ExecuteMethod(PAFBakeryYeastProducing.MN_GetPumpOverTargets) as ACValueList;
+            ACValueList targets = PAFPreProducing?.ExecuteMethod(nameof(PAFBakeryYeastProducing.GetPumpOverTargets)) as ACValueList;
 
             if (VirtualSourceFacility != null && targets != null)
             {
@@ -1447,6 +1452,15 @@ namespace gipbakery.mes.processapplication
                 Messages.Error(this, "Error50465");
                 return;
             }
+
+            if (   FinishOrderOnPumping 
+                && !_IsOrderInfoEmpty 
+                && PAFPreProducing != null
+                && DischargingState != (short)ACStateEnum.SMIdle)
+            {
+                FinishOrder();
+            }
+
 
             CurrentBookParamRelocation.InwardFacility = inwardFacility;
             CurrentBookParamRelocation.OutwardFacility = outwardFacility;

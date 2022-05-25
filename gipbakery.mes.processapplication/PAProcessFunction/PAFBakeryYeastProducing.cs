@@ -25,25 +25,27 @@ namespace gipbakery.mes.processapplication
         public PAFBakeryYeastProducing(gip.core.datamodel.ACClass acType, IACObject content, IACObject parentACObject, ACValueList parameter, string acIdentifier = "") :
             base(acType, content, parentACObject, parameter, acIdentifier)
         {
-            _FermentationStarterScaleACUrl = new ACPropertyConfigValue<string>(this, "FermentationStarterScaleACUrl", "");
-            _TemperatureSensorACUrl = new ACPropertyConfigValue<string>(this, "TemperatureSensorACUrl", "");
-            _CleaningMode = new ACPropertyConfigValue<BakeryPreProdCleaningMode>(this, "CleaningMode", BakeryPreProdCleaningMode.OverBits);
-            _ContinueProdACClassWF = new ACPropertyConfigValue<string>(this, "ContinueProdACClassWF", "");
-            _PumpOverACClassWF = new ACPropertyConfigValue<string>(this, "PumpOverACClassWF", "");
-            _CleaningProdACClassWF = new ACPropertyConfigValue<string>(this, "CleaningProdACClassWF", "");
-            _PumpOverProcessModuleACUrl = new ACPropertyConfigValue<string>(this, "PumpOverProcessModuleACUrl", "");
+            _FermentationStarterScaleACUrl = new ACPropertyConfigValue<string>(this, nameof(FermentationStarterScaleACUrl), "");
+            _TemperatureSensorACUrl = new ACPropertyConfigValue<string>(this, nameof(TemperatureSensorACUrl), "");
+            _CleaningMode = new ACPropertyConfigValue<BakeryPreProdCleaningMode>(this, nameof(CleaningMode), BakeryPreProdCleaningMode.OverBits);
+            _ContinueProdACClassWF = new ACPropertyConfigValue<string>(this, nameof(ContinueProdACClassWF), "");
+            _PumpOverACClassWF = new ACPropertyConfigValue<string>(this, nameof(PumpOverACClassWF), "");
+            _CleaningProdACClassWF = new ACPropertyConfigValue<string>(this, nameof(CleaningProdACClassWF), "");
+            _PumpOverProcessModuleACUrl = new ACPropertyConfigValue<string>(this, nameof(PumpOverProcessModuleACUrl), "");
+            _FinishOrderOnPumping = new ACPropertyConfigValue<bool>(this, nameof(FinishOrderOnPumping), true);
         }
 
         public override bool ACPostInit()
         {
             bool result = base.ACPostInit();
 
-            string temp = FermentationStarterScaleACUrl;
-            temp = TemperatureSensorACUrl;
-            temp = ContinueProdACClassWF;
-            temp = PumpOverACClassWF;
-            temp = CleaningProdACClassWF;
-            temp = PumpOverProcessModuleACUrl;
+            _ = FermentationStarterScaleACUrl;
+            _ = TemperatureSensorACUrl;
+            _ = ContinueProdACClassWF;
+            _ = PumpOverACClassWF;
+            _ = CleaningProdACClassWF;
+            _ = PumpOverProcessModuleACUrl;
+            _ = FinishOrderOnPumping;
             BakeryPreProdCleaningMode mode = CleaningMode;
 
             PAProcessModule module = ParentACComponent as PAProcessModule;
@@ -86,20 +88,6 @@ namespace gipbakery.mes.processapplication
             }
             return base.ACDeInit(deleteACClassTask);
         }
-
-        public const string ClassName = "PAFBakeryYeastProducing";
-
-        public const string MN_GetVirtualStoreACUrl = "GetVirtualStoreACUrl";
-        public const string MN_Clean = "Clean";
-        public const string MN_SwitchVirtualStoreOutwardEnabled = "SwitchVirtualStoreOutwardEnabled";
-        public const string MN_GetPumpOverTargets = "GetPumpOverTargets";
-        public const string MN_GetSourceVirtualStoreID = "GetSourceVirtualStoreID";
-
-        public const string PN_CleaningMode = "CleaningMode";
-        public const string PN_CleaningProdACClassWF = "CleaningProdACClassWF";
-        public const string PN_FermentationStarterScaleACUrl = "FermentationStarterScaleACUrl";
-        public const string PN_PumpOverProcessModuleACUrl = "PumpOverProcessModuleACUrl";
-        public const string PN_TemperatureSensorACUrl = "TemperatureSensorACUrl";
 
         #endregion
 
@@ -191,6 +179,20 @@ namespace gipbakery.mes.processapplication
             }
         }
 
+        protected ACPropertyConfigValue<bool> _FinishOrderOnPumping;
+        [ACPropertyConfig("en{'Finish order for pumping first'}de{'Auftrag beednen zum Umpumpen'}")]
+        public bool FinishOrderOnPumping
+        {
+            get
+            {
+                return _FinishOrderOnPumping.ValueT;
+            }
+            set
+            {
+                _FinishOrderOnPumping.ValueT = value;
+            }
+        }
+
         #endregion
 
         public virtual bool IsVirtSourceStoreNecessary
@@ -254,7 +256,7 @@ namespace gipbakery.mes.processapplication
             if (source == null && IsVirtSourceStoreNecessary)
             {
                 //Error50484: The virtual source store can not be found!
-                Msg msg = new Msg(this, eMsgLevel.Error, ClassName, "FindStores(10)", 252, "Error50484");
+                Msg msg = new Msg(this, eMsgLevel.Error, nameof(PAFBakeryYeastProducing), "FindStores(10)", 252, "Error50484");
                 if (IsAlarmActive(FunctionError, msg.Message) == null)
                 {
                     OnNewAlarmOccurred(FunctionError, msg);
@@ -265,7 +267,7 @@ namespace gipbakery.mes.processapplication
             if (target == null)
             {
                 //Error50485: The virtual target store can not be found!
-                Msg msg = new Msg(this, eMsgLevel.Error, ClassName, "FindStores(20)", 263, "Error50485");
+                Msg msg = new Msg(this, eMsgLevel.Error, nameof(PAFBakeryYeastProducing), "FindStores(20)", 263, "Error50485");
                 if (IsAlarmActive(FunctionError, msg.Message) == null)
                 {
                     OnNewAlarmOccurred(FunctionError, msg);
