@@ -385,11 +385,21 @@ namespace gipbakery.mes.processapplication
             set;
         }
 
+        double? _CleanTargetQuantity;
         [ACPropertyInfo(860, "", "en{'Target quantity'}de{'Sollmenge'}")]
         public double CleanTargetQuantity
         {
-            get;
-            set;
+            get
+            {
+                if (!_CleanTargetQuantity.HasValue)
+                    _CleanTargetQuantity = 100;
+                return _CleanTargetQuantity.Value;
+            }
+            set
+            {
+                _CleanTargetQuantity = value;
+                OnPropertyChanged();
+            }
         }
 
         #endregion
@@ -1041,7 +1051,7 @@ namespace gipbakery.mes.processapplication
             return _IsOrderInfoEmpy && PAFPreProducing != null;
         }
 
-        [ACMethodInfo("", "en{'Start clean'}de{'Reinigen starten'}", 801, true)]
+        [ACMethodInfo("", "en{'Start cleaning'}de{'Starte Reinigungsprogramm'}", 801, true)]
         public void StartClean()
         {
             gip.core.datamodel.ACClass pafClass = PAFPreProducing?.ComponentClass.FromIPlusContext<gip.core.datamodel.ACClass>(DatabaseApp.ContextIPlus);
@@ -1130,7 +1140,7 @@ namespace gipbakery.mes.processapplication
 
                 ACComponent currentProcessModule = CurrentProcessModule;
 
-                RunWorkflow(wfClass, wfMethod, currentProcessModule);
+                RunWorkflow(wfClass, wfMethod, currentProcessModule, true, false, PARole.ValidationBehaviour.Laxly);
             }
 
             outFacility.OutwardEnabled = outFacilityOutwardEnabled;

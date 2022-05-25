@@ -313,7 +313,11 @@ namespace gipbakery.mes.processapplication
                         continue;
 
                     PAMSilo silo = rItem.SourceACComponent as PAMSilo;
-                    if (silo == null || !silo.OutwardEnabled.ValueT || string.IsNullOrEmpty(silo.Facility?.ValueT?.ValueT?.FacilityNo) || string.IsNullOrEmpty(silo.MaterialNo?.ValueT))
+                    if (silo == null 
+                        || !silo.OutwardEnabled.ValueT 
+                        || string.IsNullOrEmpty(silo.Facility?.ValueT?.ValueT?.FacilityNo) 
+                        || string.IsNullOrEmpty(silo.MaterialNo?.ValueT)
+                        || silo.AllocationExternal)
                         continue;
 
                     if (!withFacilityCombination && result.Any(c => c.MaterialNo == silo.MaterialNo.ValueT))
