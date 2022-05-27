@@ -1567,11 +1567,21 @@ namespace gipbakery.mes.processapplication
 
                 var components = currentProdOrderPartslist.ProdOrderPartslistPos_ProdOrderPartslist.Where(c => c.MaterialID.HasValue && c.MaterialPosType == GlobalApp.MaterialPosTypes.OutwardRoot);
 
-                Material intermediateAutomatic = matWFConnections.FirstOrDefault(c => c.Material.MaterialWFConnection_Material
-                                                                                       .FirstOrDefault(x => _PWDosingType.IsAssignableFrom(x.ACClassWF.PWACClass.FromIPlusContext<gip.core.datamodel.ACClass>(db).ObjectType)) != null)?.Material;
+                var intermediateAutomatic = matWFConnections.FirstOrDefault(c => c.Material
+                                                                                  .MaterialWFConnection_Material
+                                                                                  .FirstOrDefault(x => x.MaterialWFACClassMethodID == c.MaterialWFACClassMethodID
+                                                                                                    && _PWDosingType
+                                                                                                       .IsAssignableFrom(x.ACClassWF.PWACClass
+                                                                                                                          .FromIPlusContext<gip.core.datamodel.ACClass>(db).ObjectType))
+                                                                                                                          != null)?.Material;
 
-                Material intermediateManual = matWFConnections.FirstOrDefault(c => c.Material.MaterialWFConnection_Material
-                                                                                       .FirstOrDefault(x => _PWManualWeighingType.IsAssignableFrom(x.ACClassWF.PWACClass.FromIPlusContext<gip.core.datamodel.ACClass>(db).ObjectType)) != null)?.Material; ;
+                var intermediateManual = matWFConnections.FirstOrDefault(c => c.Material
+                                                                               .MaterialWFConnection_Material
+                                                                               .FirstOrDefault(x => x.MaterialWFACClassMethodID == c.MaterialWFACClassMethodID
+                                                                                                 && _PWManualWeighingType
+                                                                                                    .IsAssignableFrom(x.ACClassWF.PWACClass
+                                                                                                                       .FromIPlusContext<gip.core.datamodel.ACClass>(db).ObjectType))
+                                                                                                                       != null).Material;
 
                 if (intermediateManual == null)
                 {
@@ -1968,11 +1978,21 @@ namespace gipbakery.mes.processapplication
                 _WarmWaterMaterialNo = tempFromService.FirstOrDefault(c => c.Water == WaterType.WarmWater)?.MaterialNo;
                 string dryIce = DryIceMaterialNo;
 
-                var intermediateAutomatic = matWFConnections.FirstOrDefault(c => c.Material.MaterialWFConnection_Material
-                                                                       .FirstOrDefault(x => _PWDosingType.IsAssignableFrom(x.ACClassWF.PWACClass.FromIPlusContext<gip.core.datamodel.ACClass>(db).ObjectType)) != null)?.Material;
+                var intermediateAutomatic = matWFConnections.FirstOrDefault(c => c.Material
+                                                                                  .MaterialWFConnection_Material
+                                                                                  .FirstOrDefault(x => x.MaterialWFACClassMethodID == c.MaterialWFACClassMethodID  
+                                                                                                    && _PWDosingType
+                                                                                                       .IsAssignableFrom(x.ACClassWF.PWACClass
+                                                                                                                          .FromIPlusContext<gip.core.datamodel.ACClass>(db).ObjectType)) 
+                                                                                                                          != null)?.Material;
 
-                var intermediateManual = matWFConnections.FirstOrDefault(c => c.Material.MaterialWFConnection_Material
-                                                                                       .FirstOrDefault(x => _PWManualWeighingType.IsAssignableFrom(x.ACClassWF.PWACClass.FromIPlusContext<gip.core.datamodel.ACClass>(db).ObjectType)) != null).Material;
+                var intermediateManual = matWFConnections.FirstOrDefault(c => c.Material
+                                                                               .MaterialWFConnection_Material
+                                                                               .FirstOrDefault(x => x.MaterialWFACClassMethodID == c.MaterialWFACClassMethodID 
+                                                                                                 && _PWManualWeighingType
+                                                                                                    .IsAssignableFrom(x.ACClassWF.PWACClass
+                                                                                                                       .FromIPlusContext<gip.core.datamodel.ACClass>(db).ObjectType)) 
+                                                                                                                       != null).Material;
 
 
                 endBatchPos.ProdOrderPartslist.FromAppContext<ProdOrderPartslist>(dbApp);
