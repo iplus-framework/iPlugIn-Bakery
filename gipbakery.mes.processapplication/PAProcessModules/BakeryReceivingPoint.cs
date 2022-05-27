@@ -29,11 +29,11 @@ namespace gipbakery.mes.processapplication
         public BakeryReceivingPoint(gip.core.datamodel.ACClass acType, IACObject content, IACObject parentACObject, ACValueList parameter, string acIdentifier = "")
             : base(acType, content, parentACObject, parameter, acIdentifier)
         {
-            _PAPointMatIn2 = new PAPoint(this, "PAPointMatIn2");
-            _PAPointMatIn3 = new PAPoint(this, "PAPointMatIn3");
-            _PAPointMatIn4 = new PAPoint(this, "PAPointMatIn4");
-            _PAPointMatIn5 = new PAPoint(this, "PAPointMatIn5");
-            _PAPointMatIn6 = new PAPoint(this, "PAPointMatIn6");
+            _PAPointMatIn2 = new PAPoint(this, nameof(PAPointMatIn2));
+            _PAPointMatIn3 = new PAPoint(this, nameof(PAPointMatIn3));
+            _PAPointMatIn4 = new PAPoint(this, nameof(PAPointMatIn4));
+            _PAPointMatIn5 = new PAPoint(this, nameof(PAPointMatIn5));
+            _PAPointMatIn6 = new PAPoint(this, nameof(PAPointMatIn6));
 
             _RecvPointReadyScaleACUrl = new ACPropertyConfigValue<string>(this, "RecvPointReadyScaleACUrl", "");
             _WithCover = new ACPropertyConfigValue<bool>(this, "WithCover", false);
