@@ -129,7 +129,7 @@ namespace gipbakery.mes.processapplication
                         var temp = bakeryTempCalc.ACUrlCommand(nameof(PWBakeryTempCalc.WaterCalcResult)) as double?;
                         if (temp != null && temp.Value > 0.001)
                         {
-                            WaterTargetTemperature = temp.Value;
+                            WaterTargetTemperature = Math.Round(temp.Value,1);
                         }
                     }
                 }
