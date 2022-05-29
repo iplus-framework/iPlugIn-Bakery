@@ -1345,7 +1345,12 @@ namespace gipbakery.mes.processapplication
             if (DischargingACStateProp != null)
             {
                 if (DischargingACStateProp.ParentACComponent != null)
-                    DischargingACStateProp.ParentACComponent.ExecuteMethod(ACStateConst.TMAbort);
+                {
+                    if (DischargingState == (short)ACStateEnum.SMStarting)
+                        DischargingACStateProp.ParentACComponent.ExecuteMethod(ACStateConst.TMReset);
+                    else
+                        DischargingACStateProp.ParentACComponent.ExecuteMethod(ACStateConst.TMAbort);
+                }
                 //DischargingACStateProp.ValueT = ACStateEnum.SMCompleted;
                 //DischargingState = (short)DischargingACStateProp.ValueT;
             }
