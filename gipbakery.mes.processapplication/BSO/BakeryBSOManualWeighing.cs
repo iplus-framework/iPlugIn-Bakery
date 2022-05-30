@@ -637,7 +637,8 @@ namespace gipbakery.mes.processapplication
                 {
                     IsCoverUpDown.ValueT = !IsCoverUpDown.ValueT;
                 }
-                else if (CoverFlourBtnMode == CoverFlourButtonEnum.FlourDischargeVisible)
+                else if (   CoverFlourBtnMode == CoverFlourButtonEnum.FlourDischargeVisible
+                         && BtnFlourBlink)
                 {
                     IsCoverUpDown.ValueT = true;
                 }

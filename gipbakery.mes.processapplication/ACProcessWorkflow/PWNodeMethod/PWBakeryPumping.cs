@@ -308,6 +308,30 @@ namespace gipbakery.mes.processapplication
                             }
                         }
                     }
+                    else if (taskEntry.State == PointProcessingState.Accepted && taskEntry.InProcess)
+                    {
+                        if (IsTransport && IsRelocation)
+                        {
+                            using (var dbIPlus = new Database())
+                            using (var dbApp = new DatabaseApp(dbIPlus))
+                            {
+                                var pwMethod = ParentPWMethod<PWMethodRelocation>();
+                                Picking picking = null;
+                                if (pwMethod.CurrentPicking != null)
+                                {
+                                    var routeItem = CurrentDischargingDest(dbIPlus);
+                                    double actualWeight = 0.001;
+                                    picking = pwMethod.CurrentPicking.FromAppContext<Picking>(dbApp);
+                                    PickingPos pickingPos = pwMethod.CurrentPickingPos != null ? pwMethod.CurrentPickingPos.FromAppContext<PickingPos>(dbApp) : null;
+                                    if (picking != null)
+                                    {
+                                        DoInwardBooking(actualWeight, dbApp, routeItem, picking, pickingPos, e, true);
+                                    }
+                                }
+                            }
+                        }
+                        base.TaskCallback(sender, e, wrapObject);
+                    }
                 }
             }
             finally
