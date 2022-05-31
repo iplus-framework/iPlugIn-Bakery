@@ -38,6 +38,7 @@ namespace gipbakery.mes.processapplication
             _RecvPointReadyScaleACUrl = new ACPropertyConfigValue<string>(this, "RecvPointReadyScaleACUrl", "");
             _WithCover = new ACPropertyConfigValue<bool>(this, "WithCover", false);
             _HoseDestination = new ACPropertyConfigValue<int>(this, "HoseDestination", 999);
+            _CanAckInAdvance = new ACPropertyConfigValue<bool>(this, "CanAckInAdvance", false);
         }
 
         public override bool ACInit(Global.ACStartTypes startChildMode = Global.ACStartTypes.Automatic)
@@ -56,6 +57,7 @@ namespace gipbakery.mes.processapplication
             _ = RecvPointReadyScaleACUrl;
             _ = WithCover;
             _ = HoseDestination;
+            _ = CanAckInAdvance;
             return base.ACPostInit();
         }
 
@@ -88,6 +90,18 @@ namespace gipbakery.mes.processapplication
             {
                 _WithCover.ValueT = value;
                 OnPropertyChanged("WithCover");
+            }
+        }
+
+        private ACPropertyConfigValue<bool> _CanAckInAdvance;
+        [ACPropertyConfig("en{'Can Acknowledge flour in Advance'}de{'Bestätigung Mehl im Vorfeld erlaubt'}")]
+        public bool CanAckInAdvance
+        {
+            get => _CanAckInAdvance.ValueT;
+            set
+            {
+                _CanAckInAdvance.ValueT = value;
+                OnPropertyChanged("CanAckInAdvance");
             }
         }
 
