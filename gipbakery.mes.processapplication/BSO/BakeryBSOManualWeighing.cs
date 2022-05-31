@@ -339,19 +339,19 @@ namespace gipbakery.mes.processapplication
                             Messages.Error(this, "Can not find the configuration property WithCover on a receiving point!");
                         }
 
-                        bool CanAckInAdvance = false;
-                        config = recvPointClass.ConfigurationEntries.FirstOrDefault(c => c.KeyACUrl == recvPointClass.ACConfigKeyACUrl && c.LocalConfigACUrl == "CanAckInAdvance");
-                        if (config != null)
-                        {
-                            bool? val = config.Value as bool?;
-                            if (val.HasValue)
-                                CanAckInAdvance = val.Value;
-                        }
+                        //bool CanAckInAdvance = false;
+                        //config = recvPointClass.ConfigurationEntries.FirstOrDefault(c => c.KeyACUrl == recvPointClass.ACConfigKeyACUrl && c.LocalConfigACUrl == "CanAckInAdvance");
+                        //if (config != null)
+                        //{
+                        //    bool? val = config.Value as bool?;
+                        //    if (val.HasValue)
+                        //        CanAckInAdvance = val.Value;
+                        //}
 
                         if (cover)
-                            CoverFlourBtnMode = CanAckInAdvance ? CoverFlourButtonEnum.CoverUpDownVisibleAckInAdvance : CoverFlourButtonEnum.CoverUpDownVisible;
+                            CoverFlourBtnMode = CoverFlourButtonEnum.CoverUpDownVisible;
                         else
-                            CoverFlourBtnMode = CanAckInAdvance ? CoverFlourButtonEnum.FlourDischargeVisibleAckInAdvance : CoverFlourButtonEnum.FlourDischargeVisible;
+                            CoverFlourBtnMode = CoverFlourButtonEnum.FlourDischargeVisible;
 
                         IsCoverUpDown = isCoverUpDown;
                     }
@@ -642,15 +642,14 @@ namespace gipbakery.mes.processapplication
         {
             if (IsEnabledRecvPointCoverUpDown())
             {
-                if (   CoverFlourBtnMode == CoverFlourButtonEnum.CoverUpDownVisible 
-                    || CoverFlourBtnMode == CoverFlourButtonEnum.CoverUpDownVisibleAckInAdvance)
+                if (CoverFlourBtnMode == CoverFlourButtonEnum.CoverUpDownVisible)
                 {
                     IsCoverUpDown.ValueT = !IsCoverUpDown.ValueT;
                 }
-                else if (   CoverFlourBtnMode == CoverFlourButtonEnum.FlourDischargeVisible
-                         || (CoverFlourBtnMode == CoverFlourButtonEnum.FlourDischargeVisibleAckInAdvance && BtnFlourBlink))
+                else if (CoverFlourBtnMode == CoverFlourButtonEnum.FlourDischargeVisible)
                 {
-                    IsCoverUpDown.ValueT = true;
+                    IsCoverUpDown.ValueT = !IsCoverUpDown.ValueT;
+                    //IsCoverUpDown.ValueT = true;
                 }
             }
         }
@@ -1220,8 +1219,8 @@ namespace gipbakery.mes.processapplication
             {
                 if (messageItem.UserAckPWNode.ValueT.ACIdentifier.Contains(PWBakeryFlourDischargingAck.PWClassName))
                 {
-                    if (   CoverFlourBtnMode == CoverFlourButtonEnum.FlourDischargeVisible 
-                        || CoverFlourBtnMode == CoverFlourButtonEnum.FlourDischargeVisibleAckInAdvance)
+                    if (   CoverFlourBtnMode == CoverFlourButtonEnum.FlourDischargeVisible
+                        || (CoverFlourBtnMode == CoverFlourButtonEnum.CoverUpDownVisible && !IsCoverUpDown.ValueT))
                     {
                         BtnFlourBlink = true;
                     }
@@ -1239,8 +1238,8 @@ namespace gipbakery.mes.processapplication
     {
         None = 0,
         CoverUpDownVisible = 10,
-        CoverUpDownVisibleAckInAdvance = 11,
+        //CoverUpDownVisibleAckInAdvance = 11,
         FlourDischargeVisible = 20,
-        FlourDischargeVisibleAckInAdvance = 21
+        //FlourDischargeVisibleAckInAdvance = 21
     }
 }
