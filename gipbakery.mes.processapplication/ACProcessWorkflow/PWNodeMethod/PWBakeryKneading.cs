@@ -1,5 +1,6 @@
 ﻿using gip.core.autocomponent;
 using gip.core.datamodel;
+using gip.mes.datamodel;
 using gip.mes.processapplication;
 using System;
 using System.Collections.Generic;
@@ -180,6 +181,76 @@ namespace gipbakery.mes.processapplication
         #region Methods
 
         #region Execute-Helper-Handlers
+
+        public bool GetKneedingRiseTemperature(DatabaseApp dbApp, bool isForFullBatchSize, out double kneedingTemperature)
+        {
+            kneedingTemperature = 0;
+
+            ACMethod kneedingNodeConfiguration = this.MyConfiguration;
+            if (kneedingNodeConfiguration == null)
+            {
+                return true;
+            }
+
+            ACValue tempFix = kneedingNodeConfiguration.ParameterValueList.GetACValue("TempRiseFix");
+            if (tempFix != null)
+            {
+                double fixTempRise = tempFix.ParamAsDouble;
+                if (fixTempRise > 0.00001)
+                {
+                    kneedingTemperature = fixTempRise;
+                    return true;
+                }
+            }
+            
+            double temperatureRiseSlow = 0, temperatureRiseFast = 0;
+            TimeSpan kneedingSlow = TimeSpan.Zero, kneedingFast = TimeSpan.Zero;
+
+            // Full quantity
+            if (isForFullBatchSize)
+            {
+                ACValue tempRiseSlow = kneedingNodeConfiguration.ParameterValueList.GetACValue("TempRiseSlow");
+                if (tempRiseSlow != null)
+                    temperatureRiseSlow = tempRiseSlow.ParamAsDouble;
+
+                ACValue tempRiseFast = kneedingNodeConfiguration.ParameterValueList.GetACValue("TempRiseFast");
+                if (tempRiseFast != null)
+                    temperatureRiseFast = tempRiseFast.ParamAsDouble;
+
+                ACValue kTimeSlow = kneedingNodeConfiguration.ParameterValueList.GetACValue("KneadingTimeSlow");
+                if (kTimeSlow != null)
+                    kneedingSlow = kTimeSlow.ParamAsTimeSpan;
+
+                ACValue kTimeFast = kneedingNodeConfiguration.ParameterValueList.GetACValue("KneadingTimeFast");
+                if (kTimeFast != null)
+                    kneedingFast = kTimeFast.ParamAsTimeSpan;
+
+                kneedingTemperature = (kneedingSlow.TotalMinutes * temperatureRiseSlow) + (kneedingFast.TotalMinutes * temperatureRiseFast);
+            }
+            // Half quantity
+            else
+            {
+                ACValue tempRiseSlow = kneedingNodeConfiguration.ParameterValueList.GetACValue("TempRiseSlowHalf");
+                if (tempRiseSlow != null)
+                    temperatureRiseSlow = tempRiseSlow.ParamAsDouble;
+
+                ACValue tempRiseFast = kneedingNodeConfiguration.ParameterValueList.GetACValue("TempRiseFastHalf");
+                if (tempRiseFast != null)
+                    temperatureRiseFast = tempRiseFast.ParamAsDouble;
+
+                ACValue kTimeSlow = kneedingNodeConfiguration.ParameterValueList.GetACValue("KneadingTimeSlowHalf");
+                if (kTimeSlow != null)
+                    kneedingSlow = kTimeSlow.ParamAsTimeSpan;
+
+                ACValue kTimeFast = kneedingNodeConfiguration.ParameterValueList.GetACValue("KneadingTimeFastHalf");
+                if (kTimeFast != null)
+                    kneedingFast = kTimeFast.ParamAsTimeSpan;
+
+                kneedingTemperature = (kneedingSlow.TotalMinutes * temperatureRiseSlow) + (kneedingFast.TotalMinutes * temperatureRiseFast);
+            }
+            return true;
+        }
+
         protected override bool HandleExecuteACMethod(out object result, AsyncMethodInvocationMode invocationMode, string acMethodName, gip.core.datamodel.ACClassMethod acClassMethod, params object[] acParameter)
         {
             //result = null;
