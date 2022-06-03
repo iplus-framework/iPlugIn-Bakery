@@ -30,9 +30,6 @@ namespace gipbakery.mes.processapplication
             method.ParameterValueList.Add(new ACValue("DoughTemp", typeof(double?), false, Global.ParamOption.Required));
             paramTranslation.Add("DoughTemp", "en{'Doughtemperature °C'}de{'Teigtemperatur °C'}");
 
-            method.ParameterValueList.Add(new ACValue("ExcludeKneedingTemp", typeof(bool), false, Global.ParamOption.Required));
-            paramTranslation.Add("ExcludeKneedingTemp", "en{'Exclude kneeding temperature'}de{'Knettemperatur ausschließen'}");
-
             method.ParameterValueList.Add(new ACValue("WaterTemp", typeof(double?), false, Global.ParamOption.Required));
             paramTranslation.Add("WaterTemp", "en{'Watertemperature °C'}de{'Wassertemperatur °C'}");
 
@@ -210,23 +207,6 @@ namespace gipbakery.mes.processapplication
                     }
                 }
                 return null;
-            }
-        }
-
-        protected bool ExcludeKneedingTemp
-        {
-            get
-            {
-                var method = MyConfiguration;
-                if (method != null)
-                {
-                    var acValue = method.ParameterValueList.GetACValue("ExcludeKneedingTemp");
-                    if (acValue != null)
-                    {
-                        return acValue.ParamAsBoolean;
-                    }
-                }
-                return false;
             }
         }
 
@@ -609,17 +589,13 @@ namespace gipbakery.mes.processapplication
 
                 ProdOrderPartslistPos endBatchPos = pwMethodProduction.CurrentProdOrderPartslistPos.FromAppContext<ProdOrderPartslistPos>(dbApp);
 
+                bool kneedingTempResult = GetKneedingRiseTemperature(dbApp, endBatchPos.TargetQuantityUOM, out kneedingRiseTemperature);
+                if (!kneedingTempResult)
+                    return;
+
                 if (!UseWaterTemp)
                 {
-                    if (!ExcludeKneedingTemp)
-                    {
-                        bool kneedingTempResult = GetKneedingRiseTemperature(dbApp, endBatchPos.TargetQuantityUOM, out kneedingRiseTemperature);
-                        if (!kneedingTempResult)
-                            return;
-                    }
-
                     recvPointCorrTemp = recvPoint.DoughCorrTemp.ValueT;
-
                     doughTargetTempBeforeKneeding = DoughTemp.Value - kneedingRiseTemperature + recvPointCorrTemp;
                 }
 
@@ -768,7 +744,7 @@ namespace gipbakery.mes.processapplication
                                                                                 doughTargetTempBeforeKneeding, componentsQ, waterTargetQuantity, out defaultWaterTemp);
 
                 CalculateWaterTypes(compTemps, suggestedWaterTemp, waterTargetQuantity.Value, defaultWaterTemp, componentsQ, isOnlyWaterCompsInPartslist, doughTargetTempBeforeKneeding,
-                                    kneedingRiseTemperature, false);
+                                    false);
 
                 FillInfoForBSO(compTemps, kneedingRiseTemperature, cityWaterComp, endBatchPos);
             }
@@ -836,7 +812,7 @@ namespace gipbakery.mes.processapplication
                 double suggestedWaterTemp = CalculateWaterTemperatureSuggestion(UseWaterTemp, isOnlyWaterCompsInPartslist, cityWaterComp, WaterTemp.Value, 0,
                                                                                 0, waterTargetQuantity, out defaultWaterTemp);
 
-                CalculateWaterTypes(compTemps, suggestedWaterTemp, waterTargetQuantity.Value, defaultWaterTemp, 0, isOnlyWaterCompsInPartslist, 0, null, true);
+                CalculateWaterTypes(compTemps, suggestedWaterTemp, waterTargetQuantity.Value, defaultWaterTemp, 0, isOnlyWaterCompsInPartslist, 0, true);
 
                 FillInfoForBSO(compTemps, null, null, null);
             }
@@ -862,24 +838,6 @@ namespace gipbakery.mes.processapplication
                     return false;
                 }
 
-                PWBakeryKneading kneedingNode = kneedingNodes.FirstOrDefault();
-
-                ACMethod kneedingNodeConfiguration = kneedingNode.MyConfiguration;
-                if (kneedingNodeConfiguration == null)
-                {
-                    //Error50455: The configuration for PWBakeryKneading node is null.
-                    Msg msg = new Msg(this, eMsgLevel.Error, PWClassName, "GetKneedingRiseTemperature(20)", 767, "Error50455");
-                    if (IsAlarmActive(ProcessAlarm, msg.Message) == null)
-                    {
-                        OnNewAlarmOccurred(ProcessAlarm, msg);
-                        Messages.LogMessageMsg(msg);
-                    }
-                    return false;
-                }
-
-                double temperatureRiseSlow = 0, temperatureRiseFast = 0;
-                TimeSpan kneedingSlow = TimeSpan.Zero, kneedingFast = TimeSpan.Zero;
-
                 bool fullQuantity = true;
                 PWNodeProcessWorkflowVB planningNode = RootPW.InvokingWorkflow as PWNodeProcessWorkflowVB;
                 if (planningNode != null)
@@ -894,48 +852,9 @@ namespace gipbakery.mes.processapplication
                     }
                 }
 
-                // Full quantity
-                if (fullQuantity)
-                {
-                    ACValue tempRiseSlow = kneedingNodeConfiguration.ParameterValueList.GetACValue("TempRiseSlow");
-                    if (tempRiseSlow != null)
-                        temperatureRiseSlow = tempRiseSlow.ParamAsDouble;
+                PWBakeryKneading kneedingNode = kneedingNodes.FirstOrDefault();
 
-                    ACValue tempRiseFast = kneedingNodeConfiguration.ParameterValueList.GetACValue("TempRiseFast");
-                    if (tempRiseFast != null)
-                        temperatureRiseFast = tempRiseFast.ParamAsDouble;
-
-                    ACValue kTimeSlow = kneedingNodeConfiguration.ParameterValueList.GetACValue("KneadingTimeSlow");
-                    if (kTimeSlow != null)
-                        kneedingSlow = kTimeSlow.ParamAsTimeSpan;
-
-                    ACValue kTimeFast = kneedingNodeConfiguration.ParameterValueList.GetACValue("KneadingTimeFast");
-                    if (kTimeFast != null)
-                        kneedingFast = kTimeFast.ParamAsTimeSpan;
-
-                    kneedingTemperature = (kneedingSlow.TotalMinutes * temperatureRiseSlow) + (kneedingFast.TotalMinutes * temperatureRiseFast);
-                }
-                // Half quantity
-                else
-                {
-                    ACValue tempRiseSlow = kneedingNodeConfiguration.ParameterValueList.GetACValue("TempRiseSlowHalf");
-                    if (tempRiseSlow != null)
-                        temperatureRiseSlow = tempRiseSlow.ParamAsDouble;
-
-                    ACValue tempRiseFast = kneedingNodeConfiguration.ParameterValueList.GetACValue("TempRiseFastHalf");
-                    if (tempRiseFast != null)
-                        temperatureRiseFast = tempRiseFast.ParamAsDouble;
-
-                    ACValue kTimeSlow = kneedingNodeConfiguration.ParameterValueList.GetACValue("KneadingTimeSlowHalf");
-                    if (kTimeSlow != null)
-                        kneedingSlow = kTimeSlow.ParamAsTimeSpan;
-
-                    ACValue kTimeFast = kneedingNodeConfiguration.ParameterValueList.GetACValue("KneadingTimeFastHalf");
-                    if (kTimeFast != null)
-                        kneedingFast = kTimeFast.ParamAsTimeSpan;
-
-                    kneedingTemperature = (kneedingSlow.TotalMinutes * temperatureRiseSlow) + (kneedingFast.TotalMinutes * temperatureRiseFast);
-                }
+                return kneedingNode.GetKneedingRiseTemperature(dbApp, fullQuantity, out kneedingTemperature);
             }
             return true;
         }
@@ -1009,7 +928,7 @@ namespace gipbakery.mes.processapplication
 
 
         private void CalculateWaterTypes(IEnumerable<MaterialTemperature> componentTemperatures, double targetWaterTemperature, double totalWaterQuantity, double defaultWaterTemp,
-                                         double componentsQ, bool isOnlyWaterCompInPartslist, double doughTempBeforeKneeding, double? kneedingRiseTemp, bool isForPicking)
+                                         double componentsQ, bool isOnlyWaterCompInPartslist, double doughTempBeforeKneeding, bool isForPicking)
         {
             MaterialTemperature coldWater = componentTemperatures.FirstOrDefault(c => c.Water == WaterType.ColdWater);
             MaterialTemperature cityWater = componentTemperatures.FirstOrDefault(c => c.Water == WaterType.CityWater);
