@@ -352,6 +352,12 @@ namespace gipbakery.mes.processapplication
             set;
         }
 
+        protected ACRef<IACComponent> DischargingFunctionRef
+        {
+            get;
+            set;
+        }
+
         protected IACContainerTNet<ACStateEnum> DischargingACStateProp
         {
             get;
@@ -480,6 +486,12 @@ namespace gipbakery.mes.processapplication
             {
                 DischargingACStateProp.PropertyChanged -= DischargingACStateProp_PropertyChanged;
                 DischargingACStateProp = null;
+            }
+
+            if (DischargingFunctionRef != null)
+            {
+                DischargingFunctionRef.Detach();
+                DischargingFunctionRef = null;
             }
 
             if (ProcessModuleOrderInfo != null)
@@ -659,6 +671,7 @@ namespace gipbakery.mes.processapplication
                 if (funcComp == null)
                     return;
 
+                DischargingFunctionRef = new ACRef<IACComponent>(funcComp, this);
                 DischargingACStateProp = funcComp?.GetPropertyNet(Const.ACState) as IACContainerTNet<ACStateEnum>;
                 if (DischargingACStateProp != null)
                 {
@@ -1145,7 +1158,7 @@ namespace gipbakery.mes.processapplication
 
                 ACComponent currentProcessModule = CurrentProcessModule;
 
-                RunWorkflow(wfClass, wfMethod, currentProcessModule, true, false, PARole.ValidationBehaviour.Laxly);
+                RunWorkflow(DatabaseApp, wfClass, wfMethod, currentProcessModule, true, false, PARole.ValidationBehaviour.Laxly);
             }
 
             outFacility.OutwardEnabled = outFacilityOutwardEnabled;
@@ -1247,7 +1260,7 @@ namespace gipbakery.mes.processapplication
 
                             ACComponent currentProcessModule = CurrentProcessModule;
 
-                            RunWorkflow(wfClass, wfMethod, currentProcessModule);
+                            RunWorkflow(DatabaseApp, wfClass, wfMethod, currentProcessModule);
                         }
                         catch (Exception e)
                         {
@@ -1489,7 +1502,7 @@ namespace gipbakery.mes.processapplication
             var wfMethod = wfClass?.ACClassMethod;
 
             ACComponent currentProcessModule = CurrentProcessModule;
-            RunWorkflow(wfClass, wfMethod, currentProcessModule);
+            RunWorkflow(DatabaseApp, wfClass, wfMethod, currentProcessModule);
 
             PumpOverTargetQuantity = 0;
             SelectedPumpTarget = null;
@@ -1726,7 +1739,7 @@ namespace gipbakery.mes.processapplication
             return true;
         }
 
-        public override bool OnPreStartWorkflow(Picking picking, List<SingleDosingConfigItem> configItems, Route validRoute, gip.core.datamodel.ACClassWF rootWF)
+        public override bool OnPreStartWorkflow(DatabaseApp dbApp, Picking picking, List<SingleDosingConfigItem> configItems, Route validRoute, gip.core.datamodel.ACClassWF rootWF)
         {
             gip.core.datamodel.ACClassWF cleaning = configItems?.FirstOrDefault()?.PWGroup?.ACClassWF_ParentACClassWF
                                                                 .FirstOrDefault(c => c.PWACClass.ACIdentifier.Contains(PWBakeryCleaning.PWClassName));
@@ -1749,7 +1762,7 @@ namespace gipbakery.mes.processapplication
                 {
                     ACIdentifier = "CleaningTarget",
                     ACCaption = acMethod.GetACCaptionForACIdentifier("CleaningTarget"),
-                    ValueTypeACClassID = DatabaseApp.ContextIPlus.GetACType("Int32").ACClassID,
+                    ValueTypeACClassID = dbApp.ContextIPlus.GetACType("Int32").ACClassID,
                     ACClassWF = cleaning
                 };
 
@@ -1771,7 +1784,7 @@ namespace gipbakery.mes.processapplication
                     {
                         ACIdentifier = "TargetQuantity",
                         ACCaption = acMethod.GetACCaptionForACIdentifier("TargetQuantity"),
-                        ValueTypeACClassID = DatabaseApp.ContextIPlus.GetACType("Double").ACClassID,
+                        ValueTypeACClassID = dbApp.ContextIPlus.GetACType("Double").ACClassID,
                         ACClassWF = cleaning
                     };
 
@@ -1784,7 +1797,7 @@ namespace gipbakery.mes.processapplication
             }
 
 
-            Msg msg = DatabaseApp.ACSaveChanges();
+            Msg msg = dbApp.ACSaveChanges();
             if (msg != null)
             {
                 Messages.Msg(msg);

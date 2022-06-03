@@ -17,7 +17,7 @@ namespace gipbakery.mes.processapplication
     {
         #region c'tors
 
-        public BakeryBSOManualWeighing(ACClass acType, IACObject content, IACObject parentACObject, ACValueList parameter, string acIdentifier = "") :
+        public BakeryBSOManualWeighing(gip.core.datamodel.ACClass acType, IACObject content, IACObject parentACObject, ACValueList parameter, string acIdentifier = "") :
             base(acType, content, parentACObject, parameter, acIdentifier)
         {
 
@@ -312,48 +312,48 @@ namespace gipbakery.mes.processapplication
             ACClass recvPointClass = null;
 
             var contextIplus = DatabaseApp.ContextIPlus;
-            using (ACMonitor.Lock(contextIplus.QueryLock_1X000))
+            using (Database db = new gip.core.datamodel.Database())
             {
-                recvPointClass = selectedProcessModule?.ComponentClass.FromIPlusContext<ACClass>(contextIplus);
-            }
-
-            if (recvPointClass != null && _BakeryRecvPointType.IsAssignableFrom(recvPointClass.ObjectType))
-            {
-                var isCoverUpDown = selectedProcessModule.GetPropertyNet("IsCoverDown") as IACContainerTNet<bool>;
-                if (isCoverUpDown != null)
+                recvPointClass = selectedProcessModule?.ComponentClass.FromIPlusContext<ACClass>(db);
+                if (recvPointClass != null && _BakeryRecvPointType.IsAssignableFrom(recvPointClass.ObjectType))
                 {
-                    bool? isBounded = selectedProcessModule.ExecuteMethod("IsCoverDownPropertyBounded") as bool?;
-                    if (isBounded.HasValue && isBounded.Value)
+                    var isCoverUpDown = selectedProcessModule.GetPropertyNet(nameof(BakeryReceivingPoint.IsCoverDown)) as IACContainerTNet<bool>;
+                    if (isCoverUpDown != null)
                     {
-                        bool cover = false;
-
-                        var config = recvPointClass.ConfigurationEntries.FirstOrDefault(c => c.KeyACUrl == recvPointClass.ACConfigKeyACUrl && c.LocalConfigACUrl == "WithCover");
-                        if (config != null)
+                        bool? isBounded = selectedProcessModule.ExecuteMethod(nameof(BakeryReceivingPoint.IsCoverDownPropertyBounded)) as bool?;
+                        if (isBounded.HasValue && isBounded.Value)
                         {
-                            bool? val = config.Value as bool?;
-                            if (val.HasValue)
-                                cover = val.Value;
+                            bool cover = false;
+
+                            var config = recvPointClass.ConfigurationEntries.FirstOrDefault(c => c.KeyACUrl == recvPointClass.ACConfigKeyACUrl 
+                                                                                              && c.LocalConfigACUrl == nameof(BakeryReceivingPoint.WithCover));
+                            if (config != null)
+                            {
+                                bool? val = config.Value as bool?;
+                                if (val.HasValue)
+                                    cover = val.Value;
+                            }
+                            else
+                            {
+                                Messages.Error(this, "Can not find the configuration property WithCover on a receiving point!");
+                            }
+
+                            //bool CanAckInAdvance = false;
+                            //config = recvPointClass.ConfigurationEntries.FirstOrDefault(c => c.KeyACUrl == recvPointClass.ACConfigKeyACUrl && c.LocalConfigACUrl == "CanAckInAdvance");
+                            //if (config != null)
+                            //{
+                            //    bool? val = config.Value as bool?;
+                            //    if (val.HasValue)
+                            //        CanAckInAdvance = val.Value;
+                            //}
+
+                            if (cover)
+                                CoverFlourBtnMode = CoverFlourButtonEnum.CoverUpDownVisible;
+                            else
+                                CoverFlourBtnMode = CoverFlourButtonEnum.FlourDischargeVisible;
+
+                            IsCoverUpDown = isCoverUpDown;
                         }
-                        else
-                        {
-                            Messages.Error(this, "Can not find the configuration property WithCover on a receiving point!");
-                        }
-
-                        //bool CanAckInAdvance = false;
-                        //config = recvPointClass.ConfigurationEntries.FirstOrDefault(c => c.KeyACUrl == recvPointClass.ACConfigKeyACUrl && c.LocalConfigACUrl == "CanAckInAdvance");
-                        //if (config != null)
-                        //{
-                        //    bool? val = config.Value as bool?;
-                        //    if (val.HasValue)
-                        //        CanAckInAdvance = val.Value;
-                        //}
-
-                        if (cover)
-                            CoverFlourBtnMode = CoverFlourButtonEnum.CoverUpDownVisible;
-                        else
-                            CoverFlourBtnMode = CoverFlourButtonEnum.FlourDischargeVisible;
-
-                        IsCoverUpDown = isCoverUpDown;
                     }
                 }
             }
@@ -398,7 +398,7 @@ namespace gipbakery.mes.processapplication
                 _BakeryTempCalcACState = (short)BakeryTempCalcACState.ValueT;
             }
 
-            TempCalcResultMessage = pwNode.GetPropertyNet("TemperatureCalculationResult") as IACContainerTNet<string>;
+            TempCalcResultMessage = pwNode.GetPropertyNet(nameof(PWBakeryTempCalc.TemperatureCalculationResult)) as IACContainerTNet<string>;
 
             if (TempCalcResultMessage != null)
             {
@@ -845,9 +845,9 @@ namespace gipbakery.mes.processapplication
 
         #region Methods => SingleDosing
 
-        public override bool OnPreStartWorkflow(gip.mes.datamodel.Picking picking, List<SingleDosingConfigItem> configItems, Route validRoute, ACClassWF rootWF)
+        public override bool OnPreStartWorkflow(vd.DatabaseApp dbApp, gip.mes.datamodel.Picking picking, List<SingleDosingConfigItem> configItems, Route validRoute, ACClassWF rootWF)
         {
-            base.OnPreStartWorkflow(picking, configItems, validRoute, rootWF);
+            base.OnPreStartWorkflow(dbApp, picking, configItems, validRoute, rootWF);
 
             if (SingleDosTargetTemperature.HasValue)
             {
@@ -894,19 +894,19 @@ namespace gipbakery.mes.processapplication
                     else
                         useOnlyForWaterTempCalculation.Value = true;
 
-                    var msg = DatabaseApp.ACSaveChanges();
+                    var msg = dbApp.ACSaveChanges();
                     if (msg != null)
                         Messages.Msg(msg);
 
                 }
             }
 
-            bool result = AddDischargingConfig(picking, configItems, validRoute, rootWF);
+            bool result = AddDischargingConfig(dbApp, picking, configItems, validRoute, rootWF);
 
             return result;
         }
 
-        private bool AddDischargingConfig(gip.mes.datamodel.Picking picking, List<SingleDosingConfigItem> configItems, Route validRoute, ACClassWF rootWF)
+        private bool AddDischargingConfig(vd.DatabaseApp dbApp, vd.Picking picking, List<SingleDosingConfigItem> configItems, Route validRoute, ACClassWF rootWF)
         {
             if (!DischargeOverHose)
                 return true;
@@ -933,7 +933,7 @@ namespace gipbakery.mes.processapplication
                         return false;
                     }
 
-                    ACClass compClass = currentProcessModule?.ComponentClass.FromIPlusContext<gip.core.datamodel.ACClass>(DatabaseApp.ContextIPlus);
+                    ACClass compClass = currentProcessModule?.ComponentClass.FromIPlusContext<gip.core.datamodel.ACClass>(dbApp.ContextIPlus);
 
                     var config = compClass?.ConfigurationEntries.FirstOrDefault(c => c.KeyACUrl == compClass.ACConfigKeyACUrl && c.LocalConfigACUrl == "HoseDestination");
                     if (config == null)
