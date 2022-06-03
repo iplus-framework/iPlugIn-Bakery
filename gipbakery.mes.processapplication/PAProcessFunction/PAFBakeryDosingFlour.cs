@@ -21,6 +21,14 @@ namespace gipbakery.mes.processapplication
         public PAFBakeryDosingFlour(ACClass acType, IACObject content, IACObject parentACObject, ACValueList parameter, string acIdentifier = "") : 
             base(acType, content, parentACObject, parameter, acIdentifier)
         {
+            _HandleStoppOrAbort = new ACPropertyConfigValue<bool>(this, "HandleStoppOrAbort", false);
+        }
+
+        public override bool ACInit(Global.ACStartTypes startChildMode = Global.ACStartTypes.Automatic)
+        {
+            bool result = base.ACInit(startChildMode);
+            _ = HandleStoppOrAbort;
+            return result;
         }
 
         public override bool ACPostInit()
@@ -117,6 +125,17 @@ namespace gipbakery.mes.processapplication
             set;
         }
 
+        protected ACPropertyConfigValue<bool> _HandleStoppOrAbort;
+        [ACPropertyConfig("en{'Stop-Comand when changing source'}de{'Stop-Kommando bei Quellenwechsel'}")]
+        public bool HandleStoppOrAbort
+        {
+            get
+            {
+                return _HandleStoppOrAbort.ValueT;
+            }
+        }
+
+
         #endregion
 
         #region Methods
@@ -209,7 +228,20 @@ namespace gipbakery.mes.processapplication
 
         protected override void OnSourceChangeStoppOrAbort()
         {
-            
+            if (HandleStoppOrAbort)
+                base.OnSourceChangeStoppOrAbort();
+        }
+
+        public override void OnSiloStateChanged(PAMSilo silo, bool outwardEnabled)
+        {
+            if (IsDosingActiveFromSilo(silo))
+            {
+                if (!outwardEnabled)
+                {
+                    StateLackOfMaterial.ValueT = PANotifyState.AlarmOrFault;
+                }
+            }
+            base.OnSiloStateChanged(silo, outwardEnabled);
         }
 
         public override void SetAbortReasonEmpty()
