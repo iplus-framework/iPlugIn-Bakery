@@ -913,7 +913,6 @@ namespace gipbakery.mes.processapplication
 
             SingleDosingConfigItem configItem = configItems.FirstOrDefault(c => c.PWGroup.ACClassWF_ParentACClassWF
                                                                                  .Any(x => _BakeryTempCalcType.IsAssignableFrom(x.PWACClass.ObjectType)));
-
             if (configItem != null)
             {
                 gip.core.datamodel.ACClassWF discharging = configItem.PWGroup.ACClassWF_ParentACClassWF
@@ -953,7 +952,7 @@ namespace gipbakery.mes.processapplication
                         }
                     }
 
-                    Msg msg = DatabaseApp.ACSaveChanges();
+                    Msg msg = dbApp.ACSaveChanges();
                     if (msg != null)
                     {
                         Messages.Msg(msg);
