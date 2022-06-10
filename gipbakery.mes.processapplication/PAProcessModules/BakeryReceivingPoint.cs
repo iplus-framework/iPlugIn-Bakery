@@ -35,7 +35,7 @@ namespace gipbakery.mes.processapplication
             _PAPointMatIn5 = new PAPoint(this, nameof(PAPointMatIn5));
             _PAPointMatIn6 = new PAPoint(this, nameof(PAPointMatIn6));
 
-            _RecvPointReadyScaleACUrl = new ACPropertyConfigValue<string>(this, "RecvPointReadyScaleACUrl", "");
+            //_RecvPointReadyScaleACUrl = new ACPropertyConfigValue<string>(this, "RecvPointReadyScaleACUrl", "");
             _WithCover = new ACPropertyConfigValue<bool>(this, "WithCover", false);
             _HoseDestination = new ACPropertyConfigValue<int>(this, "HoseDestination", 999);
             _CanAckInAdvance = new ACPropertyConfigValue<bool>(this, "CanAckInAdvance", false);
@@ -54,7 +54,7 @@ namespace gipbakery.mes.processapplication
             //if (tProp != null && tProp.Source != null)
             //    tProp.ValueUpdatedOnReceival += MeasureWater_ValueUpdatedOnReceival;
 
-            _ = RecvPointReadyScaleACUrl;
+            //_ = RecvPointReadyScaleACUrl;
             _ = WithCover;
             _ = HoseDestination;
             _ = CanAckInAdvance;
@@ -69,17 +69,17 @@ namespace gipbakery.mes.processapplication
 
         #region Properties 
 
-        private ACPropertyConfigValue<string> _RecvPointReadyScaleACUrl;
-        [ACPropertyConfig("en{'Scale ACUrl for PWBakeryRecvPointReady'}de{'Waage ACUrl für PWBakeryRecvPointReady'}")]
-        public string RecvPointReadyScaleACUrl
-        {
-            get => _RecvPointReadyScaleACUrl.ValueT;
-            set
-            {
-                _RecvPointReadyScaleACUrl.ValueT = value;
-                OnPropertyChanged("RecvPointReadyScaleACUrl");
-            }
-        }
+        //private ACPropertyConfigValue<string> _RecvPointReadyScaleACUrl;
+        //[ACPropertyConfig("en{'Scale ACUrl for PWBakeryRecvPointReady'}de{'Waage ACUrl für PWBakeryRecvPointReady'}")]
+        //public string RecvPointReadyScaleACUrl
+        //{
+        //    get => _RecvPointReadyScaleACUrl.ValueT;
+        //    set
+        //    {
+        //        _RecvPointReadyScaleACUrl.ValueT = value;
+        //        OnPropertyChanged("RecvPointReadyScaleACUrl");
+        //    }
+        //}
 
         private ACPropertyConfigValue<bool> _WithCover;
         [ACPropertyConfig("en{'Receiving point with cover'}de{'Abnahmestelle mit Abdeckung'}")]
@@ -210,24 +210,24 @@ namespace gipbakery.mes.processapplication
             return TemperatureService.ExecuteMethod("GetWaterMaterialNo", ComponentClass.ACClassID) as ACValueList;
         }
 
-        public PAEScaleBase GetRecvPointReadyScale()
-        {
-            PAEScaleBase scale = null;
+        //public PAEScaleBase GetRecvPointReadyScale()
+        //{
+        //    PAEScaleBase scale = null;
 
-            if (!string.IsNullOrEmpty(RecvPointReadyScaleACUrl))
-            {
-                scale = ACUrlCommand(RecvPointReadyScaleACUrl) as PAEScaleBase;
-            }
+        //    if (!string.IsNullOrEmpty(RecvPointReadyScaleACUrl))
+        //    {
+        //        scale = ACUrlCommand(RecvPointReadyScaleACUrl) as PAEScaleBase;
+        //    }
             
-            if (scale == null)
-            {
-                IPAMContScale scaleCont = this as IPAMContScale;
-                if (scaleCont != null)
-                    scale = scaleCont.Scale;
-            }
+        //    if (scale == null)
+        //    {
+        //        IPAMContScale scaleCont = this as IPAMContScale;
+        //        if (scaleCont != null)
+        //            scale = scaleCont.Scale;
+        //    }
 
-            return scale;
-        }
+        //    return scale;
+        //}
 
         [ACMethodInfo("", "", 9999)]
         public bool IsCoverDownPropertyBounded()
