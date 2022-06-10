@@ -30,9 +30,10 @@ namespace gipbakery.mes.processapplication
             paramTranslation.Add("PrePostQOnDest", "en{'Pre posting quantity to destination at start'}de{'Vorbuchungsmenge auf Ziel bei Start'}");
             method.ParameterValueList.Add(new ACValue("NoPostingOnRelocation", typeof(bool), false, Global.ParamOption.Optional));
             paramTranslation.Add("NoPostingOnRelocation", "en{'No posting at relocation'}de{'Keine Buchung bei Umlagerung'}");
-
             method.ParameterValueList.Add(new ACValue("UseScaleWeightOnPost", typeof(bool), false, Global.ParamOption.Optional));
             paramTranslation.Add("UseScaleWeightOnPost", "en{'Use scale gross weight on posting'}de{'Waagenbruttogewicht bei der Buchung verwenden'}");
+            method.ParameterValueList.Add(new ACValue("PostingBehaviour", typeof(PostingBehaviourEnum), PostingBehaviourEnum.NotSet, Global.ParamOption.Optional));
+            paramTranslation.Add("PostingBehaviour", "en{'Posting behaviour'}de{'Buchungsverhalten'}");
 
             var wrapper = new ACMethodWrapper(method, "en{'Configuration'}de{'Konfiguration'}", typeof(PWBakeryDischargingPreProd), paramTranslation, null);
             ACMethod.RegisterVirtualMethod(typeof(PWBakeryDischargingPreProd), ACStateConst.SMStarting, wrapper);
