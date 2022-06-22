@@ -311,7 +311,7 @@ namespace gipbakery.mes.processapplication
 
             ACClass recvPointClass = null;
 
-            var contextIplus = DatabaseApp.ContextIPlus;
+            //var contextIplus = DatabaseApp.ContextIPlus;
             using (Database db = new gip.core.datamodel.Database())
             {
                 recvPointClass = selectedProcessModule?.ComponentClass.FromIPlusContext<ACClass>(db);
@@ -979,20 +979,23 @@ namespace gipbakery.mes.processapplication
 
             IACConfig targetConfig = picking.ConfigurationEntries.FirstOrDefault(c => c.PreConfigACUrl == preConfigACUrl && c.LocalConfigACUrl == configACUrl);
 
-            if (targetConfig == null)
+            using (Database db = new gip.core.datamodel.Database())
             {
-                ACConfigParam param = new ACConfigParam()
+                if (targetConfig == null)
                 {
-                    ACIdentifier = "Destination",
-                    ACCaption = acMethod.GetACCaptionForACIdentifier("Destination"),
-                    ValueTypeACClassID = DatabaseApp.ContextIPlus.GetACType("Int16").ACClassID,
-                    ACClassWF = pwNode
-                };
+                    ACConfigParam param = new ACConfigParam()
+                    {
+                        ACIdentifier = "Destination",
+                        ACCaption = acMethod.GetACCaptionForACIdentifier("Destination"),
+                        ValueTypeACClassID = db.GetACType(nameof(Int16)).ACClassID,
+                        ACClassWF = pwNode
+                    };
 
-                targetConfig = ConfigManagerIPlus.ACConfigFactory(picking, param, preConfigACUrl, configACUrl, null);
-                param.ConfigurationList.Insert(0, targetConfig);
+                    targetConfig = ConfigManagerIPlus.ACConfigFactory(picking, param, preConfigACUrl, configACUrl, null);
+                    param.ConfigurationList.Insert(0, targetConfig);
 
-                picking.ConfigurationEntries.Append(targetConfig);
+                    picking.ConfigurationEntries.Append(targetConfig);
+                }
             }
 
             targetConfig.Value = configValue;
@@ -1035,28 +1038,26 @@ namespace gipbakery.mes.processapplication
                 if (currentProcessModule != null)
                 {
                     ACClass recvPointClass = null;
-                    var contextIplus = DatabaseApp.ContextIPlus;
-                    using (ACMonitor.Lock(contextIplus.QueryLock_1X000))
+                    using (Database db = new gip.core.datamodel.Database())
                     {
-                        recvPointClass = currentProcessModule?.ComponentClass.FromIPlusContext<ACClass>(contextIplus);
-                    }
+                        recvPointClass = currentProcessModule?.ComponentClass.FromIPlusContext<ACClass>(db);
 
-                    if (recvPointClass != null && _BakeryRecvPointType.IsAssignableFrom(recvPointClass.ObjectType))
-                    {
-                        MaterialTemperature warmWater, coldWater;
-
-                        ACValueList waters = currentProcessModule.ExecuteMethod("!GetWaterComponentsFromTempService") as ACValueList;
-                        if (waters != null && waters.Any())
+                        if (recvPointClass != null && _BakeryRecvPointType.IsAssignableFrom(recvPointClass.ObjectType))
                         {
-                            IEnumerable<MaterialTemperature> waterTemps = waters.Select(c => c.Value as MaterialTemperature);
-                            warmWater = waterTemps.FirstOrDefault(c => c.Water == WaterType.WarmWater);
-                            coldWater = waterTemps.FirstOrDefault(c => c.Water == WaterType.ColdWater);
+                            MaterialTemperature warmWater, coldWater;
 
-                            _MatNoWarmWater = warmWater?.MaterialNo;
-                            _MatNoColdWater = coldWater?.MaterialNo;
+                            ACValueList waters = currentProcessModule.ExecuteMethod(nameof(BakeryReceivingPoint.GetWaterComponentsFromTempService)) as ACValueList;
+                            if (waters != null && waters.Any())
+                            {
+                                IEnumerable<MaterialTemperature> waterTemps = waters.Select(c => c.Value as MaterialTemperature);
+                                warmWater = waterTemps.FirstOrDefault(c => c.Water == WaterType.WarmWater);
+                                coldWater = waterTemps.FirstOrDefault(c => c.Water == WaterType.ColdWater);
+
+                                _MatNoWarmWater = warmWater?.MaterialNo;
+                                _MatNoColdWater = coldWater?.MaterialNo;
+                            }
                         }
                     }
-
                 }
             }
 
@@ -1074,54 +1075,52 @@ namespace gipbakery.mes.processapplication
 
             if (currentProcessModule != null)
             {
-                ACClass recvPointClass = null;
-                var contextIplus = DatabaseApp.ContextIPlus;
-                using (ACMonitor.Lock(contextIplus.QueryLock_1X000))
+                using (Database db = new gip.core.datamodel.Database())
                 {
-                    recvPointClass = currentProcessModule?.ComponentClass.FromIPlusContext<ACClass>(contextIplus);
-                }
+                    ACClass recvPointClass = currentProcessModule?.ComponentClass.FromIPlusContext<ACClass>(db);
 
-                if (recvPointClass != null && _BakeryRecvPointType.IsAssignableFrom(recvPointClass.ObjectType))
-                {
-                    MaterialTemperature warmWater = null, coldWater = null, cityWater = null;
-
-                    ACValueList waters = currentProcessModule.ExecuteMethod("!GetWaterComponentsFromTempService") as ACValueList;
-                    if (waters != null && waters.Any())
+                    if (recvPointClass != null && _BakeryRecvPointType.IsAssignableFrom(recvPointClass.ObjectType))
                     {
-                        IEnumerable<MaterialTemperature> waterTemps = waters.Select(c => c.Value as MaterialTemperature);
-                        warmWater = waterTemps.FirstOrDefault(c => c.Water == WaterType.WarmWater);
-                        coldWater = waterTemps.FirstOrDefault(c => c.Water == WaterType.ColdWater);
-                        cityWater = waterTemps.FirstOrDefault(c => c.Water == WaterType.CityWater);
-                    }
+                        MaterialTemperature warmWater = null, coldWater = null, cityWater = null;
 
-                    if (cityWater != null && SelectedSingleDosingItem.MaterialNo != cityWater.MaterialNo)
-                        return msg;
-
-                    if (!SingleDosTargetTemperature.HasValue)
-                    {
-                        //Error50489: The water target temperature is missing. Please enter the water target temperature and continue with process.
-                        Msg msg1 = new Msg(this, eMsgLevel.Error, ClassName, "ValidateStart", 943, "Error50489");
-                        if (msg != null)
+                        ACValueList waters = currentProcessModule.ExecuteMethod(nameof(BakeryReceivingPoint.GetWaterComponentsFromTempService)) as ACValueList;
+                        if (waters != null && waters.Any())
                         {
-                            msg.AddDetailMessage(msg1);
-                            return msg;
+                            IEnumerable<MaterialTemperature> waterTemps = waters.Select(c => c.Value as MaterialTemperature);
+                            warmWater = waterTemps.FirstOrDefault(c => c.Water == WaterType.WarmWater);
+                            coldWater = waterTemps.FirstOrDefault(c => c.Water == WaterType.ColdWater);
+                            cityWater = waterTemps.FirstOrDefault(c => c.Water == WaterType.CityWater);
                         }
-                        return new MsgWithDetails(new Msg[] { msg1 });
-                    }
 
-                    double minTemp = 0;
-                    double maxTemp = 80;
+                        if (cityWater != null && SelectedSingleDosingItem.MaterialNo != cityWater.MaterialNo)
+                            return msg;
 
-                    if (SingleDosTargetTemperature < minTemp || SingleDosTargetTemperature > maxTemp)
-                    {
-                        //Error50488 :The target water temperature is {0}°C, but minimum is {1}°C and maximum is {2}°C.
-                        Msg msg1 = new Msg(this, eMsgLevel.Error, ClassName, "ValidateStart", 958, "Error50488", SingleDosTargetTemperature, minTemp, maxTemp);
-                        if (msg != null)
+                        if (!SingleDosTargetTemperature.HasValue)
                         {
-                            msg.AddDetailMessage(msg1);
-                            return msg;
+                            //Error50489: The water target temperature is missing. Please enter the water target temperature and continue with process.
+                            Msg msg1 = new Msg(this, eMsgLevel.Error, ClassName, "ValidateStart", 943, "Error50489");
+                            if (msg != null)
+                            {
+                                msg.AddDetailMessage(msg1);
+                                return msg;
+                            }
+                            return new MsgWithDetails(new Msg[] { msg1 });
                         }
-                        return new MsgWithDetails(new Msg[] { msg1 });
+
+                        double minTemp = 0;
+                        double maxTemp = 80;
+
+                        if (SingleDosTargetTemperature < minTemp || SingleDosTargetTemperature > maxTemp)
+                        {
+                            //Error50488 :The target water temperature is {0}°C, but minimum is {1}°C and maximum is {2}°C.
+                            Msg msg1 = new Msg(this, eMsgLevel.Error, ClassName, "ValidateStart", 958, "Error50488", SingleDosTargetTemperature, minTemp, maxTemp);
+                            if (msg != null)
+                            {
+                                msg.AddDetailMessage(msg1);
+                                return msg;
+                            }
+                            return new MsgWithDetails(new Msg[] { msg1 });
+                        }
                     }
                 }
             }
