@@ -1161,7 +1161,7 @@ namespace gipbakery.mes.processapplication
                 RunWorkflow(DatabaseApp, wfClass, wfMethod, currentProcessModule, true, false, PARole.ValidationBehaviour.Laxly);
             }
 
-            outFacility.OutwardEnabled = outFacilityOutwardEnabled;
+            outwardFacility.OutwardEnabled = outFacilityOutwardEnabled;
             CloseTopDialog();
 
             BookNotAvailableFacility(outwardFacility);
