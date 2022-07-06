@@ -1583,11 +1583,11 @@ namespace gipbakery.mes.processapplication
                 fermentationStarter = FermentationStarterRef?.ValueT;
             }
 
-            if (fermentationStarter == null)
-            {
-                //Error50553: The fermentation starter currently isn't active!
-                Messages.Error(this, "Error50553");
-            }
+            //if (fermentationStarter == null)
+            //{
+            //    //Error50553: The fermentation starter currently isn't active!
+            //    Messages.Error(this, "Error50553");
+            //}
 
             if (fermentationStarter != null)
                 fermentationStarter.ExecuteMethod(nameof(PWBakeryFermentationStarter.AbortFermentationStarter));
@@ -1597,12 +1597,12 @@ namespace gipbakery.mes.processapplication
             ParentBSOWCS?.SelectExtraDisTargetOnPWGroup();
         }
 
-        [ACMethodInfo("", "en{'Switch to emptying mode'}de{'Leerfahren'}", 606)]
-        public virtual void SwitchToEmptyingMode()
-        {
-            CloseTopDialog();
-            ParentBSOWCS?.SelectExtraDisTargetOnPWGroup();
-        }
+        //[ACMethodInfo("", "en{'Switch to emptying mode'}de{'Leerfahren'}", 606)]
+        //public virtual void SwitchToEmptyingMode()
+        //{
+        //    CloseTopDialog();
+        //    ParentBSOWCS?.SelectExtraDisTargetOnPWGroup();
+        //}
 
         [ACMethodInfo("", "en{'Acknowledge'}de{'Quittieren'}", 602, true)]
         public void AcknowledgeMsg(MessageItem item)
