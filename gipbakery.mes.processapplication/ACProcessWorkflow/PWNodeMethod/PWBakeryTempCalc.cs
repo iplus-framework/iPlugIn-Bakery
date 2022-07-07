@@ -153,6 +153,16 @@ namespace gipbakery.mes.processapplication
             set;
         }
 
+        public override bool IsSkippable => true;
+
+        public override bool MustBeInsidePWGroup
+        {
+            get
+            {
+                return true;
+            }
+        }
+
 
         private Type _PWManualWeighingType = typeof(PWManualWeighing);
         private Type _PWDosingType = typeof(PWDosing);

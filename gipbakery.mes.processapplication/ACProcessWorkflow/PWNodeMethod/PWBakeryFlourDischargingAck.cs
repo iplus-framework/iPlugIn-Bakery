@@ -55,6 +55,14 @@ namespace gipbakery.mes.processapplication
             }
         }
 
+        public override bool IsSkippable
+        {
+            get
+            {
+                return false;
+            }
+        }
+
 
         /// <summary>
         /// This property is a reference to the BakeryReceivingPoint.CoverDown-Property if a Source-Value is bound

@@ -161,6 +161,14 @@ namespace gipbakery.mes.processapplication
         private ScaleDetectModeEnum _ScaleDetectMode;
         private ACMethodBooking _BookParamNotAvailableClone;
 
+        public override bool MustBeInsidePWGroup
+        {
+            get
+            {
+                return true;
+            }
+        }
+
         #endregion
 
         #region Methods
