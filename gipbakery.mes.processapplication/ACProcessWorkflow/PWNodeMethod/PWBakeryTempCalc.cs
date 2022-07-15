@@ -940,10 +940,14 @@ namespace gipbakery.mes.processapplication
         private void CalculateWaterTypes(IEnumerable<MaterialTemperature> componentTemperatures, double targetWaterTemperature, double totalWaterQuantity, double defaultWaterTemp,
                                          double componentsQ, bool isOnlyWaterCompInPartslist, double doughTempBeforeKneeding, bool isForPicking)
         {
-            MaterialTemperature coldWater = componentTemperatures.FirstOrDefault(c => c.Water == WaterType.ColdWater);
-            MaterialTemperature cityWater = componentTemperatures.FirstOrDefault(c => c.Water == WaterType.CityWater);
-            MaterialTemperature warmWater = componentTemperatures.FirstOrDefault(c => c.Water == WaterType.WarmWater);
+            var watersByTemp = componentTemperatures.Where(c => c.Water > WaterType.NotWater && c.Water != WaterType.DryIce).OrderBy(c => c.AverageTemperature).ToArray();
+
+
+            MaterialTemperature coldWater = watersByTemp.FirstOrDefault(); // componentTemperatures.FirstOrDefault(c => c.Water == WaterType.ColdWater);
+            MaterialTemperature cityWater = watersByTemp.Skip(1).FirstOrDefault(); // componentTemperatures.FirstOrDefault(c => c.Water == WaterType.CityWater);
+            MaterialTemperature warmWater = watersByTemp.LastOrDefault(); // componentTemperatures.FirstOrDefault(c => c.Water == WaterType.WarmWater);
             MaterialTemperature dryIce = componentTemperatures.FirstOrDefault(c => c.Water == WaterType.DryIce);
+            MaterialTemperature realCityWater = componentTemperatures.FirstOrDefault(c => c.Water == WaterType.CityWater);
 
             if (coldWater == null)
             {
@@ -993,20 +997,28 @@ namespace gipbakery.mes.processapplication
                 return;
             }
 
-            //ACValueList temperaturesUsedInCalc = new ACValueList(componentTemperatures.Where(c => c.Water != WaterType.NotWater).Select(x => new ACValue(x.Water.ToString(), x.AverageTemperature)).ToArray());
-            //if (kneedingRiseTemp.HasValue)
-            //{
-            //    ACValue acValue = new ACValue(KneedingRiseTemp, kneedingRiseTemp.Value);
-            //    temperaturesUsedInCalc.Add(acValue);
-            //}
-
-            //WaterTemperaturesUsedInCalc = temperaturesUsedInCalc;
             WaterTotalQuantity.ValueT = totalWaterQuantity;
 
             //check warm water 
             if (targetWaterTemperature > warmWater.AverageTemperature)
             {
-                WarmWaterQuantity.ValueT = totalWaterQuantity;
+                if (warmWater.AverageTemperature > 0.0001)
+                {
+                    SetWaterQuantity(warmWater, totalWaterQuantity, null, 0);
+                }
+                else
+                {
+                    var cityW = watersByTemp.FirstOrDefault(c => c.Water == WaterType.CityWater);
+                    if (cityW != null)
+                    {
+                        SetWaterQuantity(cityW, totalWaterQuantity, null, 0);
+                    }
+                    else
+                    {
+                        //alarm
+                        TemperatureCalculationResult.ValueT = "Error: City water can not be found!";
+                    }
+                }
                 // The calculated water temperature of {0} °C can not be reached, the maximum water temperature is {1} °C and the target quantity is {2} {3}. 
                 TemperatureCalculationResult.ValueT = Root.Environment.TranslateText(this, "TempCalcResultMax", targetWaterTemperature.ToString("F2"), warmWater.AverageTemperature,
                                                                                                                 totalWaterQuantity.ToString("F2"), "kg");
@@ -1015,17 +1027,8 @@ namespace gipbakery.mes.processapplication
                 return;
             }
 
-            // when city water is colder than cold water
-            MaterialTemperature waterForCombinationColder = coldWater;
-            MaterialTemperature waterForCombinationWarmer = cityWater;
 
-            if (cityWater.AverageTemperature < coldWater.AverageTemperature && coldWater.WaterDefaultTemperature != 9999)
-            {
-                waterForCombinationColder = cityWater;
-                waterForCombinationWarmer = coldWater;
-            }
-
-            if (warmWater.WaterDefaultTemperature != 9999 && CombineWarmCityWater(warmWater, waterForCombinationWarmer, targetWaterTemperature, totalWaterQuantity))
+            if (CombineWarmCityWater(warmWater, cityWater, targetWaterTemperature, totalWaterQuantity))
             {
                 //The calculated water temperature is {0} °C and the target quantity is {1} {2}.
                 TemperatureCalculationResult.ValueT = Root.Environment.TranslateText(this, "TempCalcResult", targetWaterTemperature.ToString("F2"),
@@ -1035,7 +1038,7 @@ namespace gipbakery.mes.processapplication
             }
 
 
-            if (coldWater.WaterDefaultTemperature != 9999 && CombineColdCityWater(waterForCombinationColder, waterForCombinationWarmer, targetWaterTemperature, totalWaterQuantity))
+            if (coldWater.WaterDefaultTemperature != 9999 && CombineColdCityWater(coldWater, cityWater, targetWaterTemperature, totalWaterQuantity))
             {
                 //The calculated water temperature is {0} °C and the target quantity is {1} {2}.
                 TemperatureCalculationResult.ValueT = Root.Environment.TranslateText(this, "TempCalcResult", targetWaterTemperature.ToString("F2"),
@@ -1044,13 +1047,8 @@ namespace gipbakery.mes.processapplication
                 return;
             }
 
-            if (coldWater.WaterDefaultTemperature == 9999)
-            {
-                waterForCombinationColder = cityWater;
-            }
-
-            if (!CombineWatersWithDryIce(waterForCombinationColder, dryIce, targetWaterTemperature, totalWaterQuantity, defaultWaterTemp, isOnlyWaterCompInPartslist, 
-                                         componentsQ, doughTempBeforeKneeding, isForPicking))
+            if (dryIce.WaterDefaultTemperature != 9999 && !CombineWatersWithDryIce(coldWater, dryIce, targetWaterTemperature, totalWaterQuantity, defaultWaterTemp, 
+                                                                                   isOnlyWaterCompInPartslist, componentsQ, doughTempBeforeKneeding, isForPicking))
             {
                 // The calculated water temperature of {0} °C can not be reached, the ice is {1} °C and the target quantity is {2} {3}. 
                 TemperatureCalculationResult.ValueT = Root.Environment.TranslateText(this, "TempCalcResultMin", targetWaterTemperature.ToString("F2"), dryIce.AverageTemperature,
@@ -1059,6 +1057,7 @@ namespace gipbakery.mes.processapplication
                 return;
             }
 
+            //SetWaterQuantity(realCityWater, totalWaterQuantity, null, 0);
             //The calculated water temperature is {0} °C and the target quantity is {1} {2}.
             TemperatureCalculationResult.ValueT = Root.Environment.TranslateText(this, "TempCalcResult", targetWaterTemperature.ToString("F2"),
                                                                                                          totalWaterQuantity.ToString("F2"), "kg");
@@ -1078,23 +1077,18 @@ namespace gipbakery.mes.processapplication
 
                 double cityWaterQuantity = totalWaterQuantity - warmWaterQuantity;
 
-                if (cityWaterQuantity < water.WaterMinDosingQuantity)
+                if (cityWaterQuantity < water.WaterMinDosingQuantity && warmWater.WaterDefaultTemperature != 9999)
                 {
                     warmWaterQuantity = totalWaterQuantity;
                     cityWaterQuantity = 0;
                 }
-                else if (warmWaterQuantity < warmWater.WaterMinDosingQuantity)
+                else if (warmWaterQuantity < warmWater.WaterMinDosingQuantity || warmWater.WaterDefaultTemperature == 9999)
                 {
                     warmWaterQuantity = 0;
                     cityWaterQuantity = totalWaterQuantity;
                 }
 
-                WarmWaterQuantity.ValueT = warmWaterQuantity;
-
-                if (water.Water == WaterType.CityWater)
-                    CityWaterQuantity.ValueT = cityWaterQuantity;
-                else if (water.Water == WaterType.ColdWater)
-                    ColdWaterQuantity.ValueT = cityWaterQuantity;
+                SetWaterQuantity(warmWater, warmWaterQuantity, water, cityWaterQuantity);
 
                 return true;
             }
@@ -1126,15 +1120,7 @@ namespace gipbakery.mes.processapplication
                     cityWaterQuantity = 0;
                 }
 
-                if (coldWater.Water == WaterType.ColdWater)
-                    ColdWaterQuantity.ValueT = coldWaterQuantity;
-                else if (coldWater.Water == WaterType.CityWater)
-                    CityWaterQuantity.ValueT = coldWaterQuantity;
-
-                if (cityWater.Water == WaterType.CityWater)
-                    CityWaterQuantity.ValueT = cityWaterQuantity;
-                else if (cityWater.Water == WaterType.ColdWater)
-                    ColdWaterQuantity.ValueT = cityWaterQuantity;
+                SetWaterQuantity(coldWater, coldWaterQuantity, cityWater, cityWaterQuantity);
 
                 return true;
             }
@@ -1169,21 +1155,11 @@ namespace gipbakery.mes.processapplication
 
                     if (isForPicking && !WeighIceInPicking)
                     {
-                        if (water.Water == WaterType.ColdWater)
-                            ColdWaterQuantity.ValueT = coldWaterQuantity + dryIceQuantity;
-                        else if (water.Water == WaterType.CityWater)
-                            CityWaterQuantity.ValueT = coldWaterQuantity + dryIceQuantity;
-
-                        DryIceQuantity.ValueT = 0;
+                        SetWaterQuantity(water, coldWaterQuantity + dryIceQuantity, dryIce, 0);
                     }
                     else
                     {
-                        if (water.Water == WaterType.ColdWater)
-                            ColdWaterQuantity.ValueT = coldWaterQuantity;
-                        else if (water.Water == WaterType.CityWater)
-                            CityWaterQuantity.ValueT = coldWaterQuantity;
-
-                        DryIceQuantity.ValueT = dryIceQuantity;
+                        SetWaterQuantity(water, coldWaterQuantity + dryIceQuantity, dryIce, dryIceQuantity);
                     }
 
                     return true;
@@ -1193,21 +1169,11 @@ namespace gipbakery.mes.processapplication
                     //There is no weigh for ice in picking, assign all quantity to colder water
                     if (isForPicking && !WeighIceInPicking)
                     {
-                        if (water.Water == WaterType.ColdWater)
-                            ColdWaterQuantity.ValueT = totalWaterQuantity;
-                        else if (water.Water == WaterType.CityWater)
-                            CityWaterQuantity.ValueT = totalWaterQuantity;
-
-                        DryIceQuantity.ValueT = 0;
+                        SetWaterQuantity(water, totalWaterQuantity, dryIce, 0);
                     }
                     else
                     {
-                        if (water.Water == WaterType.ColdWater)
-                            ColdWaterQuantity.ValueT = 0;
-                        else if (water.Water == WaterType.CityWater)
-                            CityWaterQuantity.ValueT = 0;
-
-                        DryIceQuantity.ValueT = totalWaterQuantity;
+                        SetWaterQuantity(water, 0, dryIce, totalWaterQuantity);
                     }
                     return false;
                 }
@@ -1259,12 +1225,7 @@ namespace gipbakery.mes.processapplication
                         }
                     }
 
-                    if (water.Water == WaterType.ColdWater)
-                        ColdWaterQuantity.ValueT = coldWaterQuantity;
-                    else if (water.Water == WaterType.CityWater)
-                        CityWaterQuantity.ValueT = coldWaterQuantity;
-
-                    DryIceQuantity.ValueT = iceQuantity;
+                    SetWaterQuantity(water, coldWaterQuantity, dryIce, iceQuantity);
                 }
                 else
                 {
@@ -1314,12 +1275,7 @@ namespace gipbakery.mes.processapplication
                                 }
                             }
 
-                            DryIceQuantity.ValueT = iceQuantity;
-
-                            if (water.Water == WaterType.ColdWater)
-                                ColdWaterQuantity.ValueT = coldWaterQuantity;
-                            else if (water.Water == WaterType.CityWater)
-                                CityWaterQuantity.ValueT = coldWaterQuantity;
+                            SetWaterQuantity(water, coldWaterQuantity, dryIce, iceQuantity);
                         }
                         else
                         {
@@ -1338,12 +1294,7 @@ namespace gipbakery.mes.processapplication
                                 iceQuantity = totalWaterQuantity;
                             }
 
-                            DryIceQuantity.ValueT = iceQuantity;
-
-                            if (water.Water == WaterType.ColdWater)
-                                ColdWaterQuantity.ValueT = coldWaterQuantity;
-                            else if (water.Water == WaterType.CityWater)
-                                CityWaterQuantity.ValueT = coldWaterQuantity;
+                            SetWaterQuantity(water, coldWaterQuantity, dryIce, iceQuantity);
                         }
                     }
                     else
@@ -1369,6 +1320,50 @@ namespace gipbakery.mes.processapplication
             }
 
             return false;
+        }
+
+        private void SetWaterQuantity(MaterialTemperature firstWater, double firstWaterQ, MaterialTemperature secondWater, double secondWaterQ)
+        {
+            if (firstWater != null)
+            {
+                if (firstWater.Water == WaterType.ColdWater)
+                {
+                    ColdWaterQuantity.ValueT = firstWaterQ;
+                }
+                else if (firstWater.Water == WaterType.CityWater)
+                {
+                    CityWaterQuantity.ValueT = firstWaterQ;
+                }
+                else if (firstWater.Water == WaterType.WarmWater)
+                {
+                    WarmWaterQuantity.ValueT = firstWaterQ;
+                }
+                else if (firstWater.Water == WaterType.DryIce)
+                {
+                    DryIceQuantity.ValueT = firstWaterQ;
+                }
+            }
+
+            if (secondWater != null)
+            {
+                if (secondWater.Water == WaterType.ColdWater)
+                {
+                    ColdWaterQuantity.ValueT = secondWaterQ;
+                }
+                else if (secondWater.Water == WaterType.CityWater)
+                {
+                    CityWaterQuantity.ValueT = secondWaterQ;
+                }
+                else if (secondWater.Water == WaterType.WarmWater)
+                {
+                    WarmWaterQuantity.ValueT = secondWaterQ;
+                }
+                else if (secondWater.Water == WaterType.DryIce)
+                {
+                    DryIceQuantity.ValueT = secondWaterQ;
+                }
+            }
+
         }
 
         private void FillInfoForBSO(IEnumerable<MaterialTemperature> componentTemperatures, double? kneedingRiseTemp, ProdOrderPartslistPosRelation cityWaterComp,
