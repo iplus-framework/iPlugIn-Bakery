@@ -947,7 +947,6 @@ namespace gipbakery.mes.processapplication
             MaterialTemperature cityWater = watersByTemp.Skip(1).FirstOrDefault(); // componentTemperatures.FirstOrDefault(c => c.Water == WaterType.CityWater);
             MaterialTemperature warmWater = watersByTemp.LastOrDefault(); // componentTemperatures.FirstOrDefault(c => c.Water == WaterType.WarmWater);
             MaterialTemperature dryIce = componentTemperatures.FirstOrDefault(c => c.Water == WaterType.DryIce);
-            MaterialTemperature realCityWater = componentTemperatures.FirstOrDefault(c => c.Water == WaterType.CityWater);
 
             if (coldWater == null)
             {
@@ -1047,7 +1046,7 @@ namespace gipbakery.mes.processapplication
                 return;
             }
 
-            if (dryIce.WaterDefaultTemperature != 9999 && !CombineWatersWithDryIce(coldWater, dryIce, targetWaterTemperature, totalWaterQuantity, defaultWaterTemp, 
+            if (!CombineWatersWithDryIce(coldWater, dryIce, targetWaterTemperature, totalWaterQuantity, defaultWaterTemp, 
                                                                                    isOnlyWaterCompInPartslist, componentsQ, doughTempBeforeKneeding, isForPicking))
             {
                 // The calculated water temperature of {0} °C can not be reached, the ice is {1} °C and the target quantity is {2} {3}. 
