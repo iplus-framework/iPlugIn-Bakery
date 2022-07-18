@@ -2,7 +2,10 @@
 using gip.core.datamodel;
 using gip.mes.datamodel;
 using gip.mes.processapplication;
+using System;
+using System.Collections.Generic;
 using System.Linq;
+using System.Xml;
 
 namespace gipbakery.mes.processapplication
 {
@@ -10,6 +13,22 @@ namespace gipbakery.mes.processapplication
     public class PWBakeryCleaning : PWNodeProcessMethod
     {
         #region c'tors
+
+        static PWBakeryCleaning()
+        {
+            ACMethod method;
+            method = new ACMethod(ACStateConst.SMStarting);
+            Dictionary<string, string> paramTranslation = new Dictionary<string, string>();
+
+            method.ParameterValueList.Add(new ACValue("DosingGroupNo", typeof(int), 0, Global.ParamOption.Optional));
+            paramTranslation.Add("DosingGroupNo", "en{'Dosing group No for wait when another dosing active with same group No'}de{'Dosiergruppennummer für Warten, wenn eine andere aktive Dosierung mit derselben Gruppennummer'}");
+
+            var wrapper = new ACMethodWrapper(method, "en{'Configuration'}de{'Konfiguration'}", typeof(PWBakeryCleaning), paramTranslation, null);
+            ACMethod.RegisterVirtualMethod(typeof(PWBakeryCleaning), ACStateConst.SMStarting, wrapper);
+            RegisterExecuteHandler(typeof(PWBakeryCleaning), HandleExecuteACMethod_PWBakeryCleaning);
+        }
+
+
 
         public PWBakeryCleaning(gip.core.datamodel.ACClass acType, IACObject content, IACObject parentACObject, ACValueList parameter, string acIdentifier = "") : 
             base(acType, content, parentACObject, parameter, acIdentifier)
@@ -27,6 +46,23 @@ namespace gipbakery.mes.processapplication
             get
             {
                 return ParentPWMethod<PWMethodTransportBase>() != null;
+            }
+        }
+
+        public int DosingGroupNo
+        {
+            get
+            {
+                var method = MyConfiguration;
+                if (method != null)
+                {
+                    var acValue = method.ParameterValueList.GetACValue("DosingGroupNo");
+                    if (acValue != null)
+                    {
+                        return acValue.ParamAsInt32;
+                    }
+                }
+                return 0;
             }
         }
 
@@ -127,6 +163,25 @@ namespace gipbakery.mes.processapplication
             {
                 _InCallback = false;
             }
+        }
+
+        protected override void DumpPropertyList(XmlDocument doc, XmlElement xmlACPropertyList)
+        {
+            base.DumpPropertyList(doc, xmlACPropertyList);
+
+            XmlElement xmlChild = xmlACPropertyList["DosingGroupNo"];
+            if (xmlChild == null)
+            {
+                xmlChild = doc.CreateElement("DosingGroupNo");
+                if (xmlChild != null)
+                    xmlChild.InnerText = DosingGroupNo.ToString();
+                xmlACPropertyList.AppendChild(xmlChild);
+            }
+        }
+
+        private static bool HandleExecuteACMethod_PWBakeryCleaning(out object result, IACComponent acComponent, string acMethodName, gip.core.datamodel.ACClassMethod acClassMethod, object[] acParameter)
+        {
+            return HandleExecuteACMethod_PWNodeProcessMethod(out result, acComponent, acMethodName, acClassMethod, acParameter);
         }
 
         #endregion

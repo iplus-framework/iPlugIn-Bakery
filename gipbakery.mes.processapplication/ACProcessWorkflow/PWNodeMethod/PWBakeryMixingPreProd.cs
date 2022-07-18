@@ -126,7 +126,7 @@ namespace gipbakery.mes.processapplication
 
             if (!anyRun)
             {
-                var cleaningNodes = ApplicationManager.FindChildComponents<PWBakeryCleaning>();
+                var cleaningNodes = ApplicationManager.FindChildComponents<PWBakeryCleaning>().Where(c => c.DosingGroupNo == DosingGroupNo);
                 if (cleaningNodes != null && cleaningNodes.Any())
                 {
                     anyRun = cleaningNodes.Any(c => c.CurrentACState == ACStateEnum.SMRunning || c.CurrentACState == ACStateEnum.SMStarting);
