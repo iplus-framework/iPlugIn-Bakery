@@ -870,9 +870,14 @@ namespace gipbakery.mes.processapplication
 
                 if (pwGroup == null)
                 {
-                    //Error50466: The user does not have access rights for class {0}.
-                    Messages.Error(this, "Error50466", false, pwGroupACUrl);
-                    return;
+                    pwGroup = Root.ACUrlCommand(pwGroupACUrl) as IACComponentPWNode;
+
+                    if (pwGroup == null)
+                    {
+                        //Error50466: The user does not have access rights for class {0}.
+                        Messages.Error(this, "Error50466", false, pwGroupACUrl);
+                        return;
+                    }
                 }
 
                 var pwGroupFermentation = new ACRef<IACComponentPWNode>(pwGroup, this);

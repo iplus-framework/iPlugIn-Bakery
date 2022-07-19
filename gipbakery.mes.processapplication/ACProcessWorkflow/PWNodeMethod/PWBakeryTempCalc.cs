@@ -196,6 +196,7 @@ namespace gipbakery.mes.processapplication
 
         private bool? _UserResponse = null;
         private double? _NewWaterQuantity = null;
+        private double? _WaterTopParentPlPosRelQ = null;
 
         private string _CityWaterMaterialNo;
         private string _ColdWaterMaterialNo;
@@ -705,6 +706,41 @@ namespace gipbakery.mes.processapplication
                     return;
                 }
 
+                ProdOrderPartslistPosRelation coldWaterComp = relations.FirstOrDefault(c => c.SourceProdOrderPartslistPos.Material.MaterialNo == _ColdWaterMaterialNo);
+                ProdOrderPartslistPosRelation warmWaterComp = relations.FirstOrDefault(c => c.SourceProdOrderPartslistPos.Material.MaterialNo == _WarmWaterMaterialNo);
+                ProdOrderPartslistPosRelation iceComp = relations.FirstOrDefault(c => c.SourceProdOrderPartslistPos.Material.MaterialNo == DryIceMaterialNo);
+
+                double? waterTargetQuantity = cityWaterComp.TargetQuantity;
+                bool saveChanges = false;
+
+                if (coldWaterComp != null && coldWaterComp.TargetQuantity > 0)
+                {
+                    waterTargetQuantity += coldWaterComp.TargetQuantity;
+                    coldWaterComp.TargetQuantity = 0;
+                    saveChanges = true;
+                }
+
+                if (warmWaterComp != null && warmWaterComp.TargetQuantity > 0)
+                {
+                    waterTargetQuantity += warmWaterComp.TargetQuantity;
+                    warmWaterComp.TargetQuantity = 0;
+                    saveChanges = true;
+                }
+
+                if (iceComp != null && iceComp.TargetQuantity > 0)
+                {
+                    waterTargetQuantity += iceComp.TargetQuantity;
+                    iceComp.TargetQuantity = 0;
+                    saveChanges = true;
+                }
+
+                if (saveChanges)
+                {
+                    var saveMsg = dbApp.ACSaveChanges();
+                    if (saveMsg != null)
+                        Messages.LogMessageMsg(saveMsg);
+                }
+
                 // Modify prodorder with new water quantity
                 if (_NewWaterQuantity.HasValue)
                 {
@@ -713,21 +749,12 @@ namespace gipbakery.mes.processapplication
                         var topRelation = cityWaterComp.TopParentPartslistPosRelation;
                         if (topRelation != null)
                         {
-                            double topRelationNewQ = topRelation.TargetQuantityUOM / cityWaterComp.TargetQuantityUOM * _NewWaterQuantity.Value;
-                            topRelation.TargetQuantityUOM = topRelationNewQ;
+                            _WaterTopParentPlPosRelQ = topRelation.TargetQuantityUOM / waterTargetQuantity.Value * _NewWaterQuantity.Value;
                         }
-
-                        cityWaterComp.TargetQuantityUOM = _NewWaterQuantity.Value;
-
-                        dbApp.ACSaveChanges();
+                        waterTargetQuantity = _NewWaterQuantity.Value;
                     }
-
                     _NewWaterQuantity = null;
                 }
-
-                ProdOrderPartslistPosRelation coldWaterComp = relations.FirstOrDefault(c => c.SourceProdOrderPartslistPos.Material.MaterialNo == _ColdWaterMaterialNo);
-                ProdOrderPartslistPosRelation warmWaterComp = relations.FirstOrDefault(c => c.SourceProdOrderPartslistPos.Material.MaterialNo == _WarmWaterMaterialNo);
-                ProdOrderPartslistPosRelation iceComp = relations.FirstOrDefault(c => c.SourceProdOrderPartslistPos.Material.MaterialNo == DryIceMaterialNo);
 
                 List<MaterialTemperature> compTemps = DetermineComponentsTemperature(currentProdOrderPartslist, intermediates, recvPoint, plMethod, dbApp, tempFromService, _ColdWaterMaterialNo,
                                                                                      _CityWaterMaterialNo, _WarmWaterMaterialNo, dryIce);
@@ -738,16 +765,7 @@ namespace gipbakery.mes.processapplication
                     componentsQ = CalculateComponents_Q_(recvPoint, kneedingRiseTemperature, relations, _ColdWaterMaterialNo, _CityWaterMaterialNo, _WarmWaterMaterialNo, dryIce, compTemps);
 
                 bool isOnlyWaterCompsInPartslist = relations.Count() == 1 && relations.FirstOrDefault(c => c.SourceProdOrderPartslistPos.Material.MaterialNo == _CityWaterMaterialNo) != null;
-                double? waterTargetQuantity = cityWaterComp.TargetQuantity;
 
-                if (coldWaterComp != null && coldWaterComp.TargetQuantity > 0)
-                    waterTargetQuantity += coldWaterComp.TargetQuantity;
-
-                if (warmWaterComp != null && warmWaterComp.TargetQuantity > 0)
-                    waterTargetQuantity += warmWaterComp.TargetQuantity;
-
-                if (iceComp != null && iceComp.TargetQuantity > 0)
-                    waterTargetQuantity += iceComp.TargetQuantity;
 
                 double defaultWaterTemp = 0;
                 double suggestedWaterTemp = CalculateWaterTemperatureSuggestion(UseWaterTemp, isOnlyWaterCompsInPartslist, cityWaterComp.SourceProdOrderPartslistPos.Material, DoughTemp.Value,
@@ -804,7 +822,6 @@ namespace gipbakery.mes.processapplication
 
                 List<MaterialTemperature> compTemps = DetermineComponentsTemperature(picking, recvPoint, dbApp, tempFromService, _ColdWaterMaterialNo, _CityWaterMaterialNo, _WarmWaterMaterialNo,
                                                                                     dryIce);
-
 
                 bool isOnlyWaterCompsInPartslist = true;
                 double? waterTargetQuantity = pickingPos.TargetQuantity;
@@ -1533,8 +1550,8 @@ namespace gipbakery.mes.processapplication
 
                 Material intermediateCity = intermediateAutomatic != null ? intermediateAutomatic : intermediateManual;
 
-                AdjustBatchPosInProdOrderPartslist(dbApp, currentProdOrderPartslist, intermediateCity, posCity, batch, cityWaterQ, totalWatersQuantity);
-
+                AdjustBatchPosInProdOrderPartslist(dbApp, currentProdOrderPartslist, intermediateCity, posCity, batch, cityWaterQ, totalWatersQuantity, _WaterTopParentPlPosRelQ);
+                _WaterTopParentPlPosRelQ = null;
 
                 if (!UseWaterMixer)
                 {
@@ -1628,7 +1645,7 @@ namespace gipbakery.mes.processapplication
         }
 
         private void AdjustBatchPosInProdOrderPartslist(DatabaseApp dbApp, ProdOrderPartslist poPartslist, Material intermediateMaterial, ProdOrderPartslistPos sourcePos, ProdOrderBatch batch,
-                                                         double waterQuantity, double totalWatersQuantity)
+                                                         double waterQuantity, double totalWatersQuantity, double? topRelationNewQuantity = null)
         {
             ProdOrderPartslistPos targetPos = poPartslist.ProdOrderPartslistPos_ProdOrderPartslist
                                                              .FirstOrDefault(c => c.MaterialID == intermediateMaterial.MaterialID
@@ -1657,6 +1674,11 @@ namespace gipbakery.mes.processapplication
                                                 .Max(x => x.Sequence) + 1 : CompSequenceNo;
 
                 dbApp.ProdOrderPartslistPosRelation.AddObject(topRelation);
+            }
+
+            if (topRelationNewQuantity.HasValue && topRelationNewQuantity > 0.00001)
+            {
+                topRelation.TargetQuantityUOM = topRelationNewQuantity.Value;
             }
 
             ProdOrderPartslistPosRelation batchRelation = batch.ProdOrderPartslistPosRelation_ProdOrderBatch
@@ -2617,6 +2639,7 @@ namespace gipbakery.mes.processapplication
                 {
                     _UserResponse = null;
                     _NewWaterQuantity = null;
+                    _WaterTopParentPlPosRelQ = null;
                 }
             }
         }
