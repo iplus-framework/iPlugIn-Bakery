@@ -1175,7 +1175,7 @@ namespace gipbakery.mes.processapplication
                     }
                     else
                     {
-                        SetWaterQuantity(water, coldWaterQuantity + dryIceQuantity, dryIce, dryIceQuantity);
+                        SetWaterQuantity(water, coldWaterQuantity, dryIce, dryIceQuantity);
                     }
 
                     return true;
