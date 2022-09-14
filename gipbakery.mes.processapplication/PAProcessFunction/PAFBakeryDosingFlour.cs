@@ -143,12 +143,15 @@ namespace gipbakery.mes.processapplication
         public override void SMStarting()
         {
             base.SMStarting();
-            double? targetQuantity = CurrentACMethod.ValueT["TargetQuantity"] as double?;
-            if (targetQuantity.HasValue)
+            if(CurrentACMethod.ValueT !=null)
             {
-                using (ACMonitor.Lock(_20015_LockValue))
+                double? targetQuantity = CurrentACMethod.ValueT["TargetQuantity"] as double?;
+                if (targetQuantity.HasValue)
                 {
-                    TargetQuantity = targetQuantity.Value;
+                    using (ACMonitor.Lock(_20015_LockValue))
+                    {
+                        TargetQuantity = targetQuantity.Value;
+                    }
                 }
             }
         }
