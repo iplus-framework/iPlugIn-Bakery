@@ -619,7 +619,7 @@ namespace gipbakery.mes.processapplication
                 _ColdWaterMaterialNo = tempFromService.FirstOrDefault(c => c.Water == WaterType.ColdWater)?.MaterialNo;
                 _CityWaterMaterialNo = tempFromService.FirstOrDefault(c => c.Water == WaterType.CityWater)?.MaterialNo;
                 _WarmWaterMaterialNo = tempFromService.FirstOrDefault(c => c.Water == WaterType.WarmWater)?.MaterialNo;
-                string dryIce = DryIceMaterialNo;
+                 string dryIce = DryIceMaterialNo;
 
                 if (string.IsNullOrEmpty(_ColdWaterMaterialNo))
                 {
@@ -699,6 +699,43 @@ namespace gipbakery.mes.processapplication
 
 
                 ProdOrderPartslistPosRelation cityWaterComp = relations.FirstOrDefault(c => c.SourceProdOrderPartslistPos.Material.MaterialNo == _CityWaterMaterialNo);
+                if (cityWaterComp != null)
+                {
+                    IEnumerable<MaterialWFConnection> matWFConnections = null;
+                    if (batchPlan != null && batchPlan.MaterialWFACClassMethodID.HasValue)
+                    {
+                        matWFConnections = dbApp.MaterialWFConnection
+                                                .Where(c => c.MaterialWFACClassMethod.MaterialWFACClassMethodID == batchPlan.MaterialWFACClassMethodID.Value
+                                                        && c.ACClassWFID == contentACClassWFVB.ACClassWFID).ToArray();
+                    }
+
+                    if (matWFConnections == null || !matWFConnections.Any())
+                    {
+                        // Error50415: No relation defined between Workflownode and intermediate material in Materialworkflow
+                        Msg msg1 = new Msg(this, eMsgLevel.Error, PWClassName, "AdjustWatersInProdOrderPartslist(40)", 1285, "Error50415");
+
+                        if (IsAlarmActive(ProcessAlarm, msg1.Message) == null)
+                            Messages.LogError(this.GetACUrl(), msg1.ACIdentifier, msg1.InnerMessage);
+                        OnNewAlarmOccurred(ProcessAlarm, msg1, false);
+                        return;
+                    }
+
+                    bool isInRelatedIntermediate = false;
+
+                    foreach (MaterialWFConnection matWFConn in matWFConnections)
+                    {
+                        if (matWFConn.MaterialID == cityWaterComp.TargetProdOrderPartslistPos.MaterialID)
+                        {
+                            isInRelatedIntermediate = true;
+                            break;
+                        }
+                    }
+
+                    if (!isInRelatedIntermediate)
+                        cityWaterComp = null;
+                }
+
+
                 if (cityWaterComp == null)
                 {
                     // If partslist not contains city water, skip node
@@ -1548,9 +1585,10 @@ namespace gipbakery.mes.processapplication
                         return;
                 }
 
-                Material intermediateCity = intermediateAutomatic != null ? intermediateAutomatic : intermediateManual;
+                Material intermediate = intermediateAutomatic != null ? intermediateAutomatic : intermediateManual;
 
-                AdjustBatchPosInProdOrderPartslist(dbApp, currentProdOrderPartslist, intermediateCity, posCity, batch, cityWaterQ, totalWatersQuantity, _WaterTopParentPlPosRelQ);
+
+                AdjustBatchPosInProdOrderPartslist(dbApp, currentProdOrderPartslist, intermediate, posCity, batch, cityWaterQ, totalWatersQuantity, _WaterTopParentPlPosRelQ);
                 _WaterTopParentPlPosRelQ = null;
 
                 if (!UseWaterMixer)
@@ -1565,7 +1603,7 @@ namespace gipbakery.mes.processapplication
                                 return;
                         }
 
-                        Material intermediate = intermediateAutomatic != null ? intermediateAutomatic : intermediateManual;
+                        //Material intermediate = intermediateAutomatic != null ? intermediateAutomatic : intermediateManual;
 
                         AdjustBatchPosInProdOrderPartslist(dbApp, currentProdOrderPartslist, intermediate, pos, batch, coldWaterQ, totalWatersQuantity);
                     }
@@ -1580,7 +1618,7 @@ namespace gipbakery.mes.processapplication
                                 return;
                         }
 
-                        Material intermediate = intermediateAutomatic != null ? intermediateAutomatic : intermediateManual;
+                        //Material intermediate = intermediateAutomatic != null ? intermediateAutomatic : intermediateManual;
 
                         AdjustBatchPosInProdOrderPartslist(dbApp, currentProdOrderPartslist, intermediate, pos, batch, warmWaterQ, totalWatersQuantity);
                     }
