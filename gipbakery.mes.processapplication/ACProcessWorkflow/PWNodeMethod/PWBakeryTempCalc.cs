@@ -724,7 +724,8 @@ namespace gipbakery.mes.processapplication
 
                     foreach (MaterialWFConnection matWFConn in matWFConnections)
                     {
-                        if (matWFConn.MaterialID == cityWaterComp.TargetProdOrderPartslistPos.MaterialID)
+                        if (cityWaterComp.TargetProdOrderPartslistPos != null && 
+                            matWFConn.MaterialID == cityWaterComp.TargetProdOrderPartslistPos.MaterialID)
                         {
                             isInRelatedIntermediate = true;
                             break;
