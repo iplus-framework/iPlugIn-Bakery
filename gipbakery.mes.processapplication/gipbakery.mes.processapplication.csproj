@@ -93,6 +93,7 @@
     <Compile Include="BSO\BakeryBSOYeastProducing.cs" />
     <Compile Include="Converter\BakeryFuncSerial2006Cleaning.cs" />
     <Compile Include="Converter\BakeryFuncSerial2006Pumping.cs" />
+    <Compile Include="Helper\PWBakeryHelper.cs" />
     <Compile Include="Model\BakeryCleanInfoItem.cs" />
     <Compile Include="Model\BakeryRecvPointTemperature.cs" />
     <Compile Include="Model\BakeryThermometerInfoItem.cs" />

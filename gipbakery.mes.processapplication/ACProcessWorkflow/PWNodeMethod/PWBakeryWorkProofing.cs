@@ -23,17 +23,8 @@ namespace gipbakery.mes.processapplication
             ACMethod method;
             method = new ACMethod(ACStateConst.SMStarting);
             Dictionary<string, string> paramTranslation = new Dictionary<string, string>();
-            method.ParameterValueList.Add(new ACValue("PiecesPerRack", typeof(int), 0, Global.ParamOption.Required));
-            paramTranslation.Add("PiecesPerRack", "en{'Capacity: Pieces per oven rack'}de{'Kapazität: Stücke pro Stikkenwagen'}");
 
-            method.ParameterValueList.Add(new ACValue("PostingQuantitySuggestionMode", typeof(PostingQuantitySuggestionMode), gip.mes.facility.PostingQuantitySuggestionMode.OrderQuantity, Global.ParamOption.Optional));
-            paramTranslation.Add("PostingQuantitySuggestionMode", "en{'Posting quantity suggestion mode'}de{'Buchungsmengen-Vorschlagsmodus'}");
-
-            method.ParameterValueList.Add(new ACValue("ValidSeqNoPostingQSMode", typeof(string), null, Global.ParamOption.Optional));
-            paramTranslation.Add("ValidSeqNoPostingQSMode", "en{'Valid sequence no. on posting quantity suggestion'}de{'Gültige laufende Nummer auf Buchungsmengenvorschlag'}");
-
-            method.ParameterValueList.Add(new ACValue("OrderQuantityOnInwardPosting", typeof(bool), false, Global.ParamOption.Optional));
-            paramTranslation.Add("OrderQuantityOnInwardPosting", "en{'Order quantity on inward posting'}de{'Order quantity on inward posting'}");
+            PWBakeryHelper.AddDefaultWorkParameters(method, paramTranslation);
 
             var wrapper = new ACMethodWrapper(method, "en{'Configuration'}de{'Konfiguration'}", typeof(PWBakeryWorkProofing), paramTranslation, null);
             ACMethod.RegisterVirtualMethod(typeof(PWBakeryWorkProofing), ACStateConst.SMStarting, wrapper);
