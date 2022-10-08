@@ -53,6 +53,13 @@ namespace gipbakery.mes.processapplication
 
         protected override CompleteResult AnalyzeACMethodResult(ACMethod acMethod, out MsgWithDetails msg, CompleteResult completeResult)
         {
+            var packMachine = ParentACComponent as BakeryPackMachine;
+            if (acMethod.ResultValueList != null && packMachine != null)
+            {
+                var acValue = acMethod.ResultValueList.GetACValue("CountedPieces");
+                if (acValue != null)
+                    acValue.Value = packMachine.PieceCounter.ValueT;
+            }
             msg = null;
             return CompleteResult.Succeeded;
         }
@@ -93,9 +100,48 @@ namespace gipbakery.mes.processapplication
             method.ParameterValueList.Add(new ACValue("ThroughputTolMinus", typeof(Double), (Double)0.0, Global.ParamOption.Optional));
             paramTranslation.Add("ThroughputTolMinus", "en{'Tolerance - [+=Pcs/-=%]'}de{'Toleranz - [+=Stück/-=%]'}");
 
+            method.ResultValueList.Add(new ACValue("CountedPieces", typeof(int), (int)0, Global.ParamOption.Optional));
+            resultTranslation.Add("CountedPieces", "en{'Counted Pieces'}de{'Gezählte Stücke'}");
+
             return new ACMethodWrapper(method, captionTranslation, pwClass, paramTranslation, resultTranslation);
         }
 
+
+        public void ResetCounter()
+        {
+            var packMachine = ParentACComponent as BakeryPackMachine;
+            if (packMachine != null)
+            {
+                packMachine.ResetCounter.ValueT = true;
+                if (ApplicationManager != null)
+                    ApplicationManager.ProjectWorkCycleR2sec += ApplicationManager_ProjectWorkCycleR2sec;
+            }
+        }
+
+        private void ApplicationManager_ProjectWorkCycleR2sec(object sender, EventArgs e)
+        {
+            var packMachine = ParentACComponent as BakeryPackMachine;
+            if (packMachine != null)
+            {
+                packMachine.ResetCounter.ValueT = false;
+                packMachine.ActivateCounter.ValueT = true;
+            }
+            if (ApplicationManager != null)
+                ApplicationManager.ProjectWorkCycleR2sec -= ApplicationManager_ProjectWorkCycleR2sec;
+        }
+
+        public int PieceCounter
+        {
+            get
+            {
+                var packMachine = ParentACComponent as BakeryPackMachine;
+                if (packMachine != null)
+                {
+                    return packMachine.PieceCounter.ValueT;
+                }
+                return 0;
+            }
+        }
 
         #endregion
     }

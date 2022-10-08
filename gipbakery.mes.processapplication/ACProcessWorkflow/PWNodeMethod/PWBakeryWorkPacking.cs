@@ -70,6 +70,34 @@ namespace gipbakery.mes.processapplication
             base.SMStarting();
         }
 
+        public override Msg OnGetMessageAfterOccupyingProcessModule(PAFWorkTaskScanBase invoker)
+        {
+            Msg msg = base.OnGetMessageAfterOccupyingProcessModule(invoker);
+            if (msg == null)
+            {
+                PAFBakeryWorkPacking pafPacking = invoker as PAFBakeryWorkPacking;
+                if (pafPacking != null)
+                {
+                    pafPacking.ResetCounter();
+                }
+            }
+            return msg;
+        }
+
+        public override Msg OnGetMessageOnReleasingProcessModule(PAFWorkTaskScanBase invoker, bool pause)
+        {
+            Msg msg = base.OnGetMessageOnReleasingProcessModule(invoker, pause);
+            if (msg == null)
+            {
+                PAFBakeryWorkPacking pafPacking = invoker as PAFBakeryWorkPacking;
+                if (pafPacking != null)
+                {
+                    //pafPacking.PieceCounter;
+                }
+            }
+            return msg;
+        }
+
         #endregion
 
     }

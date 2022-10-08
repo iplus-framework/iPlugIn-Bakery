@@ -82,6 +82,16 @@ namespace gipbakery.mes.processapplication
                 OnPropertyChanged("CanCountPieces");
             }
         }
+
+        [ACPropertyBindingTarget(203, "Read from PLC", "en{'Piece counter'}de{'Stückzähler'}", "", false, false)]
+        public IACContainerTNet<int> PieceCounter { get; set; }
+
+        [ACPropertyBindingTarget(204, "Read from PLC", "en{'Reset Counter'}de{'Zähler Rücksetzen'}", "", false, false)]
+        public IACContainerTNet<bool> ResetCounter { get; set; }
+
+        [ACPropertyBindingTarget(205, "Read from PLC", "en{'Activate Counter'}de{'Zähler aktivieren'}", "", false, false)]
+        public IACContainerTNet<bool> ActivateCounter { get; set; }
+
         #endregion
 
 
