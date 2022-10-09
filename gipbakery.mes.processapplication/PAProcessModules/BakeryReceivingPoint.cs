@@ -58,6 +58,28 @@ namespace gipbakery.mes.processapplication
             _ = WithCover;
             _ = HoseDestination;
             _ = CanAckInAdvance;
+
+            if (string.IsNullOrEmpty(WaterTankACUrl.ValueT))
+            {
+                using (Database db = new gip.core.datamodel.Database())
+                {
+                    RoutingResult routeResult = ACRoutingService.FindSuccessors(RoutingService, db, false, this,
+                                BakeryIntermWaterTank.SelRuleID_IntermWaterTank, RouteDirections.Backwards, new object[] { },
+                                (c, p, r) => typeof(BakeryIntermWaterTank).IsAssignableFrom(c.ObjectFullType),
+                                (c, p, r) => typeof(BakeryIntermWaterTank).IsAssignableFrom(c.ObjectFullType),
+                                0, true, true);
+
+                    if (routeResult != null && routeResult.Routes != null)
+                    {
+                        var result = routeResult.Components.FirstOrDefault();
+                        if (result != null)
+                        {
+                            WaterTankACUrl.ValueT = result.ValueT.ACUrl;
+                        }
+                    }
+                }
+            }
+
             return base.ACPostInit();
         }
 
@@ -144,6 +166,13 @@ namespace gipbakery.mes.processapplication
         /// </summary>
         [ACPropertyBindingTarget(IsPersistable = true)]
         public IACContainerTNet<double> RoomTemperature
+        {
+            get;
+            set;
+        }
+
+        [ACPropertyBindingTarget(IsPersistable = true)]
+        public IACContainerTNet<string> WaterTankACUrl
         {
             get;
             set;

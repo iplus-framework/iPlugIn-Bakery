@@ -1071,7 +1071,7 @@ namespace gipbakery.mes.processapplication
 
         public override MsgWithDetails ValidateSingleDosingStart(ACComponent currentProcessModule)
         {
-            MsgWithDetails msg = base.ValidateSingleDosingStart(currentProcessModule);
+            MsgWithDetails msg = null; // base.ValidateSingleDosingStart(currentProcessModule);
 
             if (currentProcessModule != null)
             {
@@ -1081,19 +1081,50 @@ namespace gipbakery.mes.processapplication
 
                     if (recvPointClass != null && _BakeryRecvPointType.IsAssignableFrom(recvPointClass.ObjectType))
                     {
-                        MaterialTemperature warmWater = null, coldWater = null, cityWater = null;
+                        MaterialTemperature cityWater = null;
 
                         ACValueList waters = currentProcessModule.ExecuteMethod(nameof(BakeryReceivingPoint.GetWaterComponentsFromTempService)) as ACValueList;
                         if (waters != null && waters.Any())
                         {
                             IEnumerable<MaterialTemperature> waterTemps = waters.Select(c => c.Value as MaterialTemperature);
-                            warmWater = waterTemps.FirstOrDefault(c => c.Water == WaterType.WarmWater);
-                            coldWater = waterTemps.FirstOrDefault(c => c.Water == WaterType.ColdWater);
+                            //warmWater = waterTemps.FirstOrDefault(c => c.Water == WaterType.WarmWater);
+                            //coldWater = waterTemps.FirstOrDefault(c => c.Water == WaterType.ColdWater);
                             cityWater = waterTemps.FirstOrDefault(c => c.Water == WaterType.CityWater);
                         }
 
                         if (cityWater != null && SelectedSingleDosingItem.MaterialNo != cityWater.MaterialNo)
-                            return msg;
+                        {
+                            return base.ValidateSingleDosingStart(currentProcessModule);
+                        }
+
+                        ACClass componentClass = currentProcessModule.ComponentClass?.FromIPlusContext<ACClass>(db);
+                        if (componentClass == null)
+                            return null;
+
+                        ACClassProperty waterTankACUrlProp = componentClass.GetProperty(nameof(BakeryReceivingPoint.WaterTankACUrl));
+                        if (waterTankACUrlProp != null && waterTankACUrlProp.Value != null && waterTankACUrlProp.Value is string)
+                        {
+                            string acUrl = waterTankACUrlProp.Value as string;
+                            ACClass waterTank = db.ACClass.FirstOrDefault(c => c.ACURLComponentCached == acUrl);
+
+                            double maxWeight = 0;
+                            ACClassProperty maxWeightProp = waterTank.GetProperty(PAProcessModule.PropNameMaxWeightCapacity);
+                            if (maxWeightProp != null && maxWeightProp.Value != null && maxWeightProp.Value is string)
+                                maxWeight = (double)ACConvert.ChangeType(maxWeightProp.Value as string, typeof(double), true, db);
+
+                            maxWeight = maxWeight - (maxWeight * 0.2);
+
+                            if (SingleDosTargetQuantity > maxWeight)
+                            {
+                                //Error50487:The dosing quantity is {0} kg but the maximum dosing qunatity is {1} kg.
+                                var msg1 = new Msg(this, eMsgLevel.Error, ClassName, "ValidateStart", 2469, "Error50487", SingleDosTargetQuantity, Math.Round(maxWeight, 2));
+                                return new MsgWithDetails(new Msg[] { msg1 });
+                            }
+                        }
+                        else
+                        {
+                            msg = ValidateSingleDosingStart(currentProcessModule);
+                        }
 
                         if (!SingleDosTargetTemperature.HasValue)
                         {

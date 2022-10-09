@@ -123,6 +123,7 @@
     <Compile Include="PAProcessModules\BakeryFreezer.cs" />
     <Compile Include="PAProcessModules\BakeryDecorStation.cs" />
     <Compile Include="PAProcessModules\BakeryCartoner.cs" />
+    <Compile Include="PAProcessModules\BakeryIntermWaterTank.cs" />
     <Compile Include="PAProcessModules\BakeryPacker.cs" />
     <Compile Include="PAProcessModules\BakeryOven.cs" />
     <Compile Include="PAProcessModules\BakeryDoughProofer.cs" />
