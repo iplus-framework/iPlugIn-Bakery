@@ -1123,7 +1123,7 @@ namespace gipbakery.mes.processapplication
                         }
                         else
                         {
-                            msg = ValidateSingleDosingStart(currentProcessModule);
+                            msg = base.ValidateSingleDosingStart(currentProcessModule);
                         }
 
                         if (!SingleDosTargetTemperature.HasValue)

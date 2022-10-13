@@ -25,6 +25,9 @@ namespace gipbakery.mes.processapplication
             method.ParameterValueList.Add(new ACValue("SkipIfNoComp", typeof(bool), false, Global.ParamOption.Required));
             paramTranslation.Add("SkipIfNoComp", "en{'Skip if no components dosed'}de{'Überspringe wenn keine Komponente dosiert'}");
 
+            method.ParameterValueList.Add(new ACValue("AutoAck", typeof(bool), false, Global.ParamOption.Optional));
+            paramTranslation.Add("AutoAck", "en{'Auto acknowledge'}de{'Automatisch quittieren'}");
+
             var wrapper = new ACMethodWrapper(method, "en{'Flour discharging acknowledge'}de{'Mehlaustragsquittung'}", typeof(PWBakeryFlourDischargingAck), paramTranslation, null);
             ACMethod.RegisterVirtualMethod(typeof(PWBakeryFlourDischargingAck), ACStateConst.SMStarting, wrapper);
         }
@@ -46,6 +49,23 @@ namespace gipbakery.mes.processapplication
                 if (method != null)
                 {
                     var acValue = method.ParameterValueList.GetACValue("SkipIfNoComp");
+                    if (acValue != null)
+                    {
+                        return acValue.ParamAsBoolean;
+                    }
+                }
+                return false;
+            }
+        }
+
+        protected bool AutoAck
+        {
+            get
+            {
+                var method = MyConfiguration;
+                if (method != null)
+                {
+                    var acValue = method.ParameterValueList.GetACValue("AutoAck");
                     if (acValue != null)
                     {
                         return acValue.ParamAsBoolean;
@@ -87,6 +107,7 @@ namespace gipbakery.mes.processapplication
                 }
             }
         }
+
         #endregion
 
         #region Methods
@@ -153,7 +174,7 @@ namespace gipbakery.mes.processapplication
             _BoundCoverDownProperty = isCoverDown as IACContainerTNet<bool>;
             if (resetCover)
                 _BoundCoverDownProperty.ValueT = false;
-            else if (_BoundCoverDownProperty.ValueT)
+            else if (_BoundCoverDownProperty.ValueT || AutoAck)
             {
                 AckStart();
                 return;
@@ -228,6 +249,15 @@ namespace gipbakery.mes.processapplication
             if (xmlChild == null)
             {
                 xmlChild = doc.CreateElement("HasRunSomeDosings");
+                if (xmlChild != null)
+                    xmlChild.InnerText = HasRunSomeDosings.ToString();
+                xmlACPropertyList.AppendChild(xmlChild);
+            }
+
+            xmlChild = xmlACPropertyList["AutoAck"];
+            if (xmlChild == null)
+            {
+                xmlChild = doc.CreateElement("AutoAck");
                 if (xmlChild != null)
                     xmlChild.InnerText = HasRunSomeDosings.ToString();
                 xmlACPropertyList.AppendChild(xmlChild);
