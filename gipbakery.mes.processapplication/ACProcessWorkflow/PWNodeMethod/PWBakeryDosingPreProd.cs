@@ -349,12 +349,8 @@ namespace gipbakery.mes.processapplication
                             double dosingQuantity = relation.RemainingDosingQuantityUOM;
 
                             responsibleFunc = null;
-                            gip.core.datamodel.ACClassMethod refPAACClassMethod = null;
-                            using (ACMonitor.Lock(this.ContextLockForACClassWF))
-                            {
-                                refPAACClassMethod = this.ContentACClassWF.RefPAACClassMethod;
-                            }
-                            ACMethod acMethod = refPAACClassMethod.TypeACSignature();
+                            gip.core.datamodel.ACClassMethod refPAACClassMethod = this.RefACClassMethodOfContentWF;
+                            ACMethod acMethod = refPAACClassMethod?.TypeACSignature();
                             if (acMethod == null)
                             {
                                 //Error50154: acMethod is null.
