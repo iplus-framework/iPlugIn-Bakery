@@ -1637,6 +1637,18 @@ namespace gipbakery.mes.processapplication
 
                     if (intermediateManual != null)
                     {
+                        if (pos.TargetQuantityUOM > 0.00001)
+                        {
+                            var relation = batch?.ProdOrderPartslistPosRelation_ProdOrderBatch
+                                                 .FirstOrDefault(c => c.SourceProdOrderPartslistPosID == pos.ProdOrderPartslistPosID
+                                                                   && c.TargetProdOrderPartslistPos.MaterialID == intermediateManual.MaterialID);
+
+                            if (relation != null)
+                            {
+                                dryIceQ = dryIceQ + relation.TargetQuantityUOM;
+                            }
+                        }
+
                         AdjustBatchPosInProdOrderPartslist(dbApp, currentProdOrderPartslist, intermediateManual, pos, batch, dryIceQ, totalWatersQuantity);
                     }
                 }
