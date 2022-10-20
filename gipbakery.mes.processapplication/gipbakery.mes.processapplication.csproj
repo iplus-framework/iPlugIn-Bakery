@@ -1,0 +1,346 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProjectGuid>{558A996A-0AA2-402A-87D0-C6B8A0B1BA85}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>gipbakery.mes.processapplication</RootNamespace>
+    <AssemblyName>gipbakery.mes.processapplication</AssemblyName>
+    <TargetFrameworkVersion>v4.8</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+    <Deterministic>true</Deterministic>
+    <TargetFrameworkProfile />
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>..\bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <IPlusIncludeDir>..\..\..\trunk\iPlusMES\bin\Debug</IPlusIncludeDir>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>..\bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <IPlusIncludeDir>..\..\..\trunk\iPlusMES\bin\Release</IPlusIncludeDir>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="EntityFramework, Version=5.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\..\packages\EntityFramework.6.1.3\lib\net45\EntityFramework.dll</HintPath>
+    </Reference>
+    <Reference Include="PresentationCore" />
+    <Reference Include="PresentationFramework" />
+    <Reference Include="System" />
+    <Reference Include="System.ComponentModel.DataAnnotations" />
+    <Reference Include="System.Configuration" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.Data.Entity" />
+    <Reference Include="System.Drawing" />
+    <Reference Include="System.Runtime.Serialization" />
+    <Reference Include="System.Security" />
+    <Reference Include="System.Xaml" />
+    <Reference Include="System.Xml.Linq" />
+    <Reference Include="System.Data.DataSetExtensions" />
+    <Reference Include="Microsoft.CSharp" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Xml" />
+    <Reference Include="WindowsBase" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="ACProcessWorkflow\PWBakeryWaitWaterM.cs" />
+    <Compile Include="ACProcessWorkflow\PWBakeryEndOnTime.cs" />
+    <Compile Include="ACProcessWorkflow\PWBakeryGroupFermentation.cs" />
+    <Compile Include="ACProcessWorkflow\PWNodeMethod\PWBakeryCleaning.cs" />
+    <Compile Include="ACProcessWorkflow\PWNodeMethod\PWBakeryDischargingPreProd.cs" />
+    <Compile Include="ACProcessWorkflow\PWNodeMethod\PWBakeryDischargingSingleDos.cs" />
+    <Compile Include="ACProcessWorkflow\PWNodeMethod\PWBakeryDosing.cs" />
+    <Compile Include="ACProcessWorkflow\PWNodeMethod\PWBakeryDosingPreProd.cs" />
+    <Compile Include="ACProcessWorkflow\PWNodeMethod\PWBakeryFermentationStarter.cs" />
+    <Compile Include="ACProcessWorkflow\PWNodeMethod\PWBakeryYeastEmptyAck.cs" />
+    <Compile Include="ACProcessWorkflow\PWNodeMethod\PWBakeryManualWeighing.cs" />
+    <Compile Include="ACProcessWorkflow\PWNodeMethod\PWBakeryMixingPreProd.cs" />
+    <Compile Include="ACProcessWorkflow\PWNodeMethod\PWBakeryPumping.cs" />
+    <Compile Include="ACProcessWorkflow\PWNodeMethod\PWBakeryRecvPointReady.cs" />
+    <Compile Include="ACProcessWorkflow\PWNodeMethod\PWBakeryFlourDischargingAck.cs" />
+    <Compile Include="ACProcessWorkflow\PWNodeMethod\PWBakeryWorkKneading.cs" />
+    <Compile Include="ACProcessWorkflow\PWNodeMethod\PWBakeryWorkDecoring.cs" />
+    <Compile Include="ACProcessWorkflow\PWNodeMethod\PWBakeryWorkCartoning.cs" />
+    <Compile Include="ACProcessWorkflow\PWNodeMethod\PWBakeryWorkPacking.cs" />
+    <Compile Include="ACProcessWorkflow\PWNodeMethod\PWBakeryWorkFreezing.cs" />
+    <Compile Include="ACProcessWorkflow\PWNodeMethod\PWBakeryWorkBaking.cs" />
+    <Compile Include="ACProcessWorkflow\PWNodeMethod\PWBakeryWorkProofing.cs" />
+    <Compile Include="ACProcessWorkflow\PWNodeMethod\PWBakeryWorkForming.cs" />
+    <Compile Include="ACProcessWorkflow\PWNodeMethod\PWBakeryKneading.cs" />
+    <Compile Include="ACProcessWorkflow\PWNodeMethod\PWBakeryRisingTimer.cs" />
+    <Compile Include="ACProcessWorkflow\PWNodeMethod\PWBakeryTempCalc.cs" />
+    <Compile Include="BSO\BakeryBSOManualAddition.cs" />
+    <Compile Include="BSO\BakeryBSOManualWeighing.cs" />
+    <Compile Include="BSO\BakeryBSOMaterial.cs" />
+    <Compile Include="BSO\BakeryBSOPartslist.cs" />
+    <Compile Include="BSO\BakeryBSOSourDoughProducing.cs" />
+    <Compile Include="BSO\BakeryBSOTemperature.cs" />
+    <Compile Include="BSO\BakeryBSOWorkCenterSelector.cs" />
+    <Compile Include="BSO\BakeryBSOYeastProducing.cs" />
+    <Compile Include="Converter\BakeryFuncSerial2006Cleaning.cs" />
+    <Compile Include="Converter\BakeryFuncSerial2006Pumping.cs" />
+    <Compile Include="Helper\PWBakeryHelper.cs" />
+    <Compile Include="Model\BakeryCleanInfoItem.cs" />
+    <Compile Include="Model\BakeryRecvPointTemperature.cs" />
+    <Compile Include="Model\BakeryThermometerInfoItem.cs" />
+    <Compile Include="Model\MaterialTemperature.cs" />
+    <Compile Include="Model\MaterialTempMeasureItem.cs" />
+    <Compile Include="Model\TempMeasurementModeEnum.cs" />
+    <Compile Include="PAModules\PABakeryTempService.cs" />
+    <Compile Include="PAModules\PAEBakeryThermometer.cs" />
+    <Compile Include="PAProcessFunction\PAFBakeryCleaning.cs" />
+    <Compile Include="PAProcessFunction\PAFBakeryDosingFlour.cs" />
+    <Compile Include="PAProcessFunction\PAFBakeryDosingWater.cs" />
+    <Compile Include="PAProcessFunction\PAFBakeryManualAddition.cs" />
+    <Compile Include="PAProcessFunction\PAFBakeryManualWeighing.cs" />
+    <Compile Include="PAProcessFunction\PAFBakeryPumping.cs" />
+    <Compile Include="PAProcessFunction\PAFBakerySourDoughProducing.cs" />
+    <Compile Include="PAProcessFunction\PAFBakeryTempMeasuring.cs" />
+    <Compile Include="PAProcessFunction\PAFBakeryWorkBaking.cs" />
+    <Compile Include="PAProcessFunction\PAFBakeryWorkKneading.cs" />
+    <Compile Include="PAProcessFunction\PAFBakeryWorkDecoring.cs" />
+    <Compile Include="PAProcessFunction\PAFBakeryWorkCartoning.cs" />
+    <Compile Include="PAProcessFunction\PAFBakeryWorkProofing.cs" />
+    <Compile Include="PAProcessFunction\PAFBakeryWorkPacking.cs" />
+    <Compile Include="PAProcessFunction\PAFBakeryWorkFreezing.cs" />
+    <Compile Include="PAProcessFunction\PAFBakeryWorkForming.cs" />
+    <Compile Include="PAProcessFunction\PAFBakeryKneading.cs" />
+    <Compile Include="PAProcessFunction\PAFBakeryYeastProducing.cs" />
+    <Compile Include="PAProcessModules\BakeryFreezer.cs" />
+    <Compile Include="PAProcessModules\BakeryDecorStation.cs" />
+    <Compile Include="PAProcessModules\BakeryCartoner.cs" />
+    <Compile Include="PAProcessModules\BakeryIntermWaterTank.cs" />
+    <Compile Include="PAProcessModules\BakeryPacker.cs" />
+    <Compile Include="PAProcessModules\BakeryOven.cs" />
+    <Compile Include="PAProcessModules\BakeryDoughProofer.cs" />
+    <Compile Include="PAProcessModules\BakeryDoughFormer.cs" />
+    <Compile Include="PAProcessModules\BakeryDoughRiser.cs" />
+    <Compile Include="PAProcessModules\BakeryKneader.cs" />
+    <Compile Include="PAProcessModules\BakeryReceivingPoint.cs" />
+    <Compile Include="PAProcessModules\BakerySilo.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="TODO.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <Reference Include="gip.bso.iplus">
+      <HintPath>$(IPlusIncludeDir)\gip.bso.iplus.dll</HintPath>
+    </Reference>
+    <Reference Include="gip.core.autocomponent, Version=1.0.0.0, Culture=neutral, PublicKeyToken=12adb6357a02d860, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>$(IPlusIncludeDir)\gip.core.autocomponent.dll</HintPath>
+    </Reference>
+    <Reference Include="gip.core.communication">
+      <HintPath>$(IPlusIncludeDir)\gip.core.communication.dll</HintPath>
+    </Reference>
+    <Reference Include="gip.core.datamodel, Version=1.0.0.0, Culture=neutral, PublicKeyToken=12adb6357a02d860, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>$(IPlusIncludeDir)\gip.core.datamodel.dll</HintPath>
+    </Reference>
+    <Reference Include="gip.core.layoutengine, Version=1.0.0.0, Culture=neutral, PublicKeyToken=12adb6357a02d860, processorArchitecture=MSIL">
+      <HintPath>$(IPlusIncludeDir)\gip.core.layoutengine.dll</HintPath>
+    </Reference>
+    <Reference Include="gip.core.manager">
+      <HintPath>$(IPlusIncludeDir)\gip.core.manager.dll</HintPath>
+    </Reference>
+    <Reference Include="gip.core.processapplication">
+      <HintPath>$(IPlusIncludeDir)\gip.core.processapplication.dll</HintPath>
+    </Reference>
+    <Reference Include="gip.bso.facility">
+      <HintPath>$(IPlusIncludeDir)\gip.bso.facility.dll</HintPath>
+    </Reference>
+    <Reference Include="gip.bso.manufacturing">
+      <HintPath>$(IPlusIncludeDir)\gip.bso.manufacturing.dll</HintPath>
+    </Reference>
+    <Reference Include="gip.bso.masterdata">
+      <HintPath>$(IPlusIncludeDir)\gip.bso.masterdata.dll</HintPath>
+    </Reference>
+    <Reference Include="gip.bso.purchasing">
+      <HintPath>$(IPlusIncludeDir)\gip.bso.purchasing.dll</HintPath>
+    </Reference>
+    <Reference Include="gip.mes.autocomponent">
+      <HintPath>$(IPlusIncludeDir)\gip.mes.autocomponent.dll</HintPath>
+    </Reference>
+    <Reference Include="gip.mes.datamodel">
+      <HintPath>$(IPlusIncludeDir)\gip.mes.datamodel.dll</HintPath>
+    </Reference>
+    <Reference Include="gip.mes.facility">
+      <HintPath>$(IPlusIncludeDir)\gip.mes.facility.dll</HintPath>
+    </Reference>
+    <Reference Include="gip.mes.manager">
+      <HintPath>$(IPlusIncludeDir)\gip.mes.manager.dll</HintPath>
+    </Reference>
+    <Reference Include="gip.mes.processapplication">
+      <HintPath>$(IPlusIncludeDir)\gip.mes.processapplication.dll</HintPath>
+    </Reference>
+    <Reference Include="gip.mes.processapplication">
+      <HintPath>$(IPlusIncludeDir)\gip2006.variobatch.processapplication.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+  <ItemGroup />
+  <ItemGroup>
+    <None Include="VBControlScripts\2021-05-07 13-32_ihrastinski.zip">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="VBControlScripts\2021-07-02 23-01_ihrastinski.zip">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="VBControlScripts\2021-07-02 23-19_ihrastinski.zip">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="VBControlScripts\2021-07-03 17-54_ihrastinski.zip">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="VBControlScripts\2021-07-28 12-42_ihrastinski.zip">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="VBControlScripts\2021-07-28 12-44_ihrastinski.zip">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="VBControlScripts\2021-08-09 15-10_ihrastinski.zip">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="VBControlScripts\2021-08-16 08-45_ihrastinski.zip">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="VBControlScripts\2021-08-26 22-51_ihrastinski.zip">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="VBControlScripts\2021-08-28 09-59_dlisak.zip">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="VBControlScripts\2021-08-29 16-28_ihrastinski.zip">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="VBControlScripts\2021-08-29 16-32_ihrastinski.zip">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="VBControlScripts\2021-09-03 10-07_ihrastinski.zip">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="VBControlScripts\2021-09-15 11-01_ihrastinski.zip">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="VBControlScripts\2021-09-16 14-47_ihrastinski.zip">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="VBControlScripts\2021-09-19 15-54_dlisak.zip">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="VBControlScripts\2021-09-23 14-08_ihrastinski.zip">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="VBControlScripts\2021-09-24 09-23_ihrastinski.zip">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="VBControlScripts\2021-09-27 10-28_ihrastinski.zip">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="VBControlScripts\2021-10-24 22-16_ihrastinski.zip">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="VBControlScripts\2021-10-27 13-33_ihrastinski.zip">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="VBControlScripts\2021-10-27 13-34_ihrastinski.zip">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="VBControlScripts\2021-11-01 21-22_ihrastinski.zip">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="VBControlScripts\2021-11-07 09-25_ihrastinski.zip">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="VBControlScripts\2021-11-08 13-00_ihrastinski.zip">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="VBControlScripts\2021-11-09 12-54_ihrastinski.zip">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="VBControlScripts\2021-11-09 13-13_ihrastinski.zip">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="VBControlScripts\2021-11-11 14-04_ihrastinski.zip">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="VBControlScripts\2021-11-14 19-19_dlisak.zip">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="VBControlScripts\2021-11-23 11-14_ihrastinski.zip">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="VBControlScripts\2022-01-28 08-56_ihrastinski.zip">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="VBControlScripts\2022-02-04 08-36_dlisak.zip">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="VBControlScripts\2022-02-08 22-38_ihrastinski.zip">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="VBControlScripts\2022-02-18 13-33_ihrastinski.zip">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="VBControlScripts\2022-03-05 22-14_dlisak.zip">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="VBControlScripts\2022-03-08 15-44_ihrastinski.zip">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="VBControlScripts\2022-03-14 22-59_dlisak.zip">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="VBControlScripts\2022-03-18 11-58_aagincic.zip">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="VBControlScripts\2022-03-22 16-21_ihrastinski.zip">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="VBControlScripts\2022-04-04 12-11_dlisak.zip">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="VBControlScripts\2022-04-14 14-00_ihrastinski.zip">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="VBControlScripts\2022-04-20 15-52_ihrastinski.zip">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="VBControlScripts\2022-05-20 08-37_ihrastinski.zip">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="VBControlScripts\2022-05-25 07-57_dlisak.zip">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="VBControlScripts\2022-06-01 17-21_ihrastinski.zip">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="VBControlScripts\2022-06-10 12-03_aagincic.zip">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="VBControlScripts\2022-06-10 15-50_ihrastinski.zip">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="VBControlScripts\2022-06-22 23-08_ihrastinski.zip">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="VBControlScripts\2022-07-06 14-25_ihrastinski.zip">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+</Project>
