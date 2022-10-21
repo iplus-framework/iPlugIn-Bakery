@@ -1,13 +1,7 @@
 ﻿using gip.core.autocomponent;
 using gip.core.datamodel;
-using gip.mes.facility;
 using gip.mes.processapplication;
-using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Xml;
 
 namespace gipbakery.mes.processapplication
 {
