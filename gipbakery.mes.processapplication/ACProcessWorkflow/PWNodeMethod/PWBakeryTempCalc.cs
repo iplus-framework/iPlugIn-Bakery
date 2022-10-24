@@ -765,7 +765,7 @@ namespace gipbakery.mes.processapplication
                     saveChanges = true;
                 }
 
-                if (iceComp != null && iceComp.TargetQuantity > 0)
+                if (iceComp != null && iceComp.TargetQuantity > 0 && IterationCount.ValueT > 0)
                 {
                     waterTargetQuantity += iceComp.TargetQuantity;
                     iceComp.TargetQuantity = 0;
