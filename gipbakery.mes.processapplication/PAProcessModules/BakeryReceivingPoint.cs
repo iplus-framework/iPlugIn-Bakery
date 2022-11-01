@@ -71,10 +71,10 @@ namespace gipbakery.mes.processapplication
 
                     if (routeResult != null && routeResult.Routes != null)
                     {
-                        var result = routeResult.Components.FirstOrDefault();
+                        var result = routeResult.Routes.FirstOrDefault()?.GetRouteSource()?.SourceACComponent;
                         if (result != null)
                         {
-                            WaterTankACUrl.ValueT = result.ValueT.ACUrl;
+                            WaterTankACUrl.ValueT = result.ACUrl;
                         }
                     }
                 }
