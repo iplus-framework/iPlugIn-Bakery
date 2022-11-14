@@ -800,7 +800,7 @@ namespace gipbakery.mes.processapplication
                 double componentsQ = 0;
 
                 if (!UseWaterTemp)
-                    componentsQ = CalculateComponents_Q_(recvPoint, kneedingRiseTemperature, relations, _ColdWaterMaterialNo, _CityWaterMaterialNo, _WarmWaterMaterialNo, dryIce, compTemps);
+                    componentsQ = CalculateComponents_Q_(recvPoint, doughTargetTempBeforeKneeding, relations, _ColdWaterMaterialNo, _CityWaterMaterialNo, _WarmWaterMaterialNo, dryIce, compTemps);
 
                 bool isOnlyWaterCompsInPartslist = relations.Count() == 1 && relations.FirstOrDefault(c => c.SourceProdOrderPartslistPos.Material.MaterialNo == _CityWaterMaterialNo) != null;
 
