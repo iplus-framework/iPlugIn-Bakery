@@ -60,6 +60,7 @@
     <Compile Include="ACProcessWorkflow\PWBakeryWaitWaterM.cs" />
     <Compile Include="ACProcessWorkflow\PWBakeryEndOnTime.cs" />
     <Compile Include="ACProcessWorkflow\PWBakeryGroupFermentation.cs" />
+    <Compile Include="ACProcessWorkflow\PWNodeMethod\PWBakeryWorkTask.cs" />
     <Compile Include="ACProcessWorkflow\PWNodeMethod\PWBakeryCleaning.cs" />
     <Compile Include="ACProcessWorkflow\PWNodeMethod\PWBakeryDischargingPreProd.cs" />
     <Compile Include="ACProcessWorkflow\PWNodeMethod\PWBakeryDischargingSingleDos.cs" />
@@ -93,7 +94,6 @@
     <Compile Include="BSO\BakeryBSOYeastProducing.cs" />
     <Compile Include="Converter\BakeryFuncSerial2006Cleaning.cs" />
     <Compile Include="Converter\BakeryFuncSerial2006Pumping.cs" />
-    <Compile Include="Helper\PWBakeryHelper.cs" />
     <Compile Include="Model\BakeryCleanInfoItem.cs" />
     <Compile Include="Model\BakeryRecvPointTemperature.cs" />
     <Compile Include="Model\BakeryThermometerInfoItem.cs" />
@@ -192,7 +192,9 @@
       <HintPath>$(IPlusIncludeDir)\gip2006.variobatch.processapplication.dll</HintPath>
     </Reference>
   </ItemGroup>
-  <ItemGroup />
+  <ItemGroup>
+    <Folder Include="Helper\" />
+  </ItemGroup>
   <ItemGroup>
     <None Include="VBControlScripts\2021-05-07 13-32_ihrastinski.zip">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>

@@ -12,7 +12,7 @@ using System.Xml;
 namespace gipbakery.mes.processapplication
 {
     [ACClassInfo(Const.PackName_VarioAutomation, "en{'Cartoning'}de{'Kartonieren'}", Global.ACKinds.TPWNodeMethod, Global.ACStorableTypes.Optional, false, PWMethodVBBase.PWClassName, true)]
-    public class PWBakeryWorkCartoning : PWWorkTaskScanBase
+    public class PWBakeryWorkCartoning : PWBakeryWorkTask
     {
         new public const string PWClassName = nameof(PWBakeryWorkCartoning);
 
@@ -20,15 +20,10 @@ namespace gipbakery.mes.processapplication
 
         static PWBakeryWorkCartoning()
         {
-            ACMethod method;
-            method = new ACMethod(ACStateConst.SMStarting);
-            Dictionary<string, string> paramTranslation = new Dictionary<string, string>();
-
-            PWBakeryHelper.AddDefaultWorkParameters(method, paramTranslation);
-
-            var wrapper = new ACMethodWrapper(method, "en{'Configuration'}de{'Konfiguration'}", typeof(PWBakeryWorkCartoning), paramTranslation, null);
-            ACMethod.RegisterVirtualMethod(typeof(PWBakeryWorkCartoning), ACStateConst.SMStarting, wrapper);
-            RegisterExecuteHandler(typeof(PWBakeryWorkCartoning), HandleExecuteACMethod_PWBakeryWorkCartoning);
+            Type thisType = typeof(PWBakeryWorkCartoning);
+            ACMethodWrapper wrapper = PWBakeryWorkTask.CreateACMethodWrapper(thisType);
+            ACMethod.RegisterVirtualMethod(thisType, ACStateConst.SMStarting, wrapper);
+            RegisterExecuteHandler(thisType, HandleExecuteACMethod_PWBakeryWorkCartoning);
         }
 
         public PWBakeryWorkCartoning(gip.core.datamodel.ACClass acType, IACObject content, IACObject parentACObject, ACValueList parameter, string acIdentifier = "")
@@ -60,7 +55,7 @@ namespace gipbakery.mes.processapplication
 
         public static bool HandleExecuteACMethod_PWBakeryWorkCartoning(out object result, IACComponent acComponent, string acMethodName, gip.core.datamodel.ACClassMethod acClassMethod, params object[] acParameter)
         {
-            return HandleExecuteACMethod_PWWorkTaskScanBase(out result, acComponent, acMethodName, acClassMethod, acParameter);
+            return HandleExecuteACMethod_PWBakeryWorkTask(out result, acComponent, acMethodName, acClassMethod, acParameter);
         }
         #endregion
 

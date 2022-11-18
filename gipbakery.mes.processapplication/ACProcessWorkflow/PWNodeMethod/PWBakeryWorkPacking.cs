@@ -1,28 +1,24 @@
 ﻿using gip.core.autocomponent;
 using gip.core.datamodel;
 using gip.mes.processapplication;
+using System;
 using System.Collections.Generic;
 
 namespace gipbakery.mes.processapplication
 {
     [ACClassInfo(Const.PackName_VarioAutomation, "en{'Packing'}de{'Verpacken'}", Global.ACKinds.TPWNodeMethod, Global.ACStorableTypes.Optional, false, PWMethodVBBase.PWClassName, true)]
-    public class PWBakeryWorkPacking : PWWorkTaskScanBase
+    public class PWBakeryWorkPacking : PWBakeryWorkTask
     {
-        new public const string PWClassName = "PWBakeryWorkPacking";
+        new public const string PWClassName = nameof(PWBakeryWorkPacking);
 
         #region Constructors
 
         static PWBakeryWorkPacking()
         {
-            ACMethod method;
-            method = new ACMethod(ACStateConst.SMStarting);
-            Dictionary<string, string> paramTranslation = new Dictionary<string, string>();
-
-            PWBakeryHelper.AddDefaultWorkParameters(method, paramTranslation);
-
-            var wrapper = new ACMethodWrapper(method, "en{'Configuration'}de{'Konfiguration'}", typeof(PWBakeryWorkPacking), paramTranslation, null);
-            ACMethod.RegisterVirtualMethod(typeof(PWBakeryWorkPacking), ACStateConst.SMStarting, wrapper);
-            RegisterExecuteHandler(typeof(PWBakeryWorkPacking), HandleExecuteACMethod_PWBakeryWorkPacking);
+            Type thisType = typeof(PWBakeryWorkPacking);
+            ACMethodWrapper wrapper = PWBakeryWorkTask.CreateACMethodWrapper(thisType);
+            ACMethod.RegisterVirtualMethod(thisType, ACStateConst.SMStarting, wrapper);
+            RegisterExecuteHandler(thisType, HandleExecuteACMethod_PWBakeryWorkPacking);
         }
 
         public PWBakeryWorkPacking(gip.core.datamodel.ACClass acType, IACObject content, IACObject parentACObject, ACValueList parameter, string acIdentifier = "")
@@ -54,7 +50,7 @@ namespace gipbakery.mes.processapplication
 
         public static bool HandleExecuteACMethod_PWBakeryWorkPacking(out object result, IACComponent acComponent, string acMethodName, gip.core.datamodel.ACClassMethod acClassMethod, params object[] acParameter)
         {
-            return HandleExecuteACMethod_PWWorkTaskScanBase(out result, acComponent, acMethodName, acClassMethod, acParameter);
+            return HandleExecuteACMethod_PWBakeryWorkTask(out result, acComponent, acMethodName, acClassMethod, acParameter);
         }
         #endregion
 

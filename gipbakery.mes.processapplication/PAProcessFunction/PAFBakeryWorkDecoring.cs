@@ -11,7 +11,7 @@ using System.Threading.Tasks;
 namespace gipbakery.mes.processapplication
 {
     [ACClassInfo(Const.PackName_VarioAutomation, "en{'Decoration'}de{'Dekorieren'}", Global.ACKinds.TPAProcessFunction, Global.ACStorableTypes.Required, false, PWBakeryWorkDecoring.PWClassName, true)]
-    public class PAFBakeryWorkDecoring : PAFWorkTaskScanBase
+    public class PAFBakeryWorkDecoring : PAFWorkTaskGeneric
     {
         #region Constructors
 

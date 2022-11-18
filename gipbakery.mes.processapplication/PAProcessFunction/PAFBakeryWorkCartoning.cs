@@ -10,7 +10,7 @@ using System.Threading.Tasks;
 namespace gipbakery.mes.processapplication
 {
     [ACClassInfo(Const.PackName_VarioAutomation, "en{'Cartoning'}de{'Kartonieren'}", Global.ACKinds.TPAProcessFunction, Global.ACStorableTypes.Required, false, PWBakeryWorkCartoning.PWClassName, true)]
-    public class PAFBakeryWorkCartoning : PAFWorkTaskScanBase
+    public class PAFBakeryWorkCartoning : PAFWorkTaskGeneric
     {
         #region Constructors
 

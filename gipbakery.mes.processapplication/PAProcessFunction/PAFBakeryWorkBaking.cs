@@ -10,7 +10,7 @@ using System.Threading.Tasks;
 namespace gipbakery.mes.processapplication
 {
     [ACClassInfo(Const.PackName_VarioAutomation, "en{'Backen'}de{'Backen'}", Global.ACKinds.TPAProcessFunction, Global.ACStorableTypes.Required, false, PWBakeryWorkBaking.PWClassName, true)] // , BSOConfig = "BSOBakeryWorkBaking"
-    public class PAFBakeryWorkBaking : PAFWorkTaskScanBase
+    public class PAFBakeryWorkBaking : PAFWorkTaskGeneric
     {
         #region Constructors
 

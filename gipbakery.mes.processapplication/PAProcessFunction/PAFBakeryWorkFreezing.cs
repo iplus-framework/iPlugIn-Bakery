@@ -10,7 +10,7 @@ using System.Threading.Tasks;
 namespace gipbakery.mes.processapplication
 {
     [ACClassInfo(Const.PackName_VarioAutomation, "en{'Freezing'}de{'Schockfrosten'}", Global.ACKinds.TPAProcessFunction, Global.ACStorableTypes.Required, false, PWBakeryWorkFreezing.PWClassName, true)]
-    public class PAFBakeryWorkFreezing : PAFWorkTaskScanBase
+    public class PAFBakeryWorkFreezing : PAFWorkTaskGeneric
     {
         #region Constructors
 
