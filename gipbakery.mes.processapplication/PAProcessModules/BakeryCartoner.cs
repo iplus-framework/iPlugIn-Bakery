@@ -67,6 +67,15 @@ namespace gipbakery.mes.processapplication
         }
         #endregion
 
+        #region Property
+        [ACPropertyInfo(400, "Configuration", "en{''New output lot on lot change main component'}de{'Neue Ausgangscharge bei Chargenwechsel Hauptkomponente'}", "", true)]
+        public bool NewOutputLotOnLotChange
+        {
+            get;
+            set;
+        }
+        #endregion
+
 
         #region Execute-Helper-Handlers
         public static bool HandleExecuteACMethod_BakeryCartoner(out object result, IACComponent acComponent, string acMethodName, gip.core.datamodel.ACClassMethod acClassMethod, params object[] acParameter)

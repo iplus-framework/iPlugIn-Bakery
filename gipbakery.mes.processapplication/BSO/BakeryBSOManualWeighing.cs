@@ -1108,7 +1108,7 @@ namespace gipbakery.mes.processapplication
                             ACClass waterTank = db.ACClass.FirstOrDefault(c => c.ACURLComponentCached == acUrl);
 
                             double maxWeight = 0;
-                            ACClassProperty maxWeightProp = waterTank.GetProperty(PAProcessModule.PropNameMaxWeightCapacity);
+                            ACClassProperty maxWeightProp = waterTank.GetProperty(nameof(PAProcessModule.MaxWeightCapacity));
                             if (maxWeightProp != null && maxWeightProp.Value != null && maxWeightProp.Value is string)
                                 maxWeight = (double)ACConvert.ChangeType(maxWeightProp.Value as string, typeof(double), true, db);
 
