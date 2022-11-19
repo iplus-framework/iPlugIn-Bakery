@@ -1,4 +1,5 @@
-﻿using gip.core.datamodel;
+﻿using gip.core.autocomponent;
+using gip.core.datamodel;
 using gip.mes.processapplication;
 using System.Xml;
 
@@ -28,6 +29,28 @@ namespace gipbakery.mes.processapplication
         #endregion
 
         #region Methods
+
+        public override void SMStarting()
+        {
+            PWGroup group = ParentPWGroup;
+            if (group != null)
+            {
+                var processModule = group.AccessedProcessModule;
+
+                if (processModule != null && processModule is BakeryIntermWaterTank)
+                {
+                    PWMethodRelocation pwMethodRelocation = ParentPWMethod<PWMethodRelocation>();
+
+                    bool? isLastItem = PWBakeryTempCalc.IsLastItemForDosingInPicking(pwMethodRelocation);
+                    if (isLastItem.HasValue && !isLastItem.Value)
+                    {
+                        CurrentACState = ACStateEnum.SMCompleted;
+                    }
+                }
+            }
+
+            base.SMStarting();
+        }
 
         public override bool GetConfigForACMethod(ACMethod paramMethod, bool isForPAF, params object[] acParameter)
         {

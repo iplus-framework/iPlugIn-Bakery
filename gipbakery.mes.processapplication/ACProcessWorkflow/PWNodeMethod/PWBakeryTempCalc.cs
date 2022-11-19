@@ -2524,10 +2524,16 @@ namespace gipbakery.mes.processapplication
         public bool? IsFirstItemForDosingInPicking()
         {
             PWMethodRelocation pwMethodRelocation = ParentPWMethod<PWMethodRelocation>();
+            return IsFirstItemForDosingInPicking(pwMethodRelocation);
+
+        }
+
+        public static bool? IsFirstItemForDosingInPicking(PWMethodRelocation pwMethodRelocation)
+        {
             if (pwMethodRelocation == null)
                 return null;
 
-            using(DatabaseApp dbApp = new DatabaseApp())
+            using (DatabaseApp dbApp = new DatabaseApp())
             {
                 Picking picking = pwMethodRelocation.CurrentPicking.FromAppContext<Picking>(dbApp);
 
@@ -2544,6 +2550,11 @@ namespace gipbakery.mes.processapplication
         public bool? IsLastItemForDosingInPicking()
         {
             PWMethodRelocation pwMethodRelocation = ParentPWMethod<PWMethodRelocation>();
+            return IsLastItemForDosingInPicking(pwMethodRelocation);
+        }
+
+        public static bool? IsLastItemForDosingInPicking(PWMethodRelocation pwMethodRelocation)
+        {
             if (pwMethodRelocation == null)
                 return null;
 
