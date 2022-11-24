@@ -28,9 +28,16 @@ namespace gipbakery.mes.processapplication
 
         public override bool ACInit(Global.ACStartTypes startChildMode = Global.ACStartTypes.Automatic)
         {
+            _SemaphoreCapacity = new ACPropertyConfigValue<uint>(this, nameof(SemaphoreCapacity), 0);
             if (!base.ACInit(startChildMode))
                 return false;
             return true;
+        }
+
+        public override bool ACPostInit()
+        {
+            _ = SemaphoreCapacity;
+            return base.ACPostInit();
         }
 
         public override bool ACDeInit(bool deleteACClassTask = false)
@@ -40,7 +47,7 @@ namespace gipbakery.mes.processapplication
 
         public override uint OnGetSemaphoreCapacity()
         {
-            return 0; // Infinite
+            return SemaphoreCapacity; // Infinite
         }
         #endregion
 
@@ -91,6 +98,15 @@ namespace gipbakery.mes.processapplication
 
         [ACPropertyBindingTarget(205, "Read from PLC", "en{'Activate Counter'}de{'Zähler aktivieren'}", "", false, false)]
         public IACContainerTNet<bool> ActivateCounter { get; set; }
+
+
+        private ACPropertyConfigValue<uint> _SemaphoreCapacity;
+        [ACPropertyConfig("en{'Simultenous orders'}de{'Anzahl gleichzeitiger Aufträge'}")]
+        public uint SemaphoreCapacity
+        {
+            get { return _SemaphoreCapacity.ValueT; }
+            set { _SemaphoreCapacity.ValueT = value; }
+        }
 
         #endregion
 
