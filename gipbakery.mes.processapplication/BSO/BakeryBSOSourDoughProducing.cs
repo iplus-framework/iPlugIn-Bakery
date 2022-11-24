@@ -561,25 +561,25 @@ namespace gipbakery.mes.processapplication
             }
         }
 
-        [ACMethodInfo("","en{'Acknowledge - Start'}de{'Quittieren - Start'}",800, true)]
-        public override void Acknowledge()
-        {
-            IACComponentPWNode fermentationStarter = null;
+        //[ACMethodInfo("","en{'Acknowledge - Start'}de{'Quittieren - Start'}",800, true)]
+        //public override void Acknowledge()
+        //{
+        //    IACComponentPWNode fermentationStarter = null;
 
-            using (ACMonitor.Lock(_70100_MembersLock))
-            {
-                fermentationStarter = FermentationStarterRef?.ValueT;
-            }
+        //    using (ACMonitor.Lock(_70100_MembersLock))
+        //    {
+        //        fermentationStarter = FermentationStarterRef?.ValueT;
+        //    }
 
-            if (fermentationStarter != null )
-            {
-                MessageItem msgItem = MessagesList.FirstOrDefault(c => c.UserAckPWNode != null && c.UserAckPWNode.ValueT == fermentationStarter);
-                if (msgItem != null)
-                {
-                    fermentationStarter.ExecuteMethod(nameof(PWBakeryFermentationStarter.AckFermentationStarter));
-                }
-            }
-        }
+        //    if (fermentationStarter != null )
+        //    {
+        //        MessageItem msgItem = MessagesList.FirstOrDefault(c => c.UserAckPWNode != null && c.UserAckPWNode.ValueT == fermentationStarter);
+        //        if (msgItem != null)
+        //        {
+        //            fermentationStarter.ExecuteMethod(nameof(PWBakeryFermentationStarter.AckFermentationStarter));
+        //        }
+        //    }
+        //}
 
         protected override bool HandleExecuteACMethod(out object result, AsyncMethodInvocationMode invocationMode, string acMethodName, gip.core.datamodel.ACClassMethod acClassMethod, params object[] acParameter)
         {
