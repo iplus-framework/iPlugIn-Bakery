@@ -54,7 +54,9 @@ namespace gipbakery.mes.processapplication
         protected override CompleteResult AnalyzeACMethodResult(ACMethod acMethod, out MsgWithDetails msg, CompleteResult completeResult)
         {
             var packMachine = ParentACComponent as BakeryPackMachine;
-            if (acMethod.ResultValueList != null && packMachine != null)
+            if (acMethod != null 
+                && acMethod.ResultValueList != null 
+                && packMachine != null)
             {
                 var acValue = acMethod.ResultValueList.GetACValue("CountedPieces");
                 if (acValue != null)
