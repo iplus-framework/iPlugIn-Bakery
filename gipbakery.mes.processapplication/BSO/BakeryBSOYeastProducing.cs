@@ -377,6 +377,13 @@ namespace gipbakery.mes.processapplication
 
         public bool FinishOrderOnPumping { get; set; }
 
+        [ACPropertyInfo(9999, "", "en{'Movement reason MD key on empty silo'}de{'Bewegungsgrund MD-Schlüssel auf leerem Silo'}", IsPersistable = true)]
+        public string MovementReasonMDKeyOnEmptySilo
+        {
+            get;
+            set;
+        }
+
         #region Properties => Clean
 
         [ACPropertySelected(860, "CleanItem")]
@@ -1719,6 +1726,14 @@ namespace gipbakery.mes.processapplication
             CleanNotAvailableBookData();
             CurrentBookParamNotAvailableSilo.InwardFacility = targetFacility;
             CurrentBookParamNotAvailableSilo.MDZeroStockState = MDZeroStockState.DefaultMDZeroStockState(dbApp, MDZeroStockState.ZeroStockStates.BookToZeroStock);
+
+            if (!string.IsNullOrEmpty(MovementReasonMDKeyOnEmptySilo))
+            {
+                MDMovementReason movementReason = dbApp.MDMovementReason.FirstOrDefault(c => c.MDKey == MovementReasonMDKeyOnEmptySilo);
+                if (movementReason != null)
+                    CurrentBookParamNotAvailableSilo.MDMovementReason = movementReason;
+            }
+
             ACMethodEventArgs result = ACFacilityManager.BookFacility(CurrentBookParamNotAvailableSilo, dbApp) as ACMethodEventArgs;
             if (!CurrentBookParamNotAvailableSilo.ValidMessage.IsSucceded() || CurrentBookParamNotAvailableSilo.ValidMessage.HasWarnings())
             {
