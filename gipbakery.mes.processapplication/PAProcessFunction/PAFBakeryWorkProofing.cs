@@ -77,7 +77,7 @@ namespace gipbakery.mes.processapplication
             return base.Start(acMethod);
         }
 
-        protected static ACMethodWrapper CreateVirtualMethod(string acIdentifier, string captionTranslation, Type pwClass)
+        protected static new ACMethodWrapper CreateVirtualMethod(string acIdentifier, string captionTranslation, Type pwClass)
         {
             ACMethod method = new ACMethod(acIdentifier);
             Dictionary<string, string> paramTranslation = new Dictionary<string, string>();
