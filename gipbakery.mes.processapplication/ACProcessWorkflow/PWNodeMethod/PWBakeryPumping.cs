@@ -6,6 +6,7 @@ using gip.mes.facility;
 using gip.mes.processapplication;
 using System;
 using System.Collections.Generic;
+using System.IO.Packaging;
 using System.Linq;
 using System.Xml;
 
@@ -28,6 +29,9 @@ namespace gipbakery.mes.processapplication
             method.ParameterValueList.Add(new ACValue("RelocateToFinalDest", typeof(bool), false, Global.ParamOption.Required));
             paramTranslation.Add("RelocateToFinalDest", "en{'Post quant into virtual destination bin'}de{'Quant direkt in virtuellen Zielbehälter umbuchen'}");
 
+            method.ParameterValueList.Add(new ACValue("PreventPumpAtProd", typeof(bool), true, Global.ParamOption.Optional));
+            paramTranslation.Add("PreventPumpAtProd", "en{'No pumping during production'}de{'Kein Umpumpen während der Produktion'}");
+
             var wrapper = new ACMethodWrapper(method, "en{'Configuration'}de{'Konfiguration'}", typeof(PWBakeryPumping), paramTranslation, null);
             ACMethod.RegisterVirtualMethod(typeof(PWBakeryPumping), ACStateConst.SMStarting, wrapper);
             RegisterExecuteHandler(typeof(PWBakeryPumping), HandleExecuteACMethod_PWBakeryPumping);
@@ -45,6 +49,11 @@ namespace gipbakery.mes.processapplication
                 _TargetScale.Detach();
                 _TargetScale = null;
             }
+            if (_SourceModuleRef != null)
+            {
+                _SourceModuleRef.Detach();
+                _SourceModuleRef = null;
+            }
 
             return base.ACDeInit(deleteACClassTask);
         }
@@ -56,7 +65,11 @@ namespace gipbakery.mes.processapplication
                 _TargetScale.Detach();
                 _TargetScale = null;
             }
-
+            if (_SourceModuleRef != null)
+            {
+                _SourceModuleRef.Detach();
+                _SourceModuleRef = null;
+            }
             base.Recycle(content, parentACObject, parameter, acIdentifier);
         }
 
@@ -121,6 +134,44 @@ namespace gipbakery.mes.processapplication
             }
         }
 
+        public bool PreventPumpAtProd
+        {
+            get
+            {
+                var method = MyConfiguration;
+                if (method != null)
+                {
+                    var acValue = method.ParameterValueList.GetACValue("PreventPumpAtProd");
+                    if (acValue != null)
+                    {
+                        return acValue.ParamAsBoolean;
+                    }
+                }
+                return true;
+            }
+        }
+
+        ACRef<PAProcessModule> _SourceModuleRef;
+        protected PAProcessModule SourceModule
+        {
+            get
+            {
+                if (_SourceModuleRef != null)
+                    return _SourceModuleRef.ValueT;
+                if (ParentPWGroup == null || ParentPWGroup.AccessedProcessModule == null)
+                    return null;
+                string thisPumpGroup = ParentPWGroup.AccessedProcessModule.GetACUrl();
+                PAFBakeryYeastProducing pafYProd = ApplicationManager.FindChildComponents<PAFBakeryYeastProducing>(c => c is PAFBakeryYeastProducing && (c as PAFBakeryYeastProducing).PumpOverProcessModuleACUrl == thisPumpGroup).FirstOrDefault();
+                if (pafYProd == null)
+                    return null;
+                PAProcessModule yeast = pafYProd.ParentACComponent as PAProcessModule;
+                if (yeast == null)
+                    return null;
+                _SourceModuleRef = new ACRef<PAProcessModule>(yeast, this);
+                return yeast;
+            }
+        }
+
         #endregion
 
         #region Methods
@@ -128,7 +179,31 @@ namespace gipbakery.mes.processapplication
         [ACMethodState("en{'Executing'}de{'Ausführend'}", 20, true)]
         public override void SMStarting()
         {
-            base.SMStarting();
+            if (PreventPumpAtProd)
+            {
+                bool canStartPump = true;
+                PAProcessModule sourceModule = SourceModule;
+                if (sourceModule != null)
+                {
+                    canStartPump = string.IsNullOrEmpty(sourceModule.OrderInfo.ValueT);
+                    if (!canStartPump)
+                    {
+                        PAFDischarging pafDis = sourceModule.FindChildComponents<PAFDischarging>(c => c is PAFDischarging).FirstOrDefault();
+                        if (pafDis == null || pafDis.CurrentACState != ACStateEnum.SMIdle)
+                            canStartPump = true;
+                    }
+                }
+                // Wait
+                if (!canStartPump)
+                {
+                    SubscribeToProjectWorkCycle();
+                    return;
+                }
+                else
+                    base.SMStarting();
+            }
+            else
+                base.SMStarting();
         }
 
         public override void SMIdle()
