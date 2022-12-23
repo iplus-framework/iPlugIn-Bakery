@@ -30,6 +30,9 @@ namespace gipbakery.mes.processapplication
             method.ParameterValueList.Add(new ACValue("SkipToleranceCheck", typeof(bool), false, Global.ParamOption.Optional));
             paramTranslation.Add("SkipToleranceCheck", "en{'Skip tolerance check'}de{'Toleranzprüfung überspringen'}");
 
+            method.ParameterValueList.Add(new ACValue("CheckIsPumpingActive", typeof(bool), false, Global.ParamOption.Optional));
+            paramTranslation.Add("CheckIsPumpingActive", "en{'Check is pumpover active'}de{'Prüfen, ob das Umpumpen aktiv ist'}");
+
             var wrapper = new ACMethodWrapper(method, "en{'Fermentation starter'}de{'Anstellgut'}", typeof(PWBakeryFermentationStarter), paramTranslation, null);
             ACMethod.RegisterVirtualMethod(typeof(PWBakeryFermentationStarter), ACStateConst.SMStarting, wrapper);
             RegisterExecuteHandler(typeof(PWBakeryFermentationStarter), HandleExecuteACMethod_PWBakeryFermentationStarter);
@@ -66,6 +69,7 @@ namespace gipbakery.mes.processapplication
             StoredScaleValue = 0;
             FSTargetQuantity.ValueT = null;
             CurrentProdOrderPartslistRel = null;
+            _IsCheckedIsPumpOverActive = false;
         }
 
         public const string PWClassName = nameof(PWBakeryFermentationStarter);
@@ -100,6 +104,24 @@ namespace gipbakery.mes.processapplication
                 if (method != null)
                 {
                     var acValue = method.ParameterValueList.GetACValue("SkipToleranceCheck");
+                    if (acValue != null)
+                    {
+                        if (acValue.Value != null)
+                            return acValue.ParamAsBoolean;
+                    }
+                }
+                return false;
+            }
+        }
+
+        public bool CheckIsPumpingActive
+        {
+            get
+            {
+                var method = MyConfiguration;
+                if (method != null)
+                {
+                    var acValue = method.ParameterValueList.GetACValue("CheckIsPumpingActive");
                     if (acValue != null)
                     {
                         if (acValue.Value != null)
@@ -161,6 +183,8 @@ namespace gipbakery.mes.processapplication
         private ScaleDetectModeEnum _ScaleDetectMode;
         private ACMethodBooking _BookParamNotAvailableClone;
 
+        private bool _IsCheckedIsPumpOverActive = false;
+
         public override bool MustBeInsidePWGroup
         {
             get
@@ -212,7 +236,7 @@ namespace gipbakery.mes.processapplication
 
             Msg msg = null;
             PAProcessModule processModule = ParentPWGroup.AccessedProcessModule;
-            PAFBakeryYeastProducing preProdFunction = processModule.FindChildComponents<PAFBakeryYeastProducing>().FirstOrDefault();
+            PAFBakeryYeastProducing preProdFunction = processModule?.FindChildComponents<PAFBakeryYeastProducing>().FirstOrDefault();
 
             if (preProdFunction == null)
             {
@@ -220,6 +244,16 @@ namespace gipbakery.mes.processapplication
                 msg = new Msg(this, eMsgLevel.Error, PWClassName, "StartFermentationStarter(10)", 176, "Error50442", processModule.ACCaption);
                 OnNewAlarmOccurred(ProcessAlarm, msg);
                 return;
+            }
+
+            if (CheckIsPumpingActive)
+            {
+                bool result = IsPumpingActive(preProdFunction, processModule);
+                if (result)
+                {
+                    SubscribeToProjectWorkCycle();
+                    return;
+                }
             }
 
             PAEScaleBase scale = preProdFunction.GetFermentationStarterScale();
@@ -271,6 +305,52 @@ namespace gipbakery.mes.processapplication
                     }
                 }
             }
+        }
+
+        private bool IsPumpingActive(PAFBakeryYeastProducing preProdFunction, PAProcessModule processModule)
+        {
+            if (!_IsCheckedIsPumpOverActive)
+            {
+                if (preProdFunction == null || processModule == null)
+                {
+                    _IsCheckedIsPumpOverActive = true;
+                    return false;
+                }
+
+                string pumpModuleACUrl = preProdFunction.PumpOverProcessModuleACUrl;
+                if (string.IsNullOrEmpty(pumpModuleACUrl))
+                {
+                    _IsCheckedIsPumpOverActive = true;
+                    return false;
+                }
+
+                PAProcessModule pumpModule = ACUrlCommand(pumpModuleACUrl) as PAProcessModule;
+                PAFBakeryPumping pump = pumpModule?.FindChildComponents<PAFBakeryPumping>().FirstOrDefault();
+                if (pump != null)
+                {
+                    if (pump.CurrentACState == ACStateEnum.SMRunning || pump.CurrentACState == ACStateEnum.SMStarting)
+                    {
+                        ACValue sourceItem = pump.CurrentACMethod?.ValueT?.ParameterValueList.GetACValue("Source");
+                        if (sourceItem != null && sourceItem.Value != null)
+                        {
+                            short sourceID = sourceItem.ParamAsInt16;
+                            if (sourceID == processModule.RouteItemIDAsNum)
+                            {
+                                return true;
+                            }
+                            else
+                            {
+                                _IsCheckedIsPumpOverActive = true;
+                            }
+                        }
+                    }
+                    else
+                    {
+                        _IsCheckedIsPumpOverActive = true;
+                    }
+                }
+            }
+            return false;
         }
 
         public virtual bool RelocateFromTargetToSourceFacility(DatabaseApp dbApp, Facility source, Facility target, PAEScaleBase scale)
