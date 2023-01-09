@@ -625,8 +625,8 @@ namespace gipbakery.mes.processapplication
                 }
                 else
                 {
-                    //Error50463: The fermentation starter scale can not be found! Please configure a fermentation scale ACUrl on the pre production function.
-                    Messages.Error(this, "Error50463");
+                    //Error50462: The target virtual store can not be found!
+                    Messages.Error(this, "Error50462");
                 }
 
                 string pumpOverModuleACUrl = GetConfigValue(funcClass, nameof(PAFBakeryYeastProducing.PumpOverProcessModuleACUrl)) as string;
@@ -688,7 +688,7 @@ namespace gipbakery.mes.processapplication
                 else
                 {
                     //Error50464: Initialization is not complete. The property {0} can not be found!
-                    Messages.Error(this, "Error50463", false, Const.ACState);
+                    Messages.Error(this, "Error50464", false, Const.ACState);
                 }
             }
 
@@ -696,7 +696,7 @@ namespace gipbakery.mes.processapplication
             if (ProcessModuleOrderInfo == null)
             {
                 //Error50464: Initialization is not complete. The property {0} can not be found!
-                Messages.Error(this, "Error50463", false, "OrderInfo");
+                Messages.Error(this, "Error50464", false, "OrderInfo");
                 return;
             }
 
@@ -918,7 +918,7 @@ namespace gipbakery.mes.processapplication
                         fermentationStarterRef.Detach();
 
                         //Error50464: Initialization is not complete. The property {0} can not be found!
-                        Messages.Error(this, "Error50463", false, nameof(PWBakeryFermentationStarter.FSTargetQuantity));
+                        Messages.Error(this, "Error50464", false, nameof(PWBakeryFermentationStarter.FSTargetQuantity));
                         return;
                     }
 
