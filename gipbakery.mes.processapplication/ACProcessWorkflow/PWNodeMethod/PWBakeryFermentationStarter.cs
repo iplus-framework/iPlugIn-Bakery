@@ -30,7 +30,7 @@ namespace gipbakery.mes.processapplication
             method.ParameterValueList.Add(new ACValue("SkipToleranceCheck", typeof(bool), false, Global.ParamOption.Optional));
             paramTranslation.Add("SkipToleranceCheck", "en{'Skip tolerance check'}de{'Toleranzprüfung überspringen'}");
 
-            method.ParameterValueList.Add(new ACValue("CheckIsPumpingActive", typeof(bool), false, Global.ParamOption.Optional));
+            method.ParameterValueList.Add(new ACValue("CheckIsPumpingActive", typeof(bool), true, Global.ParamOption.Optional));
             paramTranslation.Add("CheckIsPumpingActive", "en{'Check is pumpover active'}de{'Prüfen, ob das Umpumpen aktiv ist'}");
 
             var wrapper = new ACMethodWrapper(method, "en{'Fermentation starter'}de{'Anstellgut'}", typeof(PWBakeryFermentationStarter), paramTranslation, null);
