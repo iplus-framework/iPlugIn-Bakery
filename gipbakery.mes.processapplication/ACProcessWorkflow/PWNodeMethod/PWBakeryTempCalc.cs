@@ -164,6 +164,12 @@ namespace gipbakery.mes.processapplication
         }
 
 
+        public const double C_WaterSpecHeatCapacity = 4187; // Alwaya 4187 Joule/kg
+        public static double GetWaterSpecHeatCapacity(double value)
+        {
+            return value < 0.000001 ? C_WaterSpecHeatCapacity : value;
+        }
+
         private Type _PWManualWeighingType = typeof(PWManualWeighing);
         private Type _PWDosingType = typeof(PWDosing);
 
@@ -908,7 +914,7 @@ namespace gipbakery.mes.processapplication
                 if (planningNode != null)
                 {
                     ACMethod config = planningNode.MyConfiguration;
-                    ACValue standardBatchSize = config?.ParameterValueList.GetACValue("BatchSizeStandard");
+                    ACValue standardBatchSize = config?.ParameterValueList.GetACValue(ProdOrderBatchPlan.C_BatchSizeStandard);
                     if (standardBatchSize != null)
                     {
                         double halfQuantity = standardBatchSize.ParamAsDouble / 2;
@@ -955,7 +961,7 @@ namespace gipbakery.mes.processapplication
             double suggestedWaterTemperature = 20;
             defaultWaterTemp = 0; //TODO
 
-            double? waterSpecHeatCapacity = waterComp.SpecHeatCapacity;
+            double waterSpecHeatCapacity = GetWaterSpecHeatCapacity(waterComp.SpecHeatCapacity);
 
             if (calculateWaterTemp)
             {
@@ -981,9 +987,9 @@ namespace gipbakery.mes.processapplication
                     suggestedWaterTemperature = doughTargetTempAfterKneeding;
                     defaultWaterTemp = doughTargetTempAfterKneeding;
                 }
-                else if (waterTargetQuantity.HasValue && waterSpecHeatCapacity.HasValue && waterTargetQuantity > 0.00001 && waterSpecHeatCapacity > 0.00001)
+                else if (waterTargetQuantity.HasValue && waterTargetQuantity > 0.00001 && waterSpecHeatCapacity > 0.00001)
                 {
-                    suggestedWaterTemperature = (componentsQ / (waterTargetQuantity.Value * waterSpecHeatCapacity.Value)) + doughTargetTempBeforeKneeding;
+                    suggestedWaterTemperature = (componentsQ / (waterTargetQuantity.Value * waterSpecHeatCapacity)) + doughTargetTempBeforeKneeding;
                 }
             }
 
@@ -1122,8 +1128,8 @@ namespace gipbakery.mes.processapplication
         {
             if (targetWaterTemperature <= warmWater.AverageTemperature && targetWaterTemperature > water.AverageTemperature)
             {
-                double warmWaterSHC = warmWater.Material.SpecHeatCapacity;
-                double cityWaterSHC = water.Material.SpecHeatCapacity;
+                double warmWaterSHC = GetWaterSpecHeatCapacity(warmWater.Material.SpecHeatCapacity);
+                double cityWaterSHC = GetWaterSpecHeatCapacity(water.Material.SpecHeatCapacity);
 
                 double warmWaterQuantity = (totalWaterQuantity * (cityWaterSHC * (water.AverageTemperature.Value - targetWaterTemperature)))
                                            / ((cityWaterSHC * (water.AverageTemperature.Value - targetWaterTemperature))
@@ -1154,8 +1160,8 @@ namespace gipbakery.mes.processapplication
         {
             if (targetWaterTemperature <= cityWater.AverageTemperature && targetWaterTemperature > coldWater.AverageTemperature)
             {
-                double coldWaterSHC = coldWater.Material.SpecHeatCapacity;
-                double cityWaterSHC = cityWater.Material.SpecHeatCapacity;
+                double coldWaterSHC = GetWaterSpecHeatCapacity(coldWater.Material.SpecHeatCapacity);
+                double cityWaterSHC = GetWaterSpecHeatCapacity(cityWater.Material.SpecHeatCapacity);
 
                 double cityWaterQuantity = (totalWaterQuantity * (coldWaterSHC * (coldWater.AverageTemperature.Value - targetWaterTemperature)))
                                            / ((coldWaterSHC * (coldWater.AverageTemperature.Value - targetWaterTemperature))
@@ -1190,7 +1196,7 @@ namespace gipbakery.mes.processapplication
             {
                 if (targetWaterTemperature <= water.AverageTemperature && targetWaterTemperature > dryIce.AverageTemperature)
                 {
-                    double waterSHC = water.Material.SpecHeatCapacity;
+                    double waterSHC = GetWaterSpecHeatCapacity(water.Material.SpecHeatCapacity);
 
                     double coldWaterQuantity = (totalWaterQuantity * (waterSHC * (dryIce.AverageTemperature.Value - targetWaterTemperature))) /
                                                ((waterSHC * (dryIce.AverageTemperature.Value - targetWaterTemperature)) + (waterSHC * (targetWaterTemperature - water.AverageTemperature.Value)));
@@ -1239,7 +1245,7 @@ namespace gipbakery.mes.processapplication
                     double deltaTemp = defaultWaterTemp - targetWaterTemperature;
                     double deltaTempCold = water.AverageTemperature.Value + deltaTemp;
 
-                    double waterSHC = water.Material.SpecHeatCapacity;
+                    double waterSHC = GetWaterSpecHeatCapacity(water.Material.SpecHeatCapacity);
 
                     double iceQuantity = (componentsQ + totalWaterQuantity * waterSHC * (doughTempBeforeKneeding - deltaTempCold))
                                         / ((WaterMeltingHeat.Value * MeltingHeatInfluence.Value) - waterSHC * (doughTempBeforeKneeding - deltaTempCold) + waterSHC
@@ -1283,8 +1289,8 @@ namespace gipbakery.mes.processapplication
                 }
                 else
                 {
-                    double waterSHC = water.Material.SpecHeatCapacity;
-                    double iceSCH = dryIce.Material.SpecHeatCapacity;
+                    double waterSHC = GetWaterSpecHeatCapacity(water.Material.SpecHeatCapacity);
+                    double iceSCH = GetWaterSpecHeatCapacity(dryIce.Material.SpecHeatCapacity);
 
                     if (Math.Abs(waterSHC) <= Double.Epsilon)
                     {
