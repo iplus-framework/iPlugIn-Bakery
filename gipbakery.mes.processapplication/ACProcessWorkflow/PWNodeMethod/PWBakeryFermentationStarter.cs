@@ -650,9 +650,8 @@ namespace gipbakery.mes.processapplication
                         return msg;
                     }
 
-                    Facility sourceFacility = pwGroup.GetSourceFacility();
-                    sourceFacility = sourceFacility.FromAppContext<Facility>(dbApp);
-
+                    Facility sourceFacility = pwGroup.SourceFacility;
+                    sourceFacility = sourceFacility?.FromAppContext<Facility>(dbApp);
                     if (sourceFacility == null)
                     {
                         //Error50449: The virtual source facility can not be found!
@@ -878,8 +877,8 @@ namespace gipbakery.mes.processapplication
                             return msg;
                         }
 
-                        Facility sourceFacility = pwGroup.GetSourceFacility();
-
+                        Facility sourceFacility = pwGroup.SourceFacility;
+                        sourceFacility = sourceFacility?.FromAppContext<Facility>(dbApp);
                         if (sourceFacility == null)
                         {
                             //Error50449: The virtual source facility can not be found!
@@ -888,8 +887,8 @@ namespace gipbakery.mes.processapplication
                             return msg;
                         }
 
-                        Facility targetFacility = pwGroup.GetTargetFacility();
-
+                        Facility targetFacility = pwGroup.TargetFacility;
+                        targetFacility = targetFacility?.FromAppContext<Facility>(dbApp);
                         if (targetFacility == null)
                         {
                             //Error50450: The virtual target facility can not be found!
@@ -897,9 +896,6 @@ namespace gipbakery.mes.processapplication
                             ActivateProcessAlarmWithLog(msg, false);
                             return msg;
                         }
-
-                        sourceFacility = sourceFacility.FromAppContext<Facility>(dbApp);
-                        targetFacility = targetFacility.FromAppContext<Facility>(dbApp);
 
                         RelocateFromTargetToSourceFacility(dbApp, sourceFacility, targetFacility, scale);
 

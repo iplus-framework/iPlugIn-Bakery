@@ -75,8 +75,23 @@ namespace gipbakery.mes.processapplication
         private bool _BookingProcessed = false;
         private bool _SourceStoreMonitored = false;
 
-        private PAMParkingspace _SourceStore;
-        private PAMSilo _TargetStore;
+        private ACRef<PAMParkingspace> _VirtualSourceStore;
+        public PAMParkingspace VirtualSourceStore
+        {
+            get
+            {
+                return _VirtualSourceStore?.ValueT;
+            }
+        }
+
+        private ACRef<PAMSilo> _VirtualTargetStore;
+        public PAMSilo VirtualTargetStore
+        {
+            get
+            {
+                return _VirtualTargetStore?.ValueT;
+            }
+        }
 
         public bool UseScaleWeightOnPost
         {
@@ -119,9 +134,7 @@ namespace gipbakery.mes.processapplication
             {
                 _BookingProcessed = false;
             }
-
             StopMonitorSourceStore();
-
             base.SMIdle();
         }
 
@@ -464,23 +477,20 @@ namespace gipbakery.mes.processapplication
             StopMonitorSourceStore();
 
             PAProcessModule module = ParentPWGroup?.AccessedProcessModule;
-
-            PAMParkingspace sourceStore;
-            PAMSilo targetStore;
-
-            PAFBakeryYeastProducing.FindVirtualStores(module, out sourceStore, out targetStore);
-
-            if (sourceStore == null || targetStore == null)
-            {
-                UnSubscribeToProjectWorkCycle();
+            if (module == null)
                 return;
-            }
+            PAFBakeryYeastProducing function = module.FindChildComponents<PAFBakeryYeastProducing>(c => c is PAFBakeryYeastProducing).FirstOrDefault();
+            if (function == null)
+                return;
 
-            sourceStore.RefreshParkingSpace.PropertyChanged += RefreshParkingSpace_PropertyChanged;
+            PAMParkingspace sourceStore = function.VirtualSourceStore;
+            PAMSilo targetStore = function.VirtualTargetStore;
 
-            _SourceStore = sourceStore;
-            _TargetStore = targetStore;
+            if (sourceStore != null)
+                sourceStore.RefreshParkingSpace.PropertyChanged += RefreshParkingSpace_PropertyChanged;
 
+            _VirtualSourceStore = new ACRef<PAMParkingspace>(sourceStore, this);
+            _VirtualTargetStore = new ACRef<PAMSilo>(targetStore, this);
             _SourceStoreMonitored = true;
 
             UnSubscribeToProjectWorkCycle();
@@ -495,24 +505,33 @@ namespace gipbakery.mes.processapplication
 
         private void StopMonitorSourceStore()
         {
-            _SourceStoreMonitored = false;
-            if (_SourceStore != null)
+            if (_VirtualSourceStore != null)
             {
-                _SourceStore.RefreshParkingSpace.PropertyChanged -= RefreshParkingSpace_PropertyChanged;
-                _SourceStore = null;
+                if (_VirtualSourceStore.ValueT != null)
+                    _VirtualSourceStore.ValueT.RefreshParkingSpace.PropertyChanged -= RefreshParkingSpace_PropertyChanged;
+                _VirtualSourceStore.Detach();
+                _VirtualSourceStore = null;
             }
-            _TargetStore = null;
+            if (_VirtualTargetStore != null)
+            {
+                _VirtualTargetStore.Detach();
+                _VirtualTargetStore = null;
+            }
+            _SourceStoreMonitored = false;
         }
 
         private void TryRelocateFromSourceStore()
         {
-            if (_SourceStore == null || _TargetStore == null)
+            if (   _VirtualSourceStore == null 
+                || _VirtualSourceStore.ValueT == null
+                || _VirtualTargetStore == null 
+                || _VirtualTargetStore.ValueT == null)
                 return;
 
             using (DatabaseApp dbApp = new DatabaseApp())
             {
-                Facility sourceFacility = dbApp.Facility.FirstOrDefault(c => c.VBiFacilityACClassID == _SourceStore.ComponentClass.ACClassID);
-                Facility targetFacility = _TargetStore.Facility?.ValueT?.ValueT?.FromAppContext<Facility>(dbApp);
+                Facility sourceFacility = dbApp.Facility.FirstOrDefault(c => c.VBiFacilityACClassID == _VirtualSourceStore.ValueT.ComponentClass.ACClassID);
+                Facility targetFacility = _VirtualTargetStore.ValueT.Facility?.ValueT?.ValueT?.FromAppContext<Facility>(dbApp);
 
                 if (sourceFacility == null || targetFacility == null)
                     return;
@@ -638,7 +657,12 @@ namespace gipbakery.mes.processapplication
             {
                 xmlChild = doc.CreateElement("SourceStore");
                 if (xmlChild != null)
-                    xmlChild.InnerText = _SourceStore?.ToString();
+                {
+                    if (_VirtualSourceStore != null && _VirtualSourceStore.ValueT != null)
+                        xmlChild.InnerText = _VirtualSourceStore.ValueT.GetACUrl();
+                    else
+                        xmlChild.InnerText = "null";
+                }
                 xmlACPropertyList.AppendChild(xmlChild);
             }
 
@@ -647,7 +671,12 @@ namespace gipbakery.mes.processapplication
             {
                 xmlChild = doc.CreateElement("TargetStore");
                 if (xmlChild != null)
-                    xmlChild.InnerText = _TargetStore?.ToString();
+                {
+                    if (_VirtualTargetStore != null && _VirtualTargetStore.ValueT != null)
+                        xmlChild.InnerText = _VirtualTargetStore.ValueT.GetACUrl();
+                    else
+                        xmlChild.InnerText = "null";
+                }
                 xmlACPropertyList.AppendChild(xmlChild);
             }
 

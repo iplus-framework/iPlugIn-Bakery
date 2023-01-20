@@ -8,6 +8,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Xml;
+using static gip.core.communication.ISOonTCP.PLC;
 
 namespace gipbakery.mes.processapplication
 {
@@ -161,16 +162,54 @@ namespace gipbakery.mes.processapplication
 
         #region Properties => Virtual stores
 
-        private Facility SourceFacility
+        private Facility _SourceFacility;
+        public Facility SourceFacility
         {
-            get;
-            set;
+            get
+            {
+                using (ACMonitor.Lock(_20015_LockValue))
+                {
+                    return _SourceFacility;
+                }
+            }
+            set
+            {
+                using (ACMonitor.Lock(_20015_LockValue))
+                {
+                    _SourceFacility = value;
+                }
+            }
         }
 
-        private Facility TargetFacility
+        [ACMethodInfo("", "", 9999, true)]
+        public Guid? GetSourceFacilityID()
         {
-            get;
-            set;
+            return SourceFacility?.FacilityID;
+        }
+
+        private Facility _TargetFacility;
+        public Facility TargetFacility
+        {
+            get
+            {
+                using (ACMonitor.Lock(_20015_LockValue))
+                {
+                    return _TargetFacility;
+                }
+            }
+            set
+            {
+                using (ACMonitor.Lock(_20015_LockValue))
+                {
+                    _TargetFacility = value;
+                }
+            }
+        }
+
+        [ACMethodInfo("", "", 9999, true)]
+        public Guid? GetTargetFacilityID()
+        {
+            return TargetFacility?.FacilityID;
         }
 
         #endregion
@@ -189,12 +228,6 @@ namespace gipbakery.mes.processapplication
         {
             base.SMRunning();
 
-            bool calculated = false;
-            //using(ACMonitor.Lock(_20015_LockValue))
-            {
-                calculated = IsTimeCalculated.ValueT;
-            }
-
             bool findStores = false;
             using (ACMonitor.Lock(_20015_LockValue))
             {
@@ -204,21 +237,15 @@ namespace gipbakery.mes.processapplication
             if (findStores)
                 FindVirtualStores();
 
-            if (!calculated)
+            if (!IsTimeCalculated.ValueT)
             {
                 CalculateDuration();
-
-                //ActivatePreProdFunctions();
-
-                //using (ACMonitor.Lock(_20015_LockValue))
-                {
-                    IsTimeCalculated.ValueT = true;
-                }
+                IsTimeCalculated.ValueT = true;
             }
 
-            SubscribeToProjectWorkCycle();
-
-            CheckIfStartIsTooLate();
+            //SubscribeToProjectWorkCycle();
+            if (CheckIfStartIsTooLate())
+                UnSubscribeToProjectWorkCycle();
         }
 
         public override void SMCompleted()
@@ -265,52 +292,43 @@ namespace gipbakery.mes.processapplication
             }
         }
 
-        public void CheckIfStartIsTooLate()
+        /// <summary>
+        /// Returns true if time monitoring is completed
+        /// </summary>
+        /// <returns></returns>
+        public bool CheckIfStartIsTooLate()
         {
             if (EndOnTimeNodes == null)
-            {
                 EndOnTimeNodes = FindChildComponents<PWBakeryEndOnTime>(1).OrderBy(c => c.EndOnTimeSafe).ToArray();
-            }
 
-            PWBakeryEndOnTime endOnTime = EndOnTimeNodes.FirstOrDefault();
+            PWBakeryEndOnTime firstEndOnTimeNode = EndOnTimeNodes.FirstOrDefault();
+            // Inf not waiting times in workflow or first waiting time is completed, then switch off monitoring
+            if (   firstEndOnTimeNode == null
+                || firstEndOnTimeNode.IterationCount.ValueT >= 1)
+                return true;
 
-            if (endOnTime != null)
+            DateTime endTime = firstEndOnTimeNode.EndOnTimeSafe;
+            TimeSpan waitingTime = firstEndOnTimeNode.WaitingTime.ValueT;
+            DateTime startTime = endTime - waitingTime;
+            if (startTime > DateTime.MinValue && startTime < DateTime.Now)
             {
-                if (endOnTime.IterationCount.ValueT >= 1)
+                string orderInfo = AccessedProcessModule?.OrderInfo.ValueT;
+                orderInfo = orderInfo.Replace("\r", "").Replace("\n", " ");
+
+                //Warning50041: The production order {0} is planned to start at {1} but now is {2}. Please take a look.
+                Msg msg = new Msg(this, eMsgLevel.Error, PWClassName, "CheckIfStartIsTooLate(10)", 256, "Warning50041",
+                                    orderInfo, startTime, DateTime.Now);
+
+                if (IsAlarmActive(ProcessAlarm, msg.Message) == null)
                 {
-                    UnSubscribeToProjectWorkCycle();
-                    return;
+                    Messages.LogMessageMsg(msg);
                 }
 
-                DateTime dt = endOnTime.EndOnTimeSafe;
-                TimeSpan waitingTime = endOnTime.WaitingTime.ValueT;
-
-                dt = dt - waitingTime;
-
-                if (dt > DateTime.MinValue)
-                {
-                    if (dt < DateTime.Now)
-                    {
-                        string orderInfo = AccessedProcessModule?.OrderInfo.ValueT;
-                        orderInfo = orderInfo.Replace("\r", "").Replace("\n", " ");
-
-                        //Warning50041: The production order {0} is planned to start at {1} but now is {2}. Please take a look.
-
-                        Msg msg = new Msg(this, eMsgLevel.Error, PWClassName, "CheckIfStartIsTooLate(10)", 256, "Warning50041",
-                                          orderInfo, dt, DateTime.Now);
-
-                        if (IsAlarmActive(ProcessAlarm, msg.Message) == null)
-                        {
-                            Messages.LogMessageMsg(msg);
-                        }
-
-                        OnNewAlarmOccurred(ProcessAlarm, msg, true);
-                        ProcessAlarm.ValueT = PANotifyState.AlarmOrFault;
-
-                        UnSubscribeToProjectWorkCycle();
-                    }
-                }
-            }    
+                OnNewAlarmOccurred(ProcessAlarm, msg, true);
+                ProcessAlarm.ValueT = PANotifyState.AlarmOrFault;
+                return true;
+            }
+            return true;
         }
 
         public void ChangeStartNextFermentationStageTime(DateTime oldDateTime, DateTime newDateTime)
@@ -653,11 +671,11 @@ namespace gipbakery.mes.processapplication
 
         public void FindVirtualStores()
         {
-            PAMParkingspace source;
-            PAMSilo target;
-
-            Msg msg = FindSourceAndTargetStore(out source, out target);
-
+            PAMParkingspace sourceComponent;
+            PAMSilo targetComponent;
+            bool isVirtSourceStoreNecessary = false;
+            bool isVirtTargetStoreNecessary = false;
+            Msg msg = FindSourceAndTargetStore(out sourceComponent, out isVirtSourceStoreNecessary, out targetComponent, out isVirtTargetStoreNecessary);
             if (msg != null)
             {
                 if (IsAlarmActive(ProcessAlarm, msg.Message) == null)
@@ -668,11 +686,10 @@ namespace gipbakery.mes.processapplication
 
             using (DatabaseApp dbApp = new DatabaseApp())
             {
-                Facility sFacility, tFacility;
+                Facility sourceFacility, targetFacility;
+                FindFacilityForSourceAndTargetStore(dbApp, sourceComponent, targetComponent, out sourceFacility, out targetFacility);
 
-                FindFacilityForSourceAndTargetStore(dbApp, source, target, out sFacility, out tFacility);
-
-                if (sFacility == null)
+                if (sourceFacility == null && sourceComponent != null)
                 {
                     //Error50480: The virtual source store can not be found!
                     msg = new Msg(this, eMsgLevel.Error, PWClassName, "FindVirtualStores(10)", 683, "Error50480");
@@ -684,7 +701,7 @@ namespace gipbakery.mes.processapplication
                     return;
                 }
 
-                if (tFacility == null)
+                if (targetFacility == null && targetComponent != null)
                 {
                     //Error50481: The virtual target store can not be found!
                     msg = new Msg(this, eMsgLevel.Error, PWClassName, "FindVirtualStores(20)", 399, "Error50481");
@@ -696,22 +713,30 @@ namespace gipbakery.mes.processapplication
                     return;
                 }
 
-                SourceFacility = sFacility;
-                TargetFacility = tFacility;
+                SourceFacility = sourceFacility;
+                TargetFacility = targetFacility;
             }
         }
 
-        public virtual Msg FindSourceAndTargetStore(out PAMParkingspace source, out PAMSilo target)
+        public virtual Msg FindSourceAndTargetStore(out PAMParkingspace source, out bool isVirtSourceStoreNecessary, out PAMSilo target, out bool isVirtTargetStoreNecessary)
         {
             source = null;
             target = null;
-
+            isVirtSourceStoreNecessary = false;
+            isVirtTargetStoreNecessary = false;
             Msg msg = null;
-
             PAProcessModule module = AccessedProcessModule;
-            PAFBakeryYeastProducing.FindVirtualStores(module, out source, out target);
-
-            if (source == null || target == null)
+            if (module == null)
+                return null;
+            PAFBakeryYeastProducing function = module.FindChildComponents<PAFBakeryYeastProducing>(c => c is PAFBakeryYeastProducing).FirstOrDefault();
+            if (function == null)
+                return null;
+            isVirtSourceStoreNecessary = function.IsVirtSourceStoreNecessary;
+            isVirtTargetStoreNecessary = function.IsVirtTargetStoreNecessary;
+            source = function.VirtualSourceStore;
+            target = function.VirtualTargetStore;
+            if (   (source == null && isVirtSourceStoreNecessary) 
+                || (target == null && isVirtTargetStoreNecessary))
             {
                 //Error50482: The source or/and target store can not be found!
                 msg = new Msg(this, eMsgLevel.Error, PWClassName, "FindSourceAndTargetStore(10)", 722, "Error50482");
@@ -725,52 +750,12 @@ namespace gipbakery.mes.processapplication
         {
             sourceFacility = null;
             targetFacility = null;
-
             if (source != null)
                 sourceFacility = dbApp.Facility.FirstOrDefault(c => c.VBiFacilityACClassID == source.ComponentClass.ACClassID);
-
             Facility temp = target?.Facility?.ValueT?.ValueT;
             if (temp != null)
-            {
                 targetFacility = temp.FromAppContext<Facility>(dbApp);
-            }
         }
-
-        [ACMethodInfo("","",9999, true)]
-        public Guid? GetSourceFacilityID()
-        {
-            Guid? result = null;
-            using(ACMonitor.Lock(_20015_LockValue))
-            {
-                result = SourceFacility?.FacilityID;
-            }
-
-            return result;
-        }
-
-        public Facility GetSourceFacility()
-        {
-            Facility result = null;
-            using (ACMonitor.Lock(_20015_LockValue))
-            {
-                result = SourceFacility;
-            }
-
-            return result;
-        }
-
-        public Facility GetTargetFacility()
-        {
-            Facility result = null;
-            using (ACMonitor.Lock(_20015_LockValue))
-            {
-                result = TargetFacility;
-            }
-
-            return result;
-        }
-
-
         #endregion
 
         protected override void DumpPropertyList(XmlDocument doc, XmlElement xmlACPropertyList)
@@ -838,6 +823,9 @@ namespace gipbakery.mes.processapplication
                     return true;
                 case nameof(GetSourceFacilityID):
                     result = GetSourceFacilityID();
+                    return true;
+                case nameof(GetTargetFacilityID):
+                    result = GetTargetFacilityID();
                     return true;
                 default:
                     break;

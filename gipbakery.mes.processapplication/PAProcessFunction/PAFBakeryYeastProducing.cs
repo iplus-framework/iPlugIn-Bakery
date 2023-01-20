@@ -33,6 +33,7 @@ namespace gipbakery.mes.processapplication
             _CleaningProdACClassWF = new ACPropertyConfigValue<string>(this, nameof(CleaningProdACClassWF), "");
             _PumpOverProcessModuleACUrl = new ACPropertyConfigValue<string>(this, nameof(PumpOverProcessModuleACUrl), "");
             _FinishOrderOnPumping = new ACPropertyConfigValue<bool>(this, nameof(FinishOrderOnPumping), true);
+            _VirtualStoreMode = new ACPropertyConfigValue<ushort>(this, nameof(VirtualStoreMode), (ushort)VirtualStoreModeEnum.SourceAndTarget);
         }
 
         public override bool ACPostInit()
@@ -81,10 +82,15 @@ namespace gipbakery.mes.processapplication
                 module.OrderInfo.PropertyChanged -= OrderInfo_PropertyChanged;
             }
 
-            using (ACMonitor.Lock(_20015_LockValue))
+            if (_VirtualSourceStore != null)
             {
-                VirtualSourceStore = null;
-                VirtualTargetStore = null;
+                _VirtualSourceStore.Detach();
+                _VirtualSourceStore = null;
+            }
+            if (_VirtualTargetStore != null)
+            {
+                _VirtualTargetStore.Detach();
+                _VirtualTargetStore = null;
             }
             return base.ACDeInit(deleteACClassTask);
         }
@@ -193,23 +199,74 @@ namespace gipbakery.mes.processapplication
             }
         }
 
+        protected ACPropertyConfigValue<ushort> _VirtualStoreMode;
+        [ACPropertyConfig("en{'Mode virtual Stores'}de{'Modus virtuelle Lagerplätze'}")]
+        public ushort VirtualStoreMode
+        {
+            get
+            {
+                return _VirtualStoreMode.ValueT;
+            }
+            set
+            {
+                _VirtualStoreMode.ValueT = value;
+            }
+        }
+
+        public enum VirtualStoreModeEnum
+        {
+            SourceAndTarget = 0,
+            OnlySource = 1,
+            OnlyTarget = 2,
+            None = 3,
+        }
+
+        public VirtualStoreModeEnum VirtualStoreModeE
+        {
+            get
+            {
+                return (VirtualStoreModeEnum)VirtualStoreMode;
+            }
+        }
+
         #endregion
 
         public virtual bool IsVirtSourceStoreNecessary
         {
-            get => true;
+            get
+            {
+                return VirtualStoreModeE == VirtualStoreModeEnum.OnlySource || VirtualStoreModeE == VirtualStoreModeEnum.SourceAndTarget;
+            }
         }
 
+        public virtual bool IsVirtTargetStoreNecessary
+        {
+            get
+            {
+                return VirtualStoreModeE == VirtualStoreModeEnum.OnlyTarget || VirtualStoreModeE == VirtualStoreModeEnum.SourceAndTarget;
+            }
+        }
+
+        private ACRef<PAMParkingspace> _VirtualSourceStore;
         public PAMParkingspace VirtualSourceStore
         {
-            get;
-            set;
+            get
+            {
+                if (_VirtualSourceStore == null)
+                    FindStores();
+                return _VirtualSourceStore?.ValueT;
+            }
         }
 
+        private ACRef<PAMSilo> _VirtualTargetStore;
         public PAMSilo VirtualTargetStore
         {
-            get;
-            set;
+            get
+            {
+                if (_VirtualTargetStore == null)
+                    FindStores();
+                return _VirtualTargetStore?.ValueT;
+            }
         }
 
         [ACPropertyBindingTarget(820, "", "en{'Pre production cleaning program'}de{'Reinigungsprogramm für die Vorproduktion'}")]
@@ -244,14 +301,11 @@ namespace gipbakery.mes.processapplication
         {
             PAMParkingspace source;
             PAMSilo target;
-
-            FindVirtualStores(ParentACComponent as PAProcessModule, out source, out target);
-
-            using (ACMonitor.Lock(_20015_LockValue))
-            {
-                VirtualSourceStore = source;
-                VirtualTargetStore = target;
-            }
+            FindVirtualStores(out source, out target);
+            if (_VirtualSourceStore == null)
+                _VirtualSourceStore = new ACRef<PAMParkingspace>(source, this);
+            if (_VirtualTargetStore == null)
+                _VirtualTargetStore = new ACRef<PAMSilo>(target, this);
 
             if (source == null && IsVirtSourceStoreNecessary)
             {
@@ -264,7 +318,7 @@ namespace gipbakery.mes.processapplication
                 }
             }
 
-            if (target == null)
+            if (target == null && IsVirtTargetStoreNecessary)
             {
                 //Error50485: The virtual target store can not be found!
                 Msg msg = new Msg(this, eMsgLevel.Error, nameof(PAFBakeryYeastProducing), "FindStores(20)", 263, "Error50485");
@@ -288,30 +342,29 @@ namespace gipbakery.mes.processapplication
             return parkingSpace?.ComponentClass.ACClassID;
         }
 
-        public static void FindVirtualStores(PAProcessModule module, out PAMParkingspace source, out PAMSilo target)
+        public void FindVirtualStores(out PAMParkingspace source, out PAMSilo target)
         {
+            PAProcessModule module = ParentACComponent as PAProcessModule;
             source = null;
             target = null;
-
-            if (module != null)
+            if (module == null)
+                return;
+            PAPoint pointIn = module.GetPoint(nameof(PAMMixer.PAPointMatIn3)) as PAPoint;
+            if (pointIn != null)
             {
-                PAPoint pointIn = module.GetPoint(nameof(PAMMixer.PAPointMatIn3)) as PAPoint;
-                if (pointIn != null)
+                source = pointIn.ConnectionList.FirstOrDefault(c => c.SourceParentComponent is PAMParkingspace)?.SourceParentComponent as PAMParkingspace;
+                if (source == null)
                 {
-                    source = pointIn.ConnectionList.FirstOrDefault(c => c.SourceParentComponent is PAMParkingspace)?.SourceParentComponent as PAMParkingspace;
-                    if (source == null)
-                    {
-                        pointIn = module.GetPoint(nameof(PAMMixer.PAPointMatIn1)) as PAPoint;
-                        if (pointIn != null)
-                            source = pointIn.ConnectionList.FirstOrDefault(c => c.SourceParentComponent is PAMParkingspace)?.SourceParentComponent as PAMParkingspace;
-                    }
+                    pointIn = module.GetPoint(nameof(PAMMixer.PAPointMatIn1)) as PAPoint;
+                    if (pointIn != null)
+                        source = pointIn.ConnectionList.FirstOrDefault(c => c.SourceParentComponent is PAMParkingspace)?.SourceParentComponent as PAMParkingspace;
                 }
-
-                PAPoint pointOut = module.GetPoint(nameof(PAMMixer.PAPointMatOut1)) as PAPoint;
-                if (pointOut == null)
-                    return;
-                target = pointOut.ConnectionList.FirstOrDefault(c => c.TargetParentComponent is PAMSilo)?.TargetParentComponent as PAMSilo;
             }
+
+            PAPoint pointOut = module.GetPoint(nameof(PAMMixer.PAPointMatOut1)) as PAPoint;
+            if (pointOut == null)
+                return;
+            target = pointOut.ConnectionList.FirstOrDefault(c => c.TargetParentComponent is PAMSilo)?.TargetParentComponent as PAMSilo;
         }
 
 

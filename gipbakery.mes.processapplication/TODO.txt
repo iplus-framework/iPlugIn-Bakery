@@ -1,4 +1,14 @@
-﻿- Min max chargengröße rtesten
+﻿- Maximale Chargengrößen Teige einstellen
+- Kuchen mit Parkplatz
+- Drucken
+- Restteig - wie wird das gehandelt in Zukunft
+- Navision
+	- Export Rezepturen
+	- Export Lagerbewegungen
+	- Export Produktionsprotokoll
+
+
+- Min max chargengröße rtesten
 - Auslagerarter Rohkaffe-Dialog
 
 - Vorwärts und Rückwärtsterminierung implementieren.
@@ -19,3 +29,7 @@
 - TA-Berechnung Sauerteig
 - Sauerteig-Dialog: Silo leer buchen
 - Parkplatzfunktion + Freie Komponentenauswahl (Ivan)
+
+
+
+
