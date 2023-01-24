@@ -1,34 +1,4 @@
-﻿- Maximale Chargengrößen Teige einstellen
-- Kuchen mit Parkplatz
-- Drucken
-- Restteig - wie wird das gehandelt in Zukunft
-- Navision
-	- Export Rezepturen
-	- Export Lagerbewegungen
-	- Export Produktionsprotokoll
-
-
-- Min max chargengröße rtesten
-- Auslagerarter Rohkaffe-Dialog
-
-- Vorwärts und Rückwärtsterminierung implementieren.
-- Retrograde Buchung implementieren.
-- Inventurprogramm als BSO in iPlus
-- vb-mobile: "Auftrag Abmelden" aufteilen in zwei Funktionen "Auftrag beenden". Es kann ja sein, dass zwischendruch die MAchine nich t verwendet wird und pausiert ist.
-  Danach nöchte man weiter arbeiten.  Beenden geht dann nicht solange noch andere Maschinen des gleichen Typs noch belegt sind.
-  Man könnte noch eine einstellbare Abfrage einbauen, wenn "Auftrag Abmelden" gedrückt wird und die letzte Maschine aktiv ist, ob der Benutzer auch beednen will.
-- vb-mobile: Inventur und Umbuchen implementieren
-- Combobox in EditMode=false reagiert nicht auf finger, sonder maus muss an den Rahmen bewegt werden
-- TODO: Test warum Delegatequeue anwächst von Scheduler und nicht leert
--PABatchPlanScheduler: startableBatchPlan.IsValidated auskemmentorierung wieder rückgeängig machen und Routenprüfung für Trovkeneis aktivieren
-
-- Wartezeiten Sauerteig Zeitumstellung berücksichtigen
--trockeneois mus zwischenprodukt Wasser zugeordnet werden. Bislang Fehler bei Wegeprüdung
-- Teigtemperaturberechnung PWBakeryTempCalc erweitern um Businessobjekt, das die Temperaturen anzeigt und wassermengen berechnet.
-- Kesselhinweis: Wegenhmen
-- TA-Berechnung Sauerteig
-- Sauerteig-Dialog: Silo leer buchen
-- Parkplatzfunktion + Freie Komponentenauswahl (Ivan)
+﻿- Vorwärts und Rückwärtsterminierung implementieren.
 
 
 
