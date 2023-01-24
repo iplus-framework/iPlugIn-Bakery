@@ -328,7 +328,7 @@ namespace gipbakery.mes.processapplication
                 PAFBakeryPumping pump = pumpModule?.FindChildComponents<PAFBakeryPumping>().FirstOrDefault();
                 if (pump != null)
                 {
-                    if (pump.CurrentACState == ACStateEnum.SMRunning || pump.CurrentACState == ACStateEnum.SMStarting)
+                    if (pump.CurrentACState != ACStateEnum.SMIdle)
                     {
                         ACValue sourceItem = pump.CurrentACMethod?.ValueT?.ParameterValueList.GetACValue("Source");
                         if (sourceItem != null && sourceItem.Value != null)
@@ -343,11 +343,20 @@ namespace gipbakery.mes.processapplication
                                 _IsCheckedIsPumpOverActive = true;
                             }
                         }
+                        else
+                        {
+                            Messages.LogInfo(this.GetACUrl(), nameof(IsPumpingActive), string.Format("The source item from a pumping function is null! The pump function's CurrentACMethod is null = {0}",
+                                                                                                     pump.CurrentACMethod?.ValueT == null));
+                        }
                     }
                     else
                     {
                         _IsCheckedIsPumpOverActive = true;
                     }
+                }
+                else
+                {
+                    Messages.LogInfo(this.GetACUrl(), nameof(IsPumpingActive), String.Format("The pumping module is null = {0} and the pumping function is null = {1}", pumpModule == null, pump == null));
                 }
             }
             return false;
