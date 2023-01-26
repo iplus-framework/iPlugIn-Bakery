@@ -10,17 +10,17 @@ using System.Threading.Tasks;
 
 namespace gipbakery.mes.processapplication
 {
-    [ACClassInfo(Const.PackName_VarioAutomation, "en{'Serializer for Cleaning'}de{'Serialisierer für Reinigen'}", Global.ACKinds.TACDAClass, Global.ACStorableTypes.Required, false, false)]
-    public class BakeryFuncSerial2006Cleaning : ACSessionObjSerializer
+    [ACClassInfo(Const.PackName_VarioAutomation, "en{'Serializer for water temp check'}de{'Serialisierer für Wassertemp-prüfung'}", Global.ACKinds.TACDAClass, Global.ACStorableTypes.Required, false, false)]
+    public class BakeryFuncSerial2006WaterTempCheck : ACSessionObjSerializer
     {
-        public BakeryFuncSerial2006Cleaning(ACClass acType, IACObject content, IACObject parentACObject, ACValueList parameter, string acIdentifier = "") :
+        public BakeryFuncSerial2006WaterTempCheck(ACClass acType, IACObject content, IACObject parentACObject, ACValueList parameter, string acIdentifier = "") :
             base(acType, content, parentACObject, parameter, acIdentifier)
         {
         }
 
         public override bool IsSerializerFor(string typeOrACMethodName)
         {
-            return MethodNameEquals(typeOrACMethodName, "BakeryCleaning");
+            return MethodNameEquals(typeOrACMethodName, "WaterTempCheck");
         }
 
         public override object ReadObject(object complexObj, int dbNo, int offset, object miscParams)
@@ -55,10 +55,8 @@ namespace gipbakery.mes.processapplication
                 int iOffset = 0;
                 if (s7Session.HashCodeValidation == HashCodeValidationEnum.Head || s7Session.HashCodeValidation == HashCodeValidationEnum.Head_WithRead)
                     iOffset += gip.core.communication.ISOonTCP.Types.DInt.Length;
-                iOffset += gip.core.communication.ISOonTCP.Types.Real.Length; // TargetQuantity
-                iOffset += 56;
-                iOffset += gip.core.communication.ISOonTCP.Types.Int.Length; // Destination
-
+                iOffset += 38;
+                iOffset += gip.core.communication.ISOonTCP.Types.Real.Length; // WaterTemp
                 OnReadObjectGetLength(response, dbNo, offset, miscParams, readParameter, ref iOffset);
 
                 byte[] readPackage1 = new byte[iOffset];
@@ -70,13 +68,9 @@ namespace gipbakery.mes.processapplication
                 iOffset = 0;
                 if (s7Session.HashCodeValidation == HashCodeValidationEnum.Head || s7Session.HashCodeValidation == HashCodeValidationEnum.Head_WithRead)
                     iOffset += gip.core.communication.ISOonTCP.Types.DInt.Length;
-
-                response.ParameterValueList.GetACValue("TargetQuantity").Value = gip.core.communication.ISOonTCP.Types.Real.FromByteArray(readPackage1, iOffset);
+                iOffset += 38;
+                response.ParameterValueList.GetACValue("WaterTemp").Value = gip.core.communication.ISOonTCP.Types.Real.FromByteArray(readPackage1, iOffset);
                 iOffset += gip.core.communication.ISOonTCP.Types.Real.Length;
-                iOffset += 56;
-
-                response.ParameterValueList.GetACValue("CleaningTarget").Value = gip.core.communication.ISOonTCP.Types.Int.FromByteArray(readPackage1, iOffset);
-                iOffset += gip.core.communication.ISOonTCP.Types.Int.Length;
 
                 OnReadObjectAppend(response, dbNo, iOffset, miscParams, readPackage1, readParameter, ref iOffset);
             }
@@ -106,10 +100,8 @@ namespace gipbakery.mes.processapplication
                 return false;
 
             int iOffset = 0;
-
-            iOffset += gip.core.communication.ISOonTCP.Types.Real.Length; // TargetQuantity
-            iOffset += 56;
-            iOffset += gip.core.communication.ISOonTCP.Types.Int.Length; // Destination
+            iOffset += 38;
+            iOffset += gip.core.communication.ISOonTCP.Types.Real.Length; // WaterTemp
 
             if (s7Session.HashCodeValidation != HashCodeValidationEnum.Off)
                 iOffset += gip.core.communication.ISOonTCP.Types.DInt.Length;
@@ -118,16 +110,10 @@ namespace gipbakery.mes.processapplication
             iOffset = 0;
             if (s7Session.HashCodeValidation == HashCodeValidationEnum.Head || s7Session.HashCodeValidation == HashCodeValidationEnum.Head_WithRead)
                 iOffset += gip.core.communication.ISOonTCP.Types.DInt.Length;
-
-            Array.Copy(gip.core.communication.ISOonTCP.Types.Real.ToByteArray(request.ParameterValueList.GetDouble("TargetQuantity")),
+            iOffset += 38;
+            Array.Copy(gip.core.communication.ISOonTCP.Types.Real.ToByteArray(request.ParameterValueList.GetDouble("WaterTemp")),
                 0, sendPackage1, iOffset, gip.core.communication.ISOonTCP.Types.Real.Length);
             iOffset += gip.core.communication.ISOonTCP.Types.Real.Length;
-            iOffset += 56;
-
-            Array.Copy(gip.core.communication.ISOonTCP.Types.Int.ToByteArray(request.ParameterValueList.GetInt16("CleaningTarget")),
-                0, sendPackage1, iOffset, gip.core.communication.ISOonTCP.Types.Int.Length);
-            iOffset += gip.core.communication.ISOonTCP.Types.Int.Length;
-
             return this.SendObjectToPLC(s7Session, request, sendPackage1, dbNo, offset, iOffset);
         }
 

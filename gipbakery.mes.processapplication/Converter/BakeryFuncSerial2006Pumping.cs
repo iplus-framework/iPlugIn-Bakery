@@ -49,7 +49,8 @@ namespace gipbakery.mes.processapplication
             if (readParameter)
             {
                 int iOffset = 0;
-
+                if (s7Session.HashCodeValidation == HashCodeValidationEnum.Head || s7Session.HashCodeValidation == HashCodeValidationEnum.Head_WithRead)
+                    iOffset += gip.core.communication.ISOonTCP.Types.DInt.Length;
                 iOffset += gip.core.communication.ISOonTCP.Types.Real.Length; // TargetQuantity
                 iOffset += 30;
                 iOffset += gip.core.communication.ISOonTCP.Types.Int.Length; //Power
