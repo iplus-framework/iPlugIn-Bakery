@@ -518,6 +518,58 @@ namespace gipbakery.mes.processapplication
 
         #region Methods => Temperature calculation
 
+        [ACMethodInfo("", "en{'Calculate water target temperature'}de{'Calculate water target temperature'}", 700)]
+        public double? CalculateWaterTargetTemperature()
+        {
+            WarmWaterQuantity.ValueT = 0;
+            CityWaterQuantity.ValueT = 0;
+            ColdWaterQuantity.ValueT = 0;
+            DryIceQuantity.ValueT = 0;
+            WaterTotalQuantity.ValueT = 0;
+
+            BakeryReceivingPoint recvPoint = ParentPWGroup.AccessedProcessModule as BakeryReceivingPoint;
+            if (recvPoint == null)
+            {
+                //Error50407: Accessed process module on the PWGroup is null or is not BakeryReceivingPoint!
+                Msg msg = new Msg(this, eMsgLevel.Error, PWClassName, "CalculateTargetTemperature(10)", 429, "Error50407");
+                if (IsAlarmActive(ProcessAlarm, msg.Message) == null)
+                {
+                    OnNewAlarmOccurred(ProcessAlarm, msg);
+                    Root.Messages.LogMessageMsg(msg);
+                }
+                return null;
+            }
+
+            if (string.IsNullOrEmpty(DryIceMaterialNo))
+            {
+                //Error50408 The ice MaterialNo is not configured.Please configure the ice material number.
+                Msg msg = new Msg(this, eMsgLevel.Error, PWClassName, "CalculateTargetTemperature(20)", 441, "Error50408");
+                if (IsAlarmActive(ProcessAlarm, msg.Message) == null)
+                {
+                    OnNewAlarmOccurred(ProcessAlarm, msg);
+                    Root.Messages.LogMessageMsg(msg);
+                }
+                return null;
+            }
+
+            PWMethodProduction pwMethodProduction = ParentPWMethod<PWMethodProduction>();
+            // If dosing is not for production, then do nothing
+            if (pwMethodProduction != null)
+            {
+                return CalculateProdOrderTargetTemperature(recvPoint, pwMethodProduction, true);
+            }
+            else
+            {
+                PWMethodRelocation pwMethodRelocation = ParentPWMethod<PWMethodRelocation>();
+                if (pwMethodRelocation != null)
+                {
+                    return CalculateRelocationTargetTempreature(recvPoint, pwMethodRelocation, true);
+                }
+            }
+
+            return null;
+        }
+
         private void CalculateTargetTemperature()
         {
             bool recalc = false;
@@ -583,7 +635,7 @@ namespace gipbakery.mes.processapplication
             UnSubscribeToProjectWorkCycle();
         }
 
-        private void CalculateProdOrderTargetTemperature(BakeryReceivingPoint recvPoint, PWMethodProduction pwMethodProduction)
+        private double? CalculateProdOrderTargetTemperature(BakeryReceivingPoint recvPoint, PWMethodProduction pwMethodProduction, bool onlyCalculation = false)
         {
             using (Database db = new gip.core.datamodel.Database())
             using (DatabaseApp dbApp = new DatabaseApp())
@@ -597,7 +649,7 @@ namespace gipbakery.mes.processapplication
                         OnNewAlarmOccurred(ProcessAlarm, msg);
                         Root.Messages.LogMessageMsg(msg);
                     }
-                    return;
+                    return null;
                 }
 
                 double kneedingRiseTemperature = 0;
@@ -608,7 +660,7 @@ namespace gipbakery.mes.processapplication
 
                 bool kneedingTempResult = GetKneedingRiseTemperature(dbApp, endBatchPos.TargetQuantityUOM, out kneedingRiseTemperature);
                 if (!kneedingTempResult)
-                    return;
+                    return null;
 
                 if (!UseWaterTemp)
                 {
@@ -618,7 +670,7 @@ namespace gipbakery.mes.processapplication
 
                 ACValueList componentTemperaturesService = recvPoint.GetWaterComponentsFromTempService();
                 if (componentTemperaturesService == null)
-                    return;
+                    return null;
 
                 List<MaterialTemperature> tempFromService = componentTemperaturesService.Select(c => c.Value as MaterialTemperature).ToList();
 
@@ -636,7 +688,7 @@ namespace gipbakery.mes.processapplication
                         OnNewAlarmOccurred(ProcessAlarm, msg);
                         Root.Messages.LogMessageMsg(msg);
                     }
-                    return;
+                    return null;
                 }
 
                 if (string.IsNullOrEmpty(_CityWaterMaterialNo))
@@ -648,7 +700,7 @@ namespace gipbakery.mes.processapplication
                         OnNewAlarmOccurred(ProcessAlarm, msg);
                         Root.Messages.LogMessageMsg(msg);
                     }
-                    return;
+                    return null;
                 }
 
                 if (string.IsNullOrEmpty(_WarmWaterMaterialNo))
@@ -660,7 +712,7 @@ namespace gipbakery.mes.processapplication
                         OnNewAlarmOccurred(ProcessAlarm, msg);
                         Root.Messages.LogMessageMsg(msg);
                     }
-                    return;
+                    return null;
                 }
 
 
@@ -672,7 +724,7 @@ namespace gipbakery.mes.processapplication
                     if (IsAlarmActive(ProcessAlarm, msg.Message) == null)
                         Messages.LogError(this.GetACUrl(), msg.ACIdentifier, msg.InnerMessage);
                     OnNewAlarmOccurred(ProcessAlarm, msg, false);
-                    return;
+                    return null;
                 }
 
                 var contentACClassWFVB = ContentACClassWF.FromAppContext<gip.mes.datamodel.ACClassWF>(dbApp);
@@ -685,7 +737,7 @@ namespace gipbakery.mes.processapplication
                 if (currentProdOrderPartslist == null)
                 {
                     Messages.LogMessageMsg(new Msg(eMsgLevel.Error, "currentProdOrderPartslist is null."));
-                    return;
+                    return null;
                 }
 
                 IEnumerable<ProdOrderPartslistPos> intermediates = currentProdOrderPartslist.ProdOrderPartslistPos_ProdOrderPartslist
@@ -723,7 +775,7 @@ namespace gipbakery.mes.processapplication
                         if (IsAlarmActive(ProcessAlarm, msg1.Message) == null)
                             Messages.LogError(this.GetACUrl(), msg1.ACIdentifier, msg1.InnerMessage);
                         OnNewAlarmOccurred(ProcessAlarm, msg1, false);
-                        return;
+                        return null;
                     }
 
                     bool isInRelatedIntermediate = false;
@@ -747,7 +799,7 @@ namespace gipbakery.mes.processapplication
                 {
                     // If partslist not contains city water, skip node
                     CurrentACState = ACStateEnum.SMCompleted;
-                    return;
+                    return null;
                 }
 
                 ProdOrderPartslistPosRelation coldWaterComp = relations.FirstOrDefault(c => c.SourceProdOrderPartslistPos.Material.MaterialNo == _ColdWaterMaterialNo);
@@ -786,7 +838,7 @@ namespace gipbakery.mes.processapplication
                 }
 
                 // Modify prodorder with new water quantity
-                if (_NewWaterQuantity.HasValue)
+                if (!onlyCalculation && _NewWaterQuantity.HasValue)
                 {
                     if (_NewWaterQuantity.Value > 0.00001)
                     {
@@ -818,18 +870,22 @@ namespace gipbakery.mes.processapplication
                 CalculateWaterTypes(compTemps, suggestedWaterTemp, waterTargetQuantity.Value, defaultWaterTemp, componentsQ, isOnlyWaterCompsInPartslist, doughTargetTempBeforeKneeding,
                                     false);
 
+                if (onlyCalculation)
+                    return suggestedWaterTemp;
+
                 FillInfoForBSO(compTemps, kneedingRiseTemperature, cityWaterComp, endBatchPos);
             }
+            return null;
         }
 
-        private void CalculateRelocationTargetTempreature(BakeryReceivingPoint recvPoint, PWMethodRelocation pwMethodRelocation)
+        private double? CalculateRelocationTargetTempreature(BakeryReceivingPoint recvPoint, PWMethodRelocation pwMethodRelocation, bool onlyCalculation = false)
         {
             using (Database db = new gip.core.datamodel.Database())
             using (DatabaseApp dbApp = new DatabaseApp())
             {
                 ACValueList componentTemperaturesService = recvPoint.GetComponentTemperatures();
                 if (componentTemperaturesService == null)
-                    return;
+                    return null;
 
                 List<MaterialTemperature> tempFromService = componentTemperaturesService.Select(c => c.Value as MaterialTemperature).ToList();
 
@@ -847,7 +903,7 @@ namespace gipbakery.mes.processapplication
                         OnNewAlarmOccurred(ProcessAlarm, msg);
                         Messages.LogMessageMsg(msg);
                     }
-                    return;
+                    return null;
                 }
 
                 Picking picking = pwMethodRelocation.CurrentPicking.FromAppContext<Picking>(dbApp);
@@ -857,7 +913,7 @@ namespace gipbakery.mes.processapplication
                 if (cityWaterComp == null)
                 {
                     //CurrentACState = ACStateEnum.SMCompleted;
-                    return;
+                    return null;
                 }
 
                 PickingPos coldWaterComp = picking.PickingPos_Picking.FirstOrDefault(c => c.Material.MaterialNo == _ColdWaterMaterialNo);
@@ -885,8 +941,12 @@ namespace gipbakery.mes.processapplication
 
                 CalculateWaterTypes(compTemps, suggestedWaterTemp, waterTargetQuantity.Value, defaultWaterTemp, 0, isOnlyWaterCompsInPartslist, 0, true);
 
+                if (onlyCalculation)
+                    return suggestedWaterTemp;
+
                 FillInfoForBSO(compTemps, null, null, null);
             }
+            return null;
         }
 
         private bool GetKneedingRiseTemperature(DatabaseApp dbApp, double batchSize, out double kneedingTemperature)
