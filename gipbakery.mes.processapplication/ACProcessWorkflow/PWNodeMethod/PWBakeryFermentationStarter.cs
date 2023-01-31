@@ -236,7 +236,7 @@ namespace gipbakery.mes.processapplication
 
             Msg msg = null;
             PAProcessModule processModule = ParentPWGroup.AccessedProcessModule;
-            PAFBakeryYeastProducing preProdFunction = processModule?.FindChildComponents<PAFBakeryYeastProducing>().FirstOrDefault();
+            PAFBakeryYeastProducing preProdFunction = processModule?.FindChildComponents<PAFBakeryYeastProducing>(c => c is PAFBakeryYeastProducing).FirstOrDefault();
 
             if (preProdFunction == null)
             {
@@ -325,7 +325,7 @@ namespace gipbakery.mes.processapplication
                 }
 
                 PAProcessModule pumpModule = ACUrlCommand(pumpModuleACUrl) as PAProcessModule;
-                PAFBakeryPumping pump = pumpModule?.FindChildComponents<PAFBakeryPumping>().FirstOrDefault();
+                PAFBakeryPumping pump = pumpModule?.FindChildComponents<PAFBakeryPumping>(c => c is PAFBakeryPumping).FirstOrDefault();
                 if (pump != null)
                 {
                     if (pump.CurrentACState != ACStateEnum.SMIdle)
