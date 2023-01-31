@@ -209,7 +209,9 @@ namespace gipbakery.mes.processapplication
 
         public override void SMRunning()
         {
-            StartFermentationStarter();
+            bool result = StartFermentationStarter();
+            if (!result)
+                return;
 
             base.SMRunning();
         }
@@ -227,12 +229,12 @@ namespace gipbakery.mes.processapplication
             return ParentRootWFNode as T;
         }
 
-        private void StartFermentationStarter()
+        private bool StartFermentationStarter()
         {
             PWMethodProduction pwMethodProduction = ParentPWMethod<PWMethodProduction>();
             // If dosing is not for production, then do nothing
             if (pwMethodProduction == null)
-                return;
+                return true;
 
             Msg msg = null;
             PAProcessModule processModule = ParentPWGroup.AccessedProcessModule;
@@ -243,7 +245,7 @@ namespace gipbakery.mes.processapplication
                 //Error50442: The process function PAFBakerySourDoughProducing can not be found on the process module {0}. Please check your configuration.";
                 msg = new Msg(this, eMsgLevel.Error, PWClassName, "StartFermentationStarter(10)", 176, "Error50442", processModule.ACCaption);
                 OnNewAlarmOccurred(ProcessAlarm, msg);
-                return;
+                return true;
             }
 
             if (CheckIsPumpingActive)
@@ -252,7 +254,7 @@ namespace gipbakery.mes.processapplication
                 if (result)
                 {
                     SubscribeToProjectWorkCycle();
-                    return;
+                    return false;
                 }
             }
 
@@ -262,7 +264,7 @@ namespace gipbakery.mes.processapplication
                 //Error50443: The scale object for fermentation starter can not be found! Please configure scale object on the function PAFBakerySourDoughProducing for {0}.
                 msg = new Msg(this, eMsgLevel.Error, PWClassName, "StartFermentationStarter(20)", 66, "Error50443", processModule.ACCaption);
                 OnNewAlarmOccurred(ProcessAlarm, msg);
-                return;
+                return true;
             }
 
             UserInteractionEnum userAckMode = UserInteractionEnum.None;
@@ -279,7 +281,7 @@ namespace gipbakery.mes.processapplication
             }
 
             if (!FSTargetQuantity.ValueT.HasValue)
-                return;
+                return true;
 
             double targetQuantityRel = FSTargetQuantity.ValueT.Value;
 
@@ -305,6 +307,7 @@ namespace gipbakery.mes.processapplication
                     }
                 }
             }
+            return true;
         }
 
         private bool IsPumpingActive(PAFBakeryYeastProducing preProdFunction, PAProcessModule processModule)
@@ -1053,6 +1056,15 @@ namespace gipbakery.mes.processapplication
                 xmlChild = doc.CreateElement("ScaleDetectMode");
                 if (xmlChild != null)
                     xmlChild.InnerText = _ScaleDetectMode.ToString();
+                xmlACPropertyList.AppendChild(xmlChild);
+            }
+
+            xmlChild = xmlACPropertyList["_IsCheckedIsPumpOverActive"];
+            if (xmlChild == null)
+            {
+                xmlChild = doc.CreateElement("_IsCheckedIsPumpOverActive");
+                if (xmlChild != null)
+                    xmlChild.InnerText = _IsCheckedIsPumpOverActive.ToString();
                 xmlACPropertyList.AppendChild(xmlChild);
             }
         }
