@@ -49,11 +49,11 @@ namespace gipbakery.mes.processapplication
             paramTranslation.Add("TempRiseFastHalf", "en{'Temperature rising °C/Min fast half quantity'}de{'Erwärmung °C/Min schnell halbe Menge'}");
 
             // GaerZeit
-            method.ParameterValueList.Add(new ACValue("GaerZeit", typeof(double), 0, Global.ParamOption.Optional));
-            paramTranslation.Add("GaerZeit", "en{'Gaer Time'}de{'Gaer Zeit'}");
+            method.ParameterValueList.Add(new ACValue("GaerZeit", typeof(TimeSpan), TimeSpan.Zero, Global.ParamOption.Optional));
+            paramTranslation.Add("GaerZeit", "en{'Gaer Time'}de{'Gär Zeit'}");
 
             // OfenZeit
-            method.ParameterValueList.Add(new ACValue("OfenZeit", typeof(double), 0, Global.ParamOption.Optional));
+            method.ParameterValueList.Add(new ACValue("OfenZeit", typeof(TimeSpan), TimeSpan.Zero, Global.ParamOption.Optional));
             paramTranslation.Add("OfenZeit", "en{'Ofentime slow'}de{'Ofen Zeit'}");
 
             var wrapper = new ACMethodWrapper(method, "en{'Configuration'}de{'Konfiguration'}", typeof(PWBakeryKneading), paramTranslation, null);
