@@ -312,8 +312,8 @@ namespace gipbakery.mes.processapplication
 
         private bool IsPumpingActive(PAFBakeryYeastProducing preProdFunction, PAProcessModule processModule)
         {
-            //if (!_IsCheckedIsPumpOverActive)
-            //{
+            if (!_IsCheckedIsPumpOverActive)
+            {
                 if (preProdFunction == null || processModule == null)
                 {
                     Messages.LogInfo(this.GetACUrl(), nameof(IsPumpingActive) + "(10)", string.Format("preProdFunction is null: {0}  processModule is null: {1}",
@@ -359,7 +359,7 @@ namespace gipbakery.mes.processapplication
                     }
                     else
                     {
-                        Messages.LogInfo(this.GetACUrl(), nameof(IsPumpingActive) + "(50)", String.Format("PumpFunction ACState: {0}", pump.CurrentACState));
+                        //Messages.LogInfo(this.GetACUrl(), nameof(IsPumpingActive) + "(50)", String.Format("PumpFunction ACState: {0}", pump.CurrentACState));
                         _IsCheckedIsPumpOverActive = true;
                     }
                 }
@@ -367,7 +367,7 @@ namespace gipbakery.mes.processapplication
                 {
                     Messages.LogInfo(this.GetACUrl(), nameof(IsPumpingActive) + "(60)" , String.Format("The pumping module is null = {0} and the pumping function is null = {1}", pumpModule == null, pump == null));
                 }
-            //}
+            }
             return false;
         }
 
