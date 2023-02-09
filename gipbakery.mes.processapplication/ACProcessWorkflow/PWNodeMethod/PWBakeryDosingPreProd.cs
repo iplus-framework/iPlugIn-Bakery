@@ -363,7 +363,7 @@ namespace gipbakery.mes.processapplication
                             RouteQueryParams queryParams = new RouteQueryParams(RouteQueryPurpose.StartDosing,
                                 OldestSilo ? ACPartslistManager.SearchMode.OnlyEnabledOldestSilo : ACPartslistManager.SearchMode.SilosWithOutwardEnabled,
                                 null, null, ExcludedSilos);
-                            IEnumerable<Route> routes = GetRoutes(relation, dbApp, dbIPlus, queryParams, out possibleSilos);
+                            IEnumerable<Route> routes = GetRoutes(relation, dbApp, dbIPlus, queryParams, null, out possibleSilos);
 
                             if (routes != null && routes.Any())
                             {
@@ -575,12 +575,12 @@ namespace gipbakery.mes.processapplication
                 if (IsProduction)
                 {
                     ProdOrderPartslistPosRelation relation = dbApp.ProdOrderPartslistPosRelation.FirstOrDefault(c => c.ProdOrderPartslistPosRelationID == posID);
-                    routes = GetRoutes(relation, dbApp, dbIPlus, queryParams, out possibleSilos);
+                    routes = GetRoutes(relation, dbApp, dbIPlus, queryParams, null, out possibleSilos);
                 }
                 else if (IsTransport)
                 {
                     PickingPos pickingPos = dbApp.PickingPos.FirstOrDefault(c => c.PickingPosID == posID);
-                    routes = GetRoutes(pickingPos, dbApp, dbIPlus, queryParams, out possibleSilos);
+                    routes = GetRoutes(pickingPos, dbApp, dbIPlus, queryParams, null, out possibleSilos);
                 }
 
                 if (routes != null && routes.Any())

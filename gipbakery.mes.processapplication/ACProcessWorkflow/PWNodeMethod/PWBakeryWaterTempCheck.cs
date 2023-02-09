@@ -74,6 +74,12 @@ namespace gipbakery.mes.processapplication
         [ACMethodState("en{'Executing'}de{'Ausführend'}", 20, true)]
         public override void SMStarting()
         {
+            if (Root == null || !Root.Initialized)
+            {
+                SubscribeToProjectWorkCycle();
+                return;
+            }
+
             bool skipCheck = SkipCheck;
             if (!skipCheck)
             {

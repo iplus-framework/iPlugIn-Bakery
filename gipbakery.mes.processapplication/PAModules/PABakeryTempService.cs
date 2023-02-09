@@ -28,37 +28,34 @@ namespace gipbakery.mes.processapplication
             return base.ACInit(startChildMode);
         }
 
+        public override bool ACPreDeInit(bool deleteACClassTask = false)
+        {
+            return base.ACPreDeInit(deleteACClassTask);
+        }
+
         public override bool ACPostInit()
         {
             bool result = base.ACPostInit();
             if (!result)
                 return result;
 
-            Root.PropertyChanged += Root_PropertyChanged;
+            AddToPostInitQueue(() => {
+            try
+            {
+                InitializeService();
+            }
+            catch (Exception ex)
+            {
+                Messages.LogException(this.GetACUrl(), "Root_PropertyChanged(10)", ex);
+            }
+            });
 
             return result;
         }
 
-        private void Root_PropertyChanged(object sender, PropertyChangedEventArgs e)
-        {
-            if (e.PropertyName == "InitState" && Root.InitState == ACInitState.Initialized)
-            {
-                try
-                {
-                    InitializeService();
-                }
-                catch (Exception ex)
-                {
-                    Messages.LogException(this.GetACUrl(), "Root_PropertyChanged(10)", ex);
-                    //OnNewAlarmOccurred();
-                }
-                Root.PropertyChanged -= Root_PropertyChanged;
-            }
-        }
-
         public override bool ACDeInit(bool deleteACClassTask = false)
         {
-            Root.PropertyChanged -= Root_PropertyChanged;
+            //Root.PropertyChanged -= Root_PropertyChanged;
             return base.ACDeInit(deleteACClassTask);
         }
 
@@ -106,7 +103,7 @@ namespace gipbakery.mes.processapplication
         [ACPropertyBindingSource(710, "Error", "en{'Service alarm'}de{'Service Alarm'}", "", false, false)]
         public IACContainerTNet<PANotifyState> ServiceAlarm { get; set; }
 
-        private List<BakerySilo> _PossibleSilos;
+        private List<ACRef<BakerySilo>> _PossibleSilos;
 
         #endregion
 
@@ -190,11 +187,10 @@ namespace gipbakery.mes.processapplication
         {
             DeinitCache();
 
-            List<BakerySilo> silosWithBakeryPTC = new List<BakerySilo>();
+            List<ACRef<BakerySilo>> silosWithBakeryPTC = new List<ACRef<BakerySilo>>();
             var temperatures = new Dictionary<BakeryReceivingPoint, BakeryRecvPointTemperature>();
 
-            var projects = Root.ACComponentChilds.Where(c => c.ComponentClass.ACProject.ACProjectTypeIndex == (short)Global.ACProjectTypes.Application
-                                                          && c.ACIdentifier != "DataAccess");
+            var projects = Root.FindChildComponents<ApplicationManager>(c => c is ApplicationManager, null, 1);
 
             List<BakeryReceivingPoint> receivingPoints = new List<BakeryReceivingPoint>();
 
@@ -202,13 +198,13 @@ namespace gipbakery.mes.processapplication
 
             foreach (var project in projects)
             {
-                var possibleSilos = project.FindChildComponents<BakerySilo>(c => c.ACComponentChilds.Any(x => x is PAEBakeryThermometer));
+                var possibleSilos = project.FindChildComponents<BakerySilo>(c => c is BakerySilo && c.ACComponentChilds.Any(x => x is PAEBakeryThermometer));
 
                 foreach (var possibleSilo in possibleSilos)
                 {
                     if (possibleSilo.Thermometers.Any(c => !c.DisabledForTempCalculation))
                     {
-                        silosWithBakeryPTC.Add(possibleSilo);
+                        silosWithBakeryPTC.Add(new ACRef<BakerySilo>(possibleSilo,this));
                         possibleSilo.MaterialNo.PropertyChanged += MaterialNo_PropertyChanged;
                         possibleSilo.OutwardEnabled.PropertyChanged += OutwardEnabled_PropertyChanged;
                     }
@@ -228,13 +224,13 @@ namespace gipbakery.mes.processapplication
 
                     foreach (var silo in silosWithBakeryPTC)
                     {
-                        RoutingResult routingResult = ACRoutingService.SelectRoutes(RoutingService, db, false, silo.ComponentClass, receivingPoint.ComponentClass,
+                        RoutingResult routingResult = ACRoutingService.SelectRoutes(RoutingService, db, false, silo.ValueT.ComponentClass, receivingPoint.ComponentClass,
                                                                                     RouteDirections.Forwards, PAMParkingspace.SelRuleID_ParkingSpace_Deselector, null, 
                                                                                     null, null, 1, true, true);
 
                         if (routingResult != null && routingResult.Routes != null && routingResult.Routes.Any())
                         {
-                            tempInfo.AddSilo(silo);
+                            tempInfo.AddSilo(silo.ValueT);
                         }
                     }
 
@@ -327,14 +323,14 @@ namespace gipbakery.mes.processapplication
 
             if (_PossibleSilos != null && _PossibleSilos.Any())
             {
-                foreach (BakerySilo silo in _PossibleSilos)
+                foreach (ACRef<BakerySilo> silo in _PossibleSilos)
                 {
-                    silo.MaterialNo.PropertyChanged -= MaterialNo_PropertyChanged;
-                    silo.OutwardEnabled.PropertyChanged -= OutwardEnabled_PropertyChanged;
+                    silo.ValueT.MaterialNo.PropertyChanged -= MaterialNo_PropertyChanged;
+                    silo.ValueT.OutwardEnabled.PropertyChanged -= OutwardEnabled_PropertyChanged;
                 }
             }
 
-            foreach(var cacheItem in values)
+            foreach (var cacheItem in values)
             {
                 cacheItem.DeInit();
             }

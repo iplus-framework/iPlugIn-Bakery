@@ -236,7 +236,7 @@ namespace gipbakery.mes.processapplication
             if (TemperatureService == null)
                 return null;
 
-            return TemperatureService.ExecuteMethod("GetWaterMaterialNo", ComponentClass.ACClassID) as ACValueList;
+            return TemperatureService.ExecuteMethod(nameof(PABakeryTempService.GetWaterMaterialNo), ComponentClass.ACClassID) as ACValueList;
         }
 
         //public PAEScaleBase GetRecvPointReadyScale()
