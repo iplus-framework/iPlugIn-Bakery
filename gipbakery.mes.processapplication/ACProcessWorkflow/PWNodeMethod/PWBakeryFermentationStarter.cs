@@ -316,6 +316,8 @@ namespace gipbakery.mes.processapplication
             {
                 if (preProdFunction == null || processModule == null)
                 {
+                    Messages.LogInfo(this.GetACUrl(), nameof(IsPumpingActive) + "(10)", string.Format("preProdFunction is null: {0}  processModule is null: {1}",
+                                                                                                      preProdFunction == null, processModule == null));
                     _IsCheckedIsPumpOverActive = true;
                     return false;
                 }
@@ -323,6 +325,7 @@ namespace gipbakery.mes.processapplication
                 string pumpModuleACUrl = preProdFunction.PumpOverProcessModuleACUrl;
                 if (string.IsNullOrEmpty(pumpModuleACUrl))
                 {
+                    Messages.LogInfo(this.GetACUrl(), nameof(IsPumpingActive) + "(20)", "pumpModuleACUrl is null or empty!");
                     _IsCheckedIsPumpOverActive = true;
                     return false;
                 }
@@ -343,23 +346,26 @@ namespace gipbakery.mes.processapplication
                             }
                             else
                             {
+                                Messages.LogInfo(this.GetACUrl(), nameof(IsPumpingActive) + "(30)", String.Format("PAModule source item: {0}  PumpFunction source item: {1}",
+                                                                                                                  processModule.RouteItemIDAsNum, sourceID));
                                 _IsCheckedIsPumpOverActive = true;
                             }
                         }
                         else
                         {
-                            Messages.LogInfo(this.GetACUrl(), nameof(IsPumpingActive), string.Format("The source item from a pumping function is null! The pump function's CurrentACMethod is null = {0}",
+                            Messages.LogInfo(this.GetACUrl(), nameof(IsPumpingActive) + "(40)", string.Format("The source item from a pumping function is null! The pump function's CurrentACMethod is null = {0}",
                                                                                                      pump.CurrentACMethod?.ValueT == null));
                         }
                     }
                     else
                     {
+                        //Messages.LogInfo(this.GetACUrl(), nameof(IsPumpingActive) + "(50)", String.Format("PumpFunction ACState: {0}", pump.CurrentACState));
                         _IsCheckedIsPumpOverActive = true;
                     }
                 }
                 else
                 {
-                    Messages.LogInfo(this.GetACUrl(), nameof(IsPumpingActive), String.Format("The pumping module is null = {0} and the pumping function is null = {1}", pumpModule == null, pump == null));
+                    Messages.LogInfo(this.GetACUrl(), nameof(IsPumpingActive) + "(60)" , String.Format("The pumping module is null = {0} and the pumping function is null = {1}", pumpModule == null, pump == null));
                 }
             }
             return false;
