@@ -1252,7 +1252,7 @@ namespace gipbakery.mes.processapplication
 
                                 if (!inwardFacility.MaterialID.HasValue)
                                 {
-                                    //Info50080: The virutual store has not material assigned. Please assign material to the virtual store then restart dosing process and temperature control.
+                                    //Info50080: The virtual store has not material assigned. Please assign material to the virtual store then restart dosing process and temperature control.
                                     Messages.Info(this, "Info50080");
                                     return;
                                 }
