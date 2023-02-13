@@ -9,6 +9,8 @@ using System.Text;
 using System.Threading.Tasks;
 using gip.mes.processapplication;
 using gip.mes.facility;
+using System.Data.Entity.Core.Mapping;
+using gip.mes.datamodel;
 
 namespace gipbakery.mes.processapplication
 {
@@ -32,6 +34,12 @@ namespace gipbakery.mes.processapplication
         {
             _MatNoWarmWater = null;
             _MatNoColdWater = null;
+
+            if (_FloorScaleDosingInfo != null)
+            {
+                _FloorScaleDosingInfo.PropertyChanged -= _FloorScaleDosingInfo_PropertyChanged;
+                _FloorScaleDosingInfo = null;
+            }
 
             return base.ACDeInit(deleteACClassTask);
         }
@@ -76,6 +84,8 @@ namespace gipbakery.mes.processapplication
 
         private IACContainerTNet<bool> IsCoverUpDown;
 
+        private IACContainerTNet<RecvPointDosingInfoEnum> _FloorScaleDosingInfo;
+
         private CoverFlourButtonEnum _CoverFlourBtnMode;
         [ACPropertyInfo(9999)]
         public CoverFlourButtonEnum CoverFlourBtnMode
@@ -102,6 +112,17 @@ namespace gipbakery.mes.processapplication
                 //}
 
                 _BtnFlourBlink = value;
+                OnPropertyChanged();
+            }
+        }
+
+        private RecvPointDosingInfoEnum _RecvPointDosingInfo;
+        public RecvPointDosingInfoEnum RecvPointDosingInfo
+        {
+            get => _RecvPointDosingInfo;
+            set
+            {
+                _RecvPointDosingInfo = value;
                 OnPropertyChanged();
             }
         }
@@ -309,12 +330,12 @@ namespace gipbakery.mes.processapplication
 
             CoverFlourBtnMode = CoverFlourButtonEnum.None;
 
-            ACClass recvPointClass = null;
+            gip.core.datamodel.ACClass recvPointClass = null;
 
             //var contextIplus = DatabaseApp.ContextIPlus;
             using (Database db = new gip.core.datamodel.Database())
             {
-                recvPointClass = selectedProcessModule?.ComponentClass.FromIPlusContext<ACClass>(db);
+                recvPointClass = selectedProcessModule?.ComponentClass.FromIPlusContext<gip.core.datamodel.ACClass>(db);
                 if (recvPointClass != null && _BakeryRecvPointType.IsAssignableFrom(recvPointClass.ObjectType))
                 {
                     var isCoverUpDown = selectedProcessModule.GetPropertyNet(nameof(BakeryReceivingPoint.IsCoverDown)) as IACContainerTNet<bool>;
@@ -367,7 +388,7 @@ namespace gipbakery.mes.processapplication
             {
                 var pwClass = db.ACClass.FirstOrDefault(c => c.ACProject.ACProjectTypeIndex == (short)Global.ACProjectTypes.ClassLibrary &&
                                                                                                 c.ACIdentifier == PWBakeryTempCalc.PWClassName);
-                ACRef<ACClass> refClass = new ACRef<ACClass>(pwClass, true);
+                ACRef<gip.core.datamodel.ACClass> refClass = new ACRef<gip.core.datamodel.ACClass>(pwClass, true);
                 pwNodes = pwGroup.GetChildInstanceInfo(1, new ChildInstanceInfoSearchParam() { OnlyWorkflows = true, TypeOfRoots = refClass });
                 refClass.Detach();
             }
@@ -845,7 +866,7 @@ namespace gipbakery.mes.processapplication
 
         #region Methods => SingleDosing
 
-        public override bool OnPreStartWorkflow(vd.DatabaseApp dbApp, gip.mes.datamodel.Picking picking, List<SingleDosingConfigItem> configItems, Route validRoute, ACClassWF rootWF)
+        public override bool OnPreStartWorkflow(vd.DatabaseApp dbApp, gip.mes.datamodel.Picking picking, List<SingleDosingConfigItem> configItems, Route validRoute, gip.core.datamodel.ACClassWF rootWF)
         {
             base.OnPreStartWorkflow(dbApp, picking, configItems, validRoute, rootWF);
 
@@ -856,7 +877,7 @@ namespace gipbakery.mes.processapplication
 
                 if (configItem != null)
                 {
-                    ACClassWF tempCalc = configItem.PWGroup.ACClassWF_ParentACClassWF.FirstOrDefault(x => _BakeryTempCalcType.IsAssignableFrom(x.PWACClass.ObjectType));
+                    gip.core.datamodel.ACClassWF tempCalc = configItem.PWGroup.ACClassWF_ParentACClassWF.FirstOrDefault(x => _BakeryTempCalcType.IsAssignableFrom(x.PWACClass.ObjectType));
                     if (tempCalc == null)
                         return false;
 
@@ -906,7 +927,7 @@ namespace gipbakery.mes.processapplication
             return result;
         }
 
-        private bool AddDischargingConfig(vd.DatabaseApp dbApp, vd.Picking picking, List<SingleDosingConfigItem> configItems, Route validRoute, ACClassWF rootWF)
+        private bool AddDischargingConfig(vd.DatabaseApp dbApp, vd.Picking picking, List<SingleDosingConfigItem> configItems, Route validRoute, gip.core.datamodel.ACClassWF rootWF)
         {
             if (!DischargeOverHose)
                 return true;
@@ -932,7 +953,7 @@ namespace gipbakery.mes.processapplication
                         return false;
                     }
 
-                    ACClass compClass = currentProcessModule?.ComponentClass.FromIPlusContext<gip.core.datamodel.ACClass>(dbApp.ContextIPlus);
+                    gip.core.datamodel.ACClass compClass = currentProcessModule?.ComponentClass.FromIPlusContext<gip.core.datamodel.ACClass>(dbApp.ContextIPlus);
 
                     var config = compClass?.ConfigurationEntries.FirstOrDefault(c => c.KeyACUrl == compClass.ACConfigKeyACUrl && c.LocalConfigACUrl == "HoseDestination");
                     if (config == null)
@@ -964,7 +985,7 @@ namespace gipbakery.mes.processapplication
             return true;
         }
 
-        private bool InsertOverHoseConfiguration(ACClassWF pwNode, ACClassWF rootWF, gip.mes.datamodel.Picking picking, object configValue)
+        private bool InsertOverHoseConfiguration(gip.core.datamodel.ACClassWF pwNode, gip.core.datamodel.ACClassWF rootWF, gip.mes.datamodel.Picking picking, object configValue)
         {
             if (pwNode == null || rootWF == null)
                 return false;
@@ -1003,7 +1024,7 @@ namespace gipbakery.mes.processapplication
             return true;
         }
 
-        private IACConfig InsertTemperatureConfiguration(string propertyACUrl, string preConfigACUrl, string paramACIdentifier, ACClassWF acClassWF, IACConfigStore configStore)
+        private IACConfig InsertTemperatureConfiguration(string propertyACUrl, string preConfigACUrl, string paramACIdentifier, gip.core.datamodel.ACClassWF acClassWF, IACConfigStore configStore)
         {
             ACMethod acMethod = acClassWF.PWACClass.ACClassMethod_ACClass.FirstOrDefault(c => c.ACIdentifier == ACStateConst.SMStarting)?.ACMethod;
             if (acMethod != null)
@@ -1037,10 +1058,10 @@ namespace gipbakery.mes.processapplication
 
                 if (currentProcessModule != null)
                 {
-                    ACClass recvPointClass = null;
+                    gip.core.datamodel.ACClass recvPointClass = null;
                     using (Database db = new gip.core.datamodel.Database())
                     {
-                        recvPointClass = currentProcessModule?.ComponentClass.FromIPlusContext<ACClass>(db);
+                        recvPointClass = currentProcessModule?.ComponentClass.FromIPlusContext<gip.core.datamodel.ACClass>(db);
 
                         if (recvPointClass != null && _BakeryRecvPointType.IsAssignableFrom(recvPointClass.ObjectType))
                         {
@@ -1077,7 +1098,7 @@ namespace gipbakery.mes.processapplication
             {
                 using (Database db = new gip.core.datamodel.Database())
                 {
-                    ACClass recvPointClass = currentProcessModule?.ComponentClass.FromIPlusContext<ACClass>(db);
+                    gip.core.datamodel.ACClass recvPointClass = currentProcessModule?.ComponentClass.FromIPlusContext<gip.core.datamodel.ACClass>(db);
 
                     if (recvPointClass != null && _BakeryRecvPointType.IsAssignableFrom(recvPointClass.ObjectType))
                     {
@@ -1097,18 +1118,18 @@ namespace gipbakery.mes.processapplication
                             return base.ValidateSingleDosingStart(currentProcessModule);
                         }
 
-                        ACClass componentClass = currentProcessModule.ComponentClass?.FromIPlusContext<ACClass>(db);
+                        gip.core.datamodel.ACClass componentClass = currentProcessModule.ComponentClass?.FromIPlusContext<gip.core.datamodel.ACClass>(db);
                         if (componentClass == null)
                             return null;
 
-                        ACClassProperty waterTankACUrlProp = componentClass.GetProperty(nameof(BakeryReceivingPoint.WaterTankACUrl));
+                        gip.core.datamodel.ACClassProperty waterTankACUrlProp = componentClass.GetProperty(nameof(BakeryReceivingPoint.WaterTankACUrl));
                         if (waterTankACUrlProp != null && waterTankACUrlProp.Value != null && waterTankACUrlProp.Value is string)
                         {
                             string acUrl = waterTankACUrlProp.Value as string;
-                            ACClass waterTank = db.ACClass.FirstOrDefault(c => c.ACURLComponentCached == acUrl);
+                            gip.core.datamodel.ACClass waterTank = db.ACClass.FirstOrDefault(c => c.ACURLComponentCached == acUrl);
 
                             double maxWeight = 0;
-                            ACClassProperty maxWeightProp = waterTank.GetProperty(nameof(PAProcessModule.MaxWeightCapacity));
+                            gip.core.datamodel.ACClassProperty maxWeightProp = waterTank.GetProperty(nameof(PAProcessModule.MaxWeightCapacity));
                             if (maxWeightProp != null && maxWeightProp.Value != null && maxWeightProp.Value is string)
                                 maxWeight = (double)ACConvert.ChangeType(maxWeightProp.Value as string, typeof(double), true, db);
 
@@ -1173,7 +1194,7 @@ namespace gipbakery.mes.processapplication
             return base.OnGetControlModes(vbControl);
         }
 
-        protected override bool HandleExecuteACMethod(out object result, AsyncMethodInvocationMode invocationMode, string acMethodName, ACClassMethod acClassMethod, params object[] acParameter)
+        protected override bool HandleExecuteACMethod(out object result, AsyncMethodInvocationMode invocationMode, string acMethodName, gip.core.datamodel.ACClassMethod acClassMethod, params object[] acParameter)
         {
             result = null;
             switch (acMethodName)
@@ -1258,6 +1279,71 @@ namespace gipbakery.mes.processapplication
             }
 
             return base.AddToMessageList(messageItem);
+        }
+
+        public override void Abort()
+        {
+            if (!IsEnabledAbort())
+                return;
+
+            IACComponentPWNode componentPWNode = ComponentPWNodeLocked;
+            if (componentPWNode != null)
+            {
+                if (_FloorScaleDosingInfo == null)
+                {
+                    var dosingOnFloorScaleProp = CurrentProcessModule?.GetPropertyNet(nameof(BakeryReceivingPoint.IsDosingOnFloorScale));
+                    if (dosingOnFloorScaleProp != null)
+                    {
+                        _FloorScaleDosingInfo = dosingOnFloorScaleProp as IACContainerTNet<RecvPointDosingInfoEnum>;
+                    }
+                }
+
+                if (_FloorScaleDosingInfo != null)
+                {
+                    _FloorScaleDosingInfo.PropertyChanged -= _FloorScaleDosingInfo_PropertyChanged;
+                    _FloorScaleDosingInfo.PropertyChanged += _FloorScaleDosingInfo_PropertyChanged;
+
+                    _FloorScaleDosingInfo_PropertyChanged(_FloorScaleDosingInfo, new System.ComponentModel.PropertyChangedEventArgs(Const.ValueT));
+                }
+            }
+
+            base.Abort();
+
+            if (_FloorScaleDosingInfo != null)
+            {
+                _FloorScaleDosingInfo.PropertyChanged -= _FloorScaleDosingInfo_PropertyChanged;
+            }
+        }
+
+
+        private void _FloorScaleDosingInfo_PropertyChanged(object sender, System.ComponentModel.PropertyChangedEventArgs e)
+        {
+            if (e.PropertyName == Const.ValueT)
+            {
+                IACContainerTNet<RecvPointDosingInfoEnum> temp = sender as IACContainerTNet<RecvPointDosingInfoEnum>;
+                if (temp != null)
+                {
+                    RecvPointDosingInfo = temp.ValueT;
+                }
+            }
+        }
+
+        public override void Interdischarge()
+        {
+            if (!IsEnabledInterdischarge())
+                return;
+
+            base.Interdischarge();
+        }
+
+        public override bool IsEnabledInterdischarge()
+        {
+            if (RecvPointDosingInfo != RecvPointDosingInfoEnum.DosingActive)
+            {
+                return InInterdischargingQ.HasValue ? false : true;
+            }
+
+            return false;
         }
 
         #endregion

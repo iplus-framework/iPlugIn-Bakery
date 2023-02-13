@@ -80,11 +80,15 @@ namespace gipbakery.mes.processapplication
                 }
             }
 
+            RegisterDosingOnFloorScale();
+
             return base.ACPostInit();
         }
 
         public override bool ACDeInit(bool deleteACClassTask = false)
         {
+            UnRegisterDosingOnFloorScale();
+
             return base.ACDeInit(deleteACClassTask);
         }
         #endregion
@@ -178,6 +182,13 @@ namespace gipbakery.mes.processapplication
             set;
         }
 
+        [ACPropertyBindingTarget(IsPersistable = true)]
+        public IACContainerTNet<RecvPointDosingInfoEnum> IsDosingOnFloorScale
+        {
+            get;
+            set;
+        }
+
         private bool _SearchTempService = true;
         private ACRef<ACComponent> _TemperatureService;
 
@@ -239,25 +250,6 @@ namespace gipbakery.mes.processapplication
             return TemperatureService.ExecuteMethod(nameof(PABakeryTempService.GetWaterMaterialNo), ComponentClass.ACClassID) as ACValueList;
         }
 
-        //public PAEScaleBase GetRecvPointReadyScale()
-        //{
-        //    PAEScaleBase scale = null;
-
-        //    if (!string.IsNullOrEmpty(RecvPointReadyScaleACUrl))
-        //    {
-        //        scale = ACUrlCommand(RecvPointReadyScaleACUrl) as PAEScaleBase;
-        //    }
-            
-        //    if (scale == null)
-        //    {
-        //        IPAMContScale scaleCont = this as IPAMContScale;
-        //        if (scaleCont != null)
-        //            scale = scaleCont.Scale;
-        //    }
-
-        //    return scale;
-        //}
-
         [ACMethodInfo("", "", 9999)]
         public bool IsCoverDownPropertyBounded()
         {
@@ -278,6 +270,48 @@ namespace gipbakery.mes.processapplication
                 return isEnabled.Value;
 
             return false;
+        }
+
+        private void RegisterDosingOnFloorScale()
+        {
+            var pafDosings = FindChildComponents<PAFDosing>(c => c is PAFDosing, null, 1).Where(c => c.ScaleMappingHelper != null && c.ScaleMappingHelper.AssignedScales.Any(x => x is PAEScaleGravimetric));
+
+            if (pafDosings != null && pafDosings.Any())
+            {
+                foreach (var pafDosing in pafDosings)
+                {
+                    pafDosing.ACState.PropertyChanged += PAFDosingACState_PropertyChanged;
+                }
+
+                PAFDosingACState_PropertyChanged(this, new PropertyChangedEventArgs(Const.ValueT));
+            }
+            else
+            {
+                IsDosingOnFloorScale.ValueT = RecvPointDosingInfoEnum.NotPossible;
+            }
+        }
+
+        private void UnRegisterDosingOnFloorScale()
+        {
+            var pafDosings = FindChildComponents<PAFDosing>(c => c is PAFDosing, null, 1).Where(c => c.ScaleMappingHelper != null && c.ScaleMappingHelper.AssignedScales.Any(x => x is PAEScaleGravimetric));
+
+            if (pafDosings != null && pafDosings.Any())
+            {
+                foreach (var pafDosing in pafDosings)
+                {
+                    pafDosing.ACState.PropertyChanged -= PAFDosingACState_PropertyChanged;
+                }
+            }
+        }
+
+        private void PAFDosingACState_PropertyChanged(object sender, PropertyChangedEventArgs e)
+        {
+            if (e.PropertyName == Const.ValueT)
+            {
+                IsDosingOnFloorScale.ValueT = FindChildComponents<PAFDosing>(c => c is PAFDosing, null, 1)
+                                                                   .Any(c => c.CurrentACState != ACStateEnum.SMIdle 
+                                                                          && c.CurrentScaleForWeighing is PAEScaleGravimetric) ? RecvPointDosingInfoEnum.DosingActive : RecvPointDosingInfoEnum.DosingIdle;
+            }
         }
 
         public bool WaitIfMeasureWaterIsBound(PWBakeryWaitWaterM requester)

@@ -102,6 +102,7 @@
     <Compile Include="Model\BakeryThermometerInfoItem.cs" />
     <Compile Include="Model\MaterialTemperature.cs" />
     <Compile Include="Model\MaterialTempMeasureItem.cs" />
+    <Compile Include="Model\RecvPointDosingInfoEnum.cs" />
     <Compile Include="Model\TempMeasurementModeEnum.cs" />
     <Compile Include="PAModules\PABakeryTempService.cs" />
     <Compile Include="PAModules\PAEBakeryThermometer.cs" />
