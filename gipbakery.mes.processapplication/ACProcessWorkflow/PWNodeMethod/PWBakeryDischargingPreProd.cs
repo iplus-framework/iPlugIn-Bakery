@@ -32,6 +32,10 @@ namespace gipbakery.mes.processapplication
             paramTranslation.Add("NoPostingOnRelocation", "en{'No posting at relocation'}de{'Keine Buchung bei Umlagerung'}");
             method.ParameterValueList.Add(new ACValue("UseScaleWeightOnPost", typeof(bool), false, Global.ParamOption.Optional));
             paramTranslation.Add("UseScaleWeightOnPost", "en{'Use scale gross weight on posting'}de{'Waagenbruttogewicht bei der Buchung verwenden'}");
+            method.ParameterValueList.Add(new ACValue("KeepPlannedDestOnEmptying", typeof(bool), false, Global.ParamOption.Optional));
+            paramTranslation.Add("KeepPlannedDestOnEmptying", "en{'Keep planned destination on emptying mode'}de{'Geplantes Ziel im Entleerungsmodus beibehalten'}");
+            method.ParameterValueList.Add(new ACValue("SkipPredCount", typeof(short), 0, Global.ParamOption.Optional));
+            paramTranslation.Add("SkipPredCount", "en{'Search limit predecessors (- outside of group)'}de{'Begrenzung Vorgängersuche (- ausserhalb von Gruppe)'}");
             method.ParameterValueList.Add(new ACValue("PostingBehaviour", typeof(PostingBehaviourEnum), PostingBehaviourEnum.NotSet, Global.ParamOption.Optional));
             paramTranslation.Add("PostingBehaviour", "en{'Posting behaviour'}de{'Buchungsverhalten'}");
 

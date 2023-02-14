@@ -32,6 +32,9 @@ namespace gipbakery.mes.processapplication
             method.ParameterValueList.Add(new ACValue("PreventPumpAtProd", typeof(bool), true, Global.ParamOption.Optional));
             paramTranslation.Add("PreventPumpAtProd", "en{'No pumping during production'}de{'Kein Umpumpen während der Produktion'}");
 
+            method.ParameterValueList.Add(new ACValue("RouteItemIDChangeMode", typeof(ushort), 0, Global.ParamOption.Optional));
+            paramTranslation.Add("RouteItemIDChangeMode", "en{'Changemode of RouteItemID (1=Remove last digit)'}de{'Änderungsmodus der RouteItemID (1=letzte Stelle entfernen)'}");
+
             var wrapper = new ACMethodWrapper(method, "en{'Configuration'}de{'Konfiguration'}", typeof(PWBakeryPumping), paramTranslation, null);
             ACMethod.RegisterVirtualMethod(typeof(PWBakeryPumping), ACStateConst.SMStarting, wrapper);
             RegisterExecuteHandler(typeof(PWBakeryPumping), HandleExecuteACMethod_PWBakeryPumping);
@@ -131,6 +134,23 @@ namespace gipbakery.mes.processapplication
                     }
                 }
                 return false;
+            }
+        }
+
+        public ushort RouteItemIDChangeMode
+        {
+            get
+            {
+                var method = MyConfiguration;
+                if (method != null)
+                {
+                    var acValue = method.ParameterValueList.GetACValue("RouteItemIDChangeMode");
+                    if (acValue != null)
+                    {
+                        return acValue.ParamAsUInt16;
+                    }
+                }
+                return 0;
             }
         }
 
@@ -277,8 +297,16 @@ namespace gipbakery.mes.processapplication
 
             SaveScaleWeightOnStart(scaleBase);
 
-            paramMethod["Source"] = sModule.RouteItemIDAsNum;
-            paramMethod["Destination"] = tModule.RouteItemIDAsNum;
+            int sourceID = sModule.RouteItemIDAsNum;
+            int targetID = tModule.RouteItemIDAsNum;
+            if (RouteItemIDChangeMode == 1)
+            {
+                sourceID = sourceID / 10;
+                targetID = targetID / 10;
+            }
+
+            paramMethod["Source"] = sourceID;
+            paramMethod["Destination"] = targetID;
             paramMethod["Route"] = currentRoute;
             paramMethod["TargetQuantity"] = pickingPos.PickingQuantityUOM;
             paramMethod["ScaleACUrl"] = scaleBase?.ACUrl;
