@@ -8,8 +8,6 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace gipbakery.mes.processapplication
 {
@@ -850,6 +848,14 @@ namespace gipbakery.mes.processapplication
         protected virtual void HandleDischargingACState(ACStateEnum acStateEnum)
         {
             DischargingState = (short)acStateEnum;
+            if (acStateEnum == ACStateEnum.SMRunning)
+            {
+                ReadyForDosing = Root.Environment.TranslateText(this, "tbDosingReady");
+            }
+            else
+            {
+                ReadyForDosing = null;
+            }
         }
 
         protected void HandleOrderInfoPropChanged(string orderInfo)
