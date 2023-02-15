@@ -6,6 +6,7 @@ using gip.mes.facility;
 using gip.mes.processapplication;
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Linq;
 
@@ -100,9 +101,9 @@ namespace gipbakery.mes.processapplication
             }
         }
 
-        public List<FacilityCharge> _SourceFCList;
+        public ObservableCollection<FacilityCharge> _SourceFCList;
         [ACPropertyList(9999, "SourceFC")]
-        public List<FacilityCharge> SourceFCList
+        public ObservableCollection<FacilityCharge> SourceFCList
         {
             get => _SourceFCList;
             set
@@ -986,15 +987,15 @@ namespace gipbakery.mes.processapplication
 
         protected void RefreshVirtualSourceStore()
         {
-            DelegateToMainThread((object state) =>
-            {
+            //DelegateToMainThread((object state) =>
+            //{
                 if (VirtualSourceFacility == null)
                     return;
 
                 VirtualSourceFacility.FacilityCharge_Facility.AutoLoad();
                 VirtualSourceFacility.FacilityCharge_Facility.AutoRefresh();
-                SourceFCList = VirtualSourceFacility.FacilityCharge_Facility.Where(c => !c.NotAvailable).ToList();
-            });
+                SourceFCList = new ObservableCollection<FacilityCharge>(VirtualSourceFacility.FacilityCharge_Facility.Where(c => !c.NotAvailable));
+            //});
         }
 
         #endregion
