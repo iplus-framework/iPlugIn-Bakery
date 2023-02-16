@@ -349,20 +349,23 @@ namespace gipbakery.mes.processapplication
 
                 if (routeResult != null && routeResult.Routes != null && routeResult.Routes.Any())
                 {
-                    RouteItem item = routeResult.Routes.FirstOrDefault()?.GetRouteSource();
-
-                    if (item != null)
+                    foreach (Route route in routeResult.Routes)
                     {
-                        ACComponent sourceComp = item.SourceACComponent as ACComponent;
+                        RouteItem item = route.GetRouteSource();
 
-                        if (sourceComp != null)
+                        if (item != null)
                         {
-                            RoutingResult rr = ACRoutingService.FindSuccessors(RoutingService, db, false, sourceComp, PAMSilo.SelRuleID_Silo, RouteDirections.Backwards,
-                                                                null, null, null, 0, true, true);
+                            ACComponent sourceComp = item.SourceACComponent as ACComponent;
 
-                            if (rr != null && rr.Routes.Any())
+                            if (sourceComp != null)
                             {
-                                routes.AddRange(rr.Routes);
+                                RoutingResult rr = ACRoutingService.FindSuccessors(RoutingService, db, false, sourceComp, PAMSilo.SelRuleID_Silo, RouteDirections.Backwards,
+                                                                    null, null, null, 0, true, true);
+
+                                if (rr != null && rr.Routes.Any())
+                                {
+                                    routes.AddRange(rr.Routes);
+                                }
                             }
                         }
                     }
