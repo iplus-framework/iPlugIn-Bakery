@@ -42,7 +42,8 @@ namespace gipbakery.mes.processapplication
             paramTranslation.Add("DoseFromFillingSilo", "en{'Dose from silo that is filling'}de{'Dosiere aus Silo das befüllt wird'}");
             method.ParameterValueList.Add(new ACValue("FacilityNoSort", typeof(string), null, Global.ParamOption.Optional));
             paramTranslation.Add("FacilityNoSort", "en{'Priorization order container number'}de{'Priorisierungsreihenfolge Silonummer'}");
-
+            method.ParameterValueList.Add(new ACValue("DoseAllPosFromPicking", typeof(bool), false, Global.ParamOption.Optional));
+            paramTranslation.Add("DoseAllPosFromPicking", "en{'Dose all picking lines at the same time'}de{'Alle Kommissionierpositionen gleichzeitig dosieren'}");
             var wrapper = new ACMethodWrapper(method, "en{'Configuration'}de{'Konfiguration'}", typeof(PWBakeryDosing), paramTranslation, null);
             ACMethod.RegisterVirtualMethod(typeof(PWBakeryDosing), ACStateConst.SMStarting, wrapper);
             RegisterExecuteHandler(typeof(PWBakeryDosing), HandleExecuteACMethod_PWDosing);
