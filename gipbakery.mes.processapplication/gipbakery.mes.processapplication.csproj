@@ -85,6 +85,7 @@
     <Compile Include="ACProcessWorkflow\PWNodeMethod\PWBakeryKneading.cs" />
     <Compile Include="ACProcessWorkflow\PWNodeMethod\PWBakeryRisingTimer.cs" />
     <Compile Include="ACProcessWorkflow\PWNodeMethod\PWBakeryTempCalc.cs" />
+    <Compile Include="BSO\BakeryBSOBatchPlanScheduler.cs" />
     <Compile Include="BSO\BakeryBSOManualAddition.cs" />
     <Compile Include="BSO\BakeryBSOManualWeighing.cs" />
     <Compile Include="BSO\BakeryBSOMaterial.cs" />
@@ -355,6 +356,9 @@
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
     <None Include="VBControlScripts\2023-02-10 10-36_dlisak.zip">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="VBControlScripts\2023-02-21 15-21_aagincic.zip">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
   </ItemGroup>
