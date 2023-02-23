@@ -155,7 +155,7 @@ namespace gipbakery.mes.processapplication
                     }
                 }
 
-                OnPropertyChanged("IsOnlyWaterTemperatureCalculation");
+                OnPropertyChanged();
             }
         }
 
@@ -168,7 +168,7 @@ namespace gipbakery.mes.processapplication
             {
                 _IsDoughTemperatureCalculation = value;
                 _ParamChanged = true;
-                OnPropertyChanged("IsDoughTemperatureCalculation");
+                OnPropertyChanged();
             }
         }
 
@@ -180,7 +180,7 @@ namespace gipbakery.mes.processapplication
             set
             {
                 _DoughTargetTemperature = value;
-                OnPropertyChanged("DoughTargetTemperature");
+                OnPropertyChanged();
             }
         }
 
@@ -193,7 +193,7 @@ namespace gipbakery.mes.processapplication
             {
                 _DoughCorrTemperature = value;
                 _ParamChanged = true;
-                OnPropertyChanged("DoughCorrTemperature");
+                OnPropertyChanged();
             }
         }
 
@@ -206,7 +206,7 @@ namespace gipbakery.mes.processapplication
             {
                 _WaterTargetTemperature = value;
                 _ParamChanged = true;
-                OnPropertyChanged("WaterTargetTemperature");
+                OnPropertyChanged();
             }
         }
 
@@ -300,7 +300,7 @@ namespace gipbakery.mes.processapplication
             set
             {
                 _SingleDosTargetTemperature = value;
-                OnPropertyChanged("SingleDosTargetTemperature");
+                OnPropertyChanged();
             }
         }
 
@@ -312,7 +312,7 @@ namespace gipbakery.mes.processapplication
             set
             {
                 _DischargeOverHose = value;
-                OnPropertyChanged("DischargeOverHose");
+                OnPropertyChanged();
             }
         }
 
@@ -520,7 +520,7 @@ namespace gipbakery.mes.processapplication
             ACValue param = acMethod.ParameterValueList.GetACValue("AskUserIsWaterNeeded");
             if (param != null && param.ParamAsBoolean)
             {
-                bool? userResponse = tempCalc.ExecuteMethod("GetUserResponse") as bool?;
+                bool? userResponse = tempCalc.ExecuteMethod(nameof(PWBakeryTempCalc.GetUserResponse)) as bool?;
                 if (userResponse.HasValue)
                 {
                     return;
@@ -1199,47 +1199,47 @@ namespace gipbakery.mes.processapplication
             result = null;
             switch (acMethodName)
             {
-                case "RecvPointCoverUpDown":
+                case nameof(RecvPointCoverUpDown):
                     RecvPointCoverUpDown();
                     return true;
 
-                case "IsEnabledRecvPointCoverUpDown":
+                case nameof(IsEnabledRecvPointCoverUpDown):
                     result = IsEnabledRecvPointCoverUpDown();
                     return true;
 
-                case "ShowTemperaturesDialog":
+                case nameof(ShowTemperaturesDialog):
                     ShowTemperaturesDialog();
                     return true;
 
-                case "IsEnabledShowTemperaturesDialog":
+                case nameof(IsEnabledShowTemperaturesDialog):
                     result = IsEnabledShowTemperaturesDialog();
                     return true;
 
-                case "DoughTempCorrPlus":
+                case nameof(DoughTempCorrPlus):
                     DoughTempCorrPlus();
                     return true;
 
-                case "DoughTempCorrMinus":
+                case nameof(DoughTempCorrMinus):
                     DoughTempCorrMinus();
                     return true;
 
-                case "WaterTempPlus":
+                case nameof(WaterTempPlus):
                     WaterTempPlus();
                     return true;
 
-                case "WaterTempMinus":
+                case nameof(WaterTempMinus):
                     WaterTempMinus();
                     return true;
 
-                case "IsEnabledApplyTemperatures":
+                case nameof(IsEnabledApplyTemperatures):
                     result = IsEnabledApplyTemperatures();
                     return true;
 
-                case "RecalcTemperatures":
+                case nameof(RecalcTemperatures):
                     RecalcTemperatures();
                     return true;
 
-                case "IsEnabledRecalcTemperatures":
+                case nameof(IsEnabledRecalcTemperatures):
                     result = IsEnabledRecalcTemperatures();
                     return true;
             }
