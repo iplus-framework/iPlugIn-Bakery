@@ -1655,7 +1655,7 @@ namespace gipbakery.mes.processapplication
                 Material intermediate = intermediateAutomatic != null ? intermediateAutomatic : intermediateManual;
 
 
-                AdjustBatchPosInProdOrderPartslist(dbApp, currentProdOrderPartslist, intermediate, posCity, batch, cityWaterQ, totalWatersQuantity, _WaterTopParentPlPosRelQ);
+                 int relSequence = AdjustBatchPosInProdOrderPartslist(dbApp, currentProdOrderPartslist, intermediate, posCity, batch, cityWaterQ, totalWatersQuantity, _WaterTopParentPlPosRelQ);
                 _WaterTopParentPlPosRelQ = null;
 
                 if (!UseWaterMixer)
@@ -1672,7 +1672,7 @@ namespace gipbakery.mes.processapplication
 
                         //Material intermediate = intermediateAutomatic != null ? intermediateAutomatic : intermediateManual;
 
-                        AdjustBatchPosInProdOrderPartslist(dbApp, currentProdOrderPartslist, intermediate, pos, batch, coldWaterQ, totalWatersQuantity);
+                        AdjustBatchPosInProdOrderPartslist(dbApp, currentProdOrderPartslist, intermediate, pos, batch, coldWaterQ, totalWatersQuantity, null, relSequence);
                     }
 
                     if (warmWaterQ > 0.00001)
@@ -1687,7 +1687,7 @@ namespace gipbakery.mes.processapplication
 
                         //Material intermediate = intermediateAutomatic != null ? intermediateAutomatic : intermediateManual;
 
-                        AdjustBatchPosInProdOrderPartslist(dbApp, currentProdOrderPartslist, intermediate, pos, batch, warmWaterQ, totalWatersQuantity);
+                        AdjustBatchPosInProdOrderPartslist(dbApp, currentProdOrderPartslist, intermediate, pos, batch, warmWaterQ, totalWatersQuantity, null, relSequence);
                     }
                 }
 
@@ -1715,7 +1715,11 @@ namespace gipbakery.mes.processapplication
                             }
                         }
 
-                        AdjustBatchPosInProdOrderPartslist(dbApp, currentProdOrderPartslist, intermediateManual, pos, batch, dryIceQ, totalWatersQuantity);
+                        int? seqNo = null;
+                        if (CompSequenceNo > 0)
+                            seqNo = CompSequenceNo;
+
+                        AdjustBatchPosInProdOrderPartslist(dbApp, currentProdOrderPartslist, intermediateManual, pos, batch, dryIceQ, totalWatersQuantity, null, seqNo);
                     }
                 }
 
@@ -1761,9 +1765,11 @@ namespace gipbakery.mes.processapplication
             return pos;
         }
 
-        private void AdjustBatchPosInProdOrderPartslist(DatabaseApp dbApp, ProdOrderPartslist poPartslist, Material intermediateMaterial, ProdOrderPartslistPos sourcePos, ProdOrderBatch batch,
-                                                         double waterQuantity, double totalWatersQuantity, double? topRelationNewQuantity = null)
+        private int AdjustBatchPosInProdOrderPartslist(DatabaseApp dbApp, ProdOrderPartslist poPartslist, Material intermediateMaterial, ProdOrderPartslistPos sourcePos, ProdOrderBatch batch,
+                                                         double waterQuantity, double totalWatersQuantity, double? topRelationNewQuantity = null, int? relSequenceNo = null)
         {
+            int result = 0;
+
             ProdOrderPartslistPos targetPos = poPartslist.ProdOrderPartslistPos_ProdOrderPartslist
                                                              .FirstOrDefault(c => c.MaterialID == intermediateMaterial.MaterialID
                                                                                && c.MaterialPosType == GlobalApp.MaterialPosTypes.InwardIntern);
@@ -1785,13 +1791,15 @@ namespace gipbakery.mes.processapplication
                 topRelation = ProdOrderPartslistPosRelation.NewACObject(dbApp, null);
                 topRelation.SourceProdOrderPartslistPos = sourcePos;
                 topRelation.TargetProdOrderPartslistPos = targetPos;
-                topRelation.Sequence = CompSequenceNo <= 0 ? targetPos.ProdOrderPartslistPosRelation_TargetProdOrderPartslistPos
+                topRelation.Sequence = relSequenceNo == null ? targetPos.ProdOrderPartslistPosRelation_TargetProdOrderPartslistPos
                                                 .Where(c => c.TargetProdOrderPartslistPos.MaterialID == targetPos.MaterialID
                                                          && c.TargetProdOrderPartslistPos.MaterialPosType == GlobalApp.MaterialPosTypes.InwardIntern)
-                                                .Max(x => x.Sequence) + 1 : CompSequenceNo;
+                                                .Max(x => x.Sequence) + 1 : relSequenceNo.Value;
 
                 dbApp.ProdOrderPartslistPosRelation.AddObject(topRelation);
             }
+
+            result = topRelation.Sequence;
 
             if (topRelationNewQuantity.HasValue && topRelationNewQuantity > 0.00001)
             {
@@ -1832,6 +1840,8 @@ namespace gipbakery.mes.processapplication
             }
 
             batchRelation.TargetQuantityUOM = waterQuantity;
+
+            return result;
         }
 
         private void AdjustWatersInPicking()
