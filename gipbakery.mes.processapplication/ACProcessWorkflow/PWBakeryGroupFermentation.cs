@@ -85,7 +85,7 @@ namespace gipbakery.mes.processapplication
 
         #region Properties
 
-        private ACMonitorObject _65100_MemebersLock = new ACMonitorObject(65100);
+        private ACMonitorObject _65100_MembersLock = new ACMonitorObject(65100);
 
         [ACPropertyBindingSource(800, "Info", "en{'IsTimeCalculated'}de{'IsTimeCalculated'}", "", false, true)]
         public IACContainerTNet<bool> IsTimeCalculated
@@ -333,7 +333,7 @@ namespace gipbakery.mes.processapplication
 
         public void ChangeStartNextFermentationStageTime(DateTime oldDateTime, DateTime newDateTime)
         {
-            using (ACMonitor.Lock(_65100_MemebersLock))
+            using (ACMonitor.Lock(_65100_MembersLock))
             {
                 if (StartNextFermentationStageTime.ValueT == oldDateTime)
                 {
@@ -450,7 +450,7 @@ namespace gipbakery.mes.processapplication
                 if (prevEndOnTime == null)
                 {
                     DateTime dt = currentNode.EndOnTimeSafe;
-                    using (ACMonitor.Lock(_65100_MemebersLock))
+                    using (ACMonitor.Lock(_65100_MembersLock))
                     {
                         StartNextFermentationStageTime.ValueT = dt;
                     }
@@ -622,7 +622,7 @@ namespace gipbakery.mes.processapplication
             DateTime dt = pwNode.EndOnTimeSafe;
             if (dt != ReadyForDosingTime.ValueT)
             {
-                using (ACMonitor.Lock(_65100_MemebersLock))
+                using (ACMonitor.Lock(_65100_MembersLock))
                 {
                     StartNextFermentationStageTime.ValueT = dt;
                 }
@@ -651,7 +651,7 @@ namespace gipbakery.mes.processapplication
                 {
                     DateTime dt = nextNode.EndOnTimeSafe;
 
-                    using (ACMonitor.Lock(_65100_MemebersLock))
+                    using (ACMonitor.Lock(_65100_MembersLock))
                     {
                         StartNextFermentationStageTime.ValueT = dt;
                     }
