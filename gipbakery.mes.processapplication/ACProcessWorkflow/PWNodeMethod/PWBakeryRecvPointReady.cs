@@ -7,6 +7,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Windows;
 using System.Xml;
 
 namespace gipbakery.mes.processapplication
@@ -89,7 +90,20 @@ namespace gipbakery.mes.processapplication
             }
         }
 
+        protected ACMonitorObject _70100_ScaleLock = new ACMonitorObject(70100);
         private List<ACRef<PAEScaleBase>> _AckScales;
+        public IEnumerable<PAEScaleBase> AckScales
+        {
+            get
+            {
+                using (ACMonitor.Lock(_70100_ScaleLock))
+                {
+                    if (_AckScales == null)
+                        return new PAEScaleBase[] { };
+                    return _AckScales.Select(c => c.ValueT).ToArray();
+                }
+            }
+        }
 
         private bool? _DischargeOverHose = null;
 
@@ -140,38 +154,47 @@ namespace gipbakery.mes.processapplication
             if (!_DischargeOverHose.HasValue)
                 _DischargeOverHose = false;
 
-            if (AckOverScale)
+            if (!AckOverScale)
+                return;
+
+            List<ACRef<PAEScaleBase>> ackScales = null;
+            using (ACMonitor.Lock(_70100_ScaleLock))
             {
-                if (_AckScales == null)
+                ackScales = _AckScales;
+            }
+            if (ackScales == null)
+            {
+                PAMPlatformscale platScale = ParentPWGroup?.AccessedProcessModule as PAMPlatformscale;
+                if (platScale != null)
                 {
-                    PAMPlatformscale platScale = ParentPWGroup?.AccessedProcessModule as PAMPlatformscale;
-                    if (platScale != null)
+                    List<PAEScaleBase> detectionScales = platScale.GetWeightDetectionScales();
+                    if (detectionScales == null || !detectionScales.Any())
                     {
-                        List<PAEScaleBase> detectionScales = platScale.GetWeightDetectionScales();
-                        if (detectionScales == null || !detectionScales.Any())
+                        //TODO alarm
+                        UnSubscribeToProjectWorkCycle();
+                        return;
+                    }
+
+                    ackScales = new List<ACRef<PAEScaleBase>>();
+                    foreach (PAEScaleBase detScale in detectionScales)
+                    {
+                        if (   (AckScaleWeight > 0.000001 && detScale.WeightPlacedBin.HasValue)
+                            || (AckScaleWeight < -0.000001 && detScale.WeightRemovedBin.HasValue))
                         {
-                            //TODO alarm
-                            UnSubscribeToProjectWorkCycle();
-                            return;
-                        }
-
-                        _AckScales = new List<ACRef<PAEScaleBase>>();
-                        foreach (PAEScaleBase detScale in detectionScales)
-                        {
-                            if (AckScaleWeight > 0.000001 && !detScale.IsBinPlaced.HasValue)
-                                continue;
-
-                            if (AckScaleWeight < -0.000001 && !detScale.IsBinRemoved.HasValue)
-                                continue;
-
-                            _AckScales.Add(new ACRef<PAEScaleBase>(detScale, this));
+                            ackScales.Add(new ACRef<PAEScaleBase>(detScale, this));
+                            detScale.ActualValue.PropertyChanged += ActualValue_PropertyChanged;
+                            detScale.NotStandStill.PropertyChanged += ActualValue_PropertyChanged;
                         }
                     }
-                }
 
-                AckStartOverWeight();
-                
+                    using (ACMonitor.Lock(_70100_ScaleLock))
+                    {
+                        _AckScales = ackScales;
+                    }
+                }
             }
+            if (!AckStartOverWeight(true))
+                SubscribeToProjectWorkCycle();
         }
 
         private bool AckRecvPointReadyOverTempCalc()
@@ -195,35 +218,71 @@ namespace gipbakery.mes.processapplication
             }
         }
 
-        private DateTime _LastCheck = DateTime.MinValue;
+        private short _CycleCounter = 0;
 
-        private bool AckStartOverWeight()
+        private void ActualValue_PropertyChanged(object sender, System.ComponentModel.PropertyChangedEventArgs e)
         {
-            if (_LastCheck > DateTime.MinValue
-                && DateTime.Now < _LastCheck.AddSeconds(5))
-                return false;
-
-            _LastCheck = DateTime.Now;
-
-            if (_AckScales == null || !_AckScales.Any())
+            if (e.PropertyName == Const.ValueT && CurrentACState == ACStateEnum.SMRunning)
             {
-                return false;
+                AckStartOverWeight(false);
+            }
+        }
+
+        private bool AckStartOverWeight(bool cyclicCall)
+        {
+            if (cyclicCall)
+            {
+                using (ACMonitor.Lock(_70100_ScaleLock))
+                {
+                    if (_CycleCounter > 0)
+                    {
+                        _CycleCounter--;
+                        return false;
+                    }
+                }
             }
 
-            if (AckScaleWeight > 0.0000001 && _AckScales.Select(c => c.ValueT).All(c => c.IsBinPlaced.HasValue && c.IsBinPlaced.Value))
+            if (CheckIfBinsRemovedOrPlaced())
             {
-                AckStart();
+                bool doAck = false;
+                using (ACMonitor.Lock(_70100_ScaleLock))
+                {
+                    if (_CycleCounter <= 10)
+                    {
+                        _CycleCounter = 30;
+                        doAck = true;
+                    }
+                }
+
+                if (doAck && CurrentACState == ACStateEnum.SMRunning)
+                    AckStart();
                 return true;
             }
-            else if (AckScaleWeight < -0.0000001 && _AckScales.Select(c => c.ValueT).All(c => c.IsBinRemoved.HasValue && c.IsBinRemoved.Value))
+
+            if (cyclicCall)
             {
-                AckStart();
-                return true;
+                using (ACMonitor.Lock(_70100_ScaleLock))
+                {
+                    _CycleCounter = 10;
+                }
             }
-
-            SubscribeToProjectWorkCycle();
-
             return false;
+        }
+
+        private bool CheckIfBinsRemovedOrPlaced()
+        {
+            var scales = AckScales;
+            if (scales == null || !scales.Any())
+                return false;
+
+            return (AckScaleWeight > 0.0000001 && scales.All(c => c.IsBinPlaced.HasValue && c.IsBinPlaced.Value))
+                || (AckScaleWeight < -0.0000001 && scales.All(c => c.IsBinRemoved.HasValue && c.IsBinRemoved.Value));
+        }
+
+        public override void AckStart()
+        {
+            UnSubscribeToProjectWorkCycle();
+            base.AckStart();
         }
 
         public override void SMIdle()
@@ -240,28 +299,23 @@ namespace gipbakery.mes.processapplication
 
         private void ResetMembers()
         {
-            //if (_AckScale != null)
-            //{
-            //    if (AckScale != null)
-            //    {
-            //        AckScale.ActualValue.PropertyChanged -= ActualValue_PropertyChanged;
-            //        AckScale.NotStandStill.PropertyChanged -= ActualValue_PropertyChanged;
-            //    }
-            //    _AckScale.Detach();
-            //    _AckScale = null;
-            //}
-
-            _LastCheck = DateTime.MinValue;
-
-            if (_AckScales != null && _AckScales.Any())
+            using (ACMonitor.Lock(_70100_ScaleLock))
             {
-                foreach(var scaleRef in _AckScales)
-                {
-                    scaleRef.Detach();
-                }
+                _CycleCounter = 0;
             }
-
-            _AckScales = null;
+            using (ACMonitor.Lock(_70100_ScaleLock))
+            {
+                if (_AckScales != null && _AckScales.Any())
+                {
+                    foreach (var scaleRef in _AckScales)
+                    {
+                        scaleRef.ValueT.ActualValue.PropertyChanged -= ActualValue_PropertyChanged;
+                        scaleRef.ValueT.NotStandStill.PropertyChanged -= ActualValue_PropertyChanged;
+                        scaleRef.Detach();
+                    }
+                }
+                _AckScales = null;
+            }
             _DischargeOverHose = null;
         }
 
