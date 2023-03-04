@@ -226,6 +226,12 @@ namespace gipbakery.mes.processapplication
 
         public override void SMRunning()
         {
+            if (Root == null || !Root.Initialized)
+            {
+                SubscribeToProjectWorkCycle();
+                return;
+            }
+
             base.SMRunning();
 
             bool findStores = false;
@@ -241,11 +247,9 @@ namespace gipbakery.mes.processapplication
             {
                 CalculateDuration();
                 IsTimeCalculated.ValueT = true;
+                CheckIfStartIsTooLate();
             }
-
-            //SubscribeToProjectWorkCycle();
-            if (CheckIfStartIsTooLate())
-                UnSubscribeToProjectWorkCycle();
+            UnSubscribeToProjectWorkCycle();
         }
 
         public override void SMCompleted()
@@ -258,11 +262,7 @@ namespace gipbakery.mes.processapplication
         {
             base.SMIdle();
 
-            //using(ACMonitor.Lock(_20015_LockValue))
-            {
-                IsTimeCalculated.ValueT = false;
-            }
-
+            IsTimeCalculated.ValueT = false;
             NextFermentationStage.ValueT = 0;
 
             DeactivatePreProdFunctions();
@@ -299,7 +299,7 @@ namespace gipbakery.mes.processapplication
         public bool CheckIfStartIsTooLate()
         {
             if (EndOnTimeNodes == null)
-                EndOnTimeNodes = FindChildComponents<PWBakeryEndOnTime>(1).OrderBy(c => c.EndOnTimeSafe).ToArray();
+                EndOnTimeNodes = FindChildComponents<PWBakeryEndOnTime>(c => c is PWBakeryEndOnTime, null, 1).OrderBy(c => c.EndOnTimeSafe).ToArray();
 
             PWBakeryEndOnTime firstEndOnTimeNode = EndOnTimeNodes.FirstOrDefault();
             // Inf not waiting times in workflow or first waiting time is completed, then switch off monitoring
@@ -412,7 +412,7 @@ namespace gipbakery.mes.processapplication
                 return;
             }
 
-            List<PWBakeryEndOnTime> endOnTimeNodes = FindChildComponents<PWBakeryEndOnTime>(1);
+            List<PWBakeryEndOnTime> endOnTimeNodes = FindChildComponents<PWBakeryEndOnTime>(c => c is PWBakeryEndOnTime, null, 1);
 
             if (endOnTimeNodes == null || !endOnTimeNodes.Any())
                 return;
@@ -461,14 +461,10 @@ namespace gipbakery.mes.processapplication
 
                 List<PWBakeryDosingPreProd> pwDosings = FindVariableDurationNodes(currentNode, prevEndOnTime, parallelNodes);
                 List<PWBaseNodeProcess> fixDurationNodes = FindFixedDurationNodes(currentNode, prevEndOnTime, parallelNodes);
-                if (currentNode == lastNode)
-                {
-                    fixDurationNodes.Add(currentNode);
-                }
+                fixDurationNodes.Add(currentNode);
 
                 TimeSpan fixedDuration = CalculateFixedDuration(fixDurationNodes, stages);
                 TimeSpan variableDuration = CalculateVariableDuration(pwDosings, stages);
-
                 TimeSpan durationPerStage = fixedDuration + variableDuration;
 
                 DateTime prevTime = currentNode.EndOnTimeSafe - durationPerStage;
@@ -552,10 +548,10 @@ namespace gipbakery.mes.processapplication
             // PWNodeEndOnTime has parallel workflow nodes
             if (parallelNodes.Count() > 1)
             {
-                return currentEndNode.FindPredecessors<PWBaseNodeProcess>(true, c => c is PWMixing || c is PWNodeWait, d => d == prevEndNode || parallelNodes.Contains(d), 0);
+                return currentEndNode.FindPredecessors<PWBaseNodeProcess>(true, c => c is PWMixing || (c is PWNodeWait && !(c is PWBakeryEndOnTime)), d => d == prevEndNode || parallelNodes.Contains(d), 0);
             }
 
-            return currentEndNode.FindPredecessors<PWBaseNodeProcess>(true, c => c is PWMixing || c is PWNodeWait, d => d is PWBakeryEndOnTime, 0);
+            return currentEndNode.FindPredecessors<PWBaseNodeProcess>(true, c => c is PWMixing || (c is PWNodeWait && !(c is PWBakeryEndOnTime)), d => d is PWBakeryEndOnTime, 0);
         }
 
         public virtual TimeSpan CalculateVariableDuration(List<PWBakeryDosingPreProd> dosingNodes, int stage)
@@ -599,16 +595,10 @@ namespace gipbakery.mes.processapplication
 
             result = TimeSpan.FromSeconds(pwNodes.OfType<PWNodeWait>().Sum(c => c.Duration.TotalSeconds));
 
-            var pwMixingTimes = pwNodes.Where(c => c.ContentACClassWF != null && c.ContentACClassWF.ACIdentifierPrefix == "MixingTime");
-
-            foreach (PWBaseNodeProcess pwNode in pwMixingTimes)
+            var pwMixingTimes = pwNodes.Where(c => c is PWMixing && c.ContentACClassWF != null && c.ContentACClassWF.ACIdentifierPrefix == "MixingTime");
+            foreach (PWMixing pwNode in pwMixingTimes)
             {
-                ACValue duration = pwNode.ContentACClassWF.RefPAACClassMethod?.ACMethod?.ParameterValueList?.GetACValue("Duration");
-                if (duration == null)
-                    continue;
-
-                TimeSpan ts = duration.ParamAsTimeSpan;
-                result += ts;
+                result += pwNode.MixingTime;
             }
 
             return result;

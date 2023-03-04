@@ -72,11 +72,11 @@ namespace gipbakery.mes.processapplication
         {
             get
             {
-                var method = MyConfiguration;
+                var method = NewACMethodPAFWithConfiguration();
                 if (method != null)
                 {
                     var acValue = method.ParameterValueList.GetACValue("FlowSwitching1");
-                    if (acValue != null)
+                    if (acValue != null && acValue.ParamAsDouble >= 0.000001)
                     {
                         return acValue.ParamAsDouble;
                     }
@@ -89,7 +89,7 @@ namespace gipbakery.mes.processapplication
         {
             get
             {
-                var method = MyConfiguration;
+                var method = NewACMethodPAFWithConfiguration();
                 if (method != null)
                 {
                     var acValue = method.ParameterValueList.GetACValue("PulsationPauseTime");
