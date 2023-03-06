@@ -222,7 +222,7 @@ namespace gipbakery.mes.processapplication
 
         private void ActualValue_PropertyChanged(object sender, System.ComponentModel.PropertyChangedEventArgs e)
         {
-            if (e.PropertyName == Const.ValueT && CurrentACState == ACStateEnum.SMRunning)
+            if (e.PropertyName == Const.ValueT && (CurrentACState == ACStateEnum.SMStarting || CurrentACState == ACStateEnum.SMRunning))
             {
                 AckStartOverWeight(false);
             }
@@ -254,7 +254,7 @@ namespace gipbakery.mes.processapplication
                     }
                 }
 
-                if (doAck && CurrentACState == ACStateEnum.SMRunning)
+                if (doAck && (CurrentACState == ACStateEnum.SMStarting || CurrentACState == ACStateEnum.SMRunning))
                     AckStart();
                 return true;
             }
