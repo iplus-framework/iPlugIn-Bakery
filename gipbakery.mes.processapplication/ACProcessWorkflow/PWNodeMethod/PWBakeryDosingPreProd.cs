@@ -24,7 +24,7 @@ namespace gipbakery.mes.processapplication
             method = new ACMethod(ACStateConst.SMStarting);
             Dictionary<string, string> paramTranslation = new Dictionary<string, string>();
 
-            method.ParameterValueList.Add(new ACValue("SkipComponents", typeof(bool), false, Global.ParamOption.Required));
+            method.ParameterValueList.Add(new ACValue("SkipComponents", typeof(DosingSkipMode), DosingSkipMode.False, Global.ParamOption.Required));
             paramTranslation.Add("SkipComponents", "en{'Skip not dosable components'}de{'Überspringe nicht dosierbare Komponenten'}");
             method.ParameterValueList.Add(new ACValue("ComponentsSeqFrom", typeof(Int32), 0, Global.ParamOption.Optional));
             paramTranslation.Add("ComponentsSeqFrom", "en{'Components from Seq.-No.'}de{'Komponenten VON Seq.-Nr.'}");
@@ -102,6 +102,9 @@ namespace gipbakery.mes.processapplication
             }
         }
 
+        /// <summary>
+        /// Silo change without abort
+        /// </summary>
         public bool DosingForFlour
         {
             get
@@ -419,10 +422,12 @@ namespace gipbakery.mes.processapplication
         //Lack of material - silo change without abort on PAFDosing
         public override void OnHandleStateCheckEmptySilo(PAFDosing dosing)
         {
+            // Silo change with abort
             if (!DosingForFlour)
             {
                 base.OnHandleStateCheckEmptySilo(dosing);
             }
+            // Else Silo change without abort
             else
             {
                 double actualQuantity = 0;
@@ -447,19 +452,22 @@ namespace gipbakery.mes.processapplication
                     PAMSilo silo = CurrentDosingSilo(null);
                     if (silo == null)
                         return;
+
+                    DosingRestInfo restInfo = new DosingRestInfo(silo, dosing, null);// 10);
+
                     //if (silo.MatSensorEmtpy == null
                     //    || (silo.MatSensorEmtpy != null && silo.MatSensorEmtpy.SensorState.ValueT != PANotifyState.Off))
                     {
-                        silo.RefreshFacility(false, null);
-                        double zeroTolerance = 10;
-                        if (silo.Facility.ValueT != null && silo.Facility.ValueT.ValueT != null)
-                            zeroTolerance = silo.Facility.ValueT.ValueT.Tolerance;
-                        if (zeroTolerance <= 0.1)
-                            zeroTolerance = 10;
+                        //silo.RefreshFacility(false, null);
+                        //double zeroTolerance = 10;
+                        //if (silo.Facility.ValueT != null && silo.Facility.ValueT.ValueT != null)
+                        //    zeroTolerance = silo.Facility.ValueT.ValueT.Tolerance;
+                        //if (zeroTolerance <= 0.1)
+                        //    zeroTolerance = 10;
 
                         // Überprüfe Rechnerischen Restbestand des Silos
-                        double rest = silo.FillLevel.ValueT - actualQuantity;
-                        bool doZeroBooking = rest < zeroTolerance || dosing.DosingAbortReason.ValueT == PADosingAbortReason.EmptySourceNextSource;
+                        //double rest = silo.FillLevel.ValueT - actualQuantity;
+                        bool doZeroBooking = (restInfo.InZeroTolerance && restInfo.IsZeroTolSet) || dosing.DosingAbortReason.ValueT == PADosingAbortReason.EmptySourceNextSource;
                         if (   doZeroBooking
                             || dosing.DosingAbortReason.ValueT == PADosingAbortReason.MachineMalfunction)
                         {

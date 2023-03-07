@@ -126,7 +126,7 @@ namespace gipbakery.mes.processapplication
         }
 
         protected ACPropertyConfigValue<bool> _HandleStoppOrAbort;
-        [ACPropertyConfig("en{'Stop-Comand when changing source'}de{'Stop-Kommando bei Quellenwechsel'}")]
+        [ACPropertyConfig("en{'Execute Stop/Abort-Comand when changing source'}de{'Führe Stop/Abbruch-Kommando aus bei Quellenwechsel'}")]
         public bool HandleStoppOrAbort
         {
             get
@@ -251,7 +251,10 @@ namespace gipbakery.mes.processapplication
         {
             if (!IsEnabledSetAbortReasonEmpty())
                 return;
-            DosingAbortReason.ValueT = PADosingAbortReason.EmptySourceNextSource;
+            if (HandleStoppOrAbort)
+                base.SetAbortReasonEmpty();
+            else
+                DosingAbortReason.ValueT = PADosingAbortReason.EmptySourceNextSource;
         }
 
         private void StateLackOfMaterial_PropertyChanged(object sender, System.ComponentModel.PropertyChangedEventArgs e)

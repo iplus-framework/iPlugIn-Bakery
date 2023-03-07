@@ -342,7 +342,7 @@ namespace gipbakery.mes.processapplication
             }
         }
 
-        [ACMethodInteraction("", "en{'Recalculate prod times'}de{'Neuberechnung der Produktionszeiten'}", 800, true)]
+        [ACMethodInteraction("", "en{'Recalculate start-times'}de{'Neuberechnung der Startzeiten'}", 800, true)]
         public void RunCalculationAgain()
         {
             IsTimeCalculated.ValueT = false;

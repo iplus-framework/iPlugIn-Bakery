@@ -563,7 +563,7 @@ namespace gipbakery.mes.processapplication
                 PWMethodRelocation pwMethodRelocation = ParentPWMethod<PWMethodRelocation>();
                 if (pwMethodRelocation != null)
                 {
-                    return CalculateRelocationTargetTempreature(recvPoint, pwMethodRelocation, true);
+                    return CalculateRelocationTargetTemperature(recvPoint, pwMethodRelocation, true);
                 }
             }
 
@@ -624,7 +624,7 @@ namespace gipbakery.mes.processapplication
                 PWMethodRelocation pwMethodRelocation = ParentPWMethod<PWMethodRelocation>();
                 if (pwMethodRelocation != null)
                 {
-                    CalculateRelocationTargetTempreature(recvPoint, pwMethodRelocation);
+                    CalculateRelocationTargetTemperature(recvPoint, pwMethodRelocation);
                 }
             }
 
@@ -681,8 +681,8 @@ namespace gipbakery.mes.processapplication
 
                 if (string.IsNullOrEmpty(_ColdWaterMaterialNo))
                 {
-                    //Error50410: Can not get the MaterialNo for {0} from the temperature service.
-                    Msg msg = new Msg(this, eMsgLevel.Error, PWClassName, "CalculateProdOrderTargetTemperature(20)", 515, "Error50410", "ColdWater");
+                    //Error50410: The Temperature service didn't return temperature informations for water type {0}.
+                    Msg msg = new Msg(this, eMsgLevel.Error, PWClassName, nameof(CalculateProdOrderTargetTemperature) + "(510)", 510, "Error50410", WaterType.ColdWater.ToString());
                     if (IsAlarmActive(ProcessAlarm, msg.Message) == null)
                     {
                         OnNewAlarmOccurred(ProcessAlarm, msg);
@@ -693,8 +693,8 @@ namespace gipbakery.mes.processapplication
 
                 if (string.IsNullOrEmpty(_CityWaterMaterialNo))
                 {
-                    //Error50410: Can not get the MaterialNo for {0} from the temperature service.
-                    Msg msg = new Msg(this, eMsgLevel.Error, PWClassName, "CalculateProdOrderTargetTemperature(20)", 526, "Error50410", "ColdWater");
+                    //Error50410: The Temperature service didn't return temperature informations for water type {0}.
+                    Msg msg = new Msg(this, eMsgLevel.Error, PWClassName, nameof(CalculateProdOrderTargetTemperature) + "(520)", 520, "Error50410", WaterType.CityWater.ToString());
                     if (IsAlarmActive(ProcessAlarm, msg.Message) == null)
                     {
                         OnNewAlarmOccurred(ProcessAlarm, msg);
@@ -705,8 +705,8 @@ namespace gipbakery.mes.processapplication
 
                 if (string.IsNullOrEmpty(_WarmWaterMaterialNo))
                 {
-                    //Error50410: Can not get the MaterialNo for {0} from the temperature service.
-                    Msg msg = new Msg(this, eMsgLevel.Error, PWClassName, "CalculateProdOrderTargetTemperature(20)", 537, "Error50410", "ColdWater");
+                    //Error50410: The Temperature service didn't return temperature informations for water type {0}.
+                    Msg msg = new Msg(this, eMsgLevel.Error, PWClassName, nameof(CalculateProdOrderTargetTemperature) + "(530)", 530, "Error50410", WaterType.WarmWater.ToString());
                     if (IsAlarmActive(ProcessAlarm, msg.Message) == null)
                     {
                         OnNewAlarmOccurred(ProcessAlarm, msg);
@@ -878,7 +878,7 @@ namespace gipbakery.mes.processapplication
             return null;
         }
 
-        private double? CalculateRelocationTargetTempreature(BakeryReceivingPoint recvPoint, PWMethodRelocation pwMethodRelocation, bool onlyCalculation = false)
+        private double? CalculateRelocationTargetTemperature(BakeryReceivingPoint recvPoint, PWMethodRelocation pwMethodRelocation, bool onlyCalculation = false)
         {
             using (Database db = new gip.core.datamodel.Database())
             using (DatabaseApp dbApp = new DatabaseApp())
@@ -894,14 +894,38 @@ namespace gipbakery.mes.processapplication
                 _WarmWaterMaterialNo = tempFromService.FirstOrDefault(c => c.Water == WaterType.WarmWater)?.MaterialNo;
                 string dryIce = DryIceMaterialNo;
 
-                if (string.IsNullOrEmpty(_ColdWaterMaterialNo) || string.IsNullOrEmpty(_CityWaterMaterialNo) || string.IsNullOrEmpty(_WarmWaterMaterialNo) || string.IsNullOrEmpty(dryIce))
+                if (string.IsNullOrEmpty(_ColdWaterMaterialNo))
                 {
-                    //Error50453: The water material number missing. Please check temperature service or water source tank/facility.
-                    Msg msg = new Msg(this, eMsgLevel.Error, PWClassName, "CalculateRelocationTargetTempreature(10)", 694, "Error50453");
+                    //Error50410: The Temperature service didn't return temperature informations for water type {0}.
+                    Msg msg = new Msg(this, eMsgLevel.Error, PWClassName, nameof(CalculateRelocationTargetTemperature) + "(610)", 610, "Error50410", WaterType.ColdWater.ToString());
                     if (IsAlarmActive(ProcessAlarm, msg.Message) == null)
                     {
                         OnNewAlarmOccurred(ProcessAlarm, msg);
-                        Messages.LogMessageMsg(msg);
+                        Root.Messages.LogMessageMsg(msg);
+                    }
+                    return null;
+                }
+
+                if (string.IsNullOrEmpty(_CityWaterMaterialNo))
+                {
+                    //Error50410: The Temperature service didn't return temperature informations for water type {0}.
+                    Msg msg = new Msg(this, eMsgLevel.Error, PWClassName, nameof(CalculateRelocationTargetTemperature) + "(620)", 620, "Error50410", WaterType.CityWater.ToString());
+                    if (IsAlarmActive(ProcessAlarm, msg.Message) == null)
+                    {
+                        OnNewAlarmOccurred(ProcessAlarm, msg);
+                        Root.Messages.LogMessageMsg(msg);
+                    }
+                    return null;
+                }
+
+                if (string.IsNullOrEmpty(_WarmWaterMaterialNo))
+                {
+                    //Error50410: The Temperature service didn't return temperature informations for water type {0}.
+                    Msg msg = new Msg(this, eMsgLevel.Error, PWClassName, nameof(CalculateRelocationTargetTemperature) + "(630)", 630, "Error50410", WaterType.WarmWater.ToString());
+                    if (IsAlarmActive(ProcessAlarm, msg.Message) == null)
+                    {
+                        OnNewAlarmOccurred(ProcessAlarm, msg);
+                        Root.Messages.LogMessageMsg(msg);
                     }
                     return null;
                 }
@@ -2093,8 +2117,9 @@ namespace gipbakery.mes.processapplication
                     {
                         Material sMaterial = rel.SourceProdOrderPartslistPos.Material;
 
-                        if (sMaterial.UsageACProgram && (sMaterial.MaterialNo == _CityWaterMaterialNo || sMaterial.MaterialNo == _ColdWaterMaterialNo
-                                                                                                      || sMaterial.MaterialNo == _WarmWaterMaterialNo))
+                        if (sMaterial.UsageACProgram && (  sMaterial.MaterialNo == _CityWaterMaterialNo 
+                                                        || sMaterial.MaterialNo == _ColdWaterMaterialNo
+                                                        || sMaterial.MaterialNo == _WarmWaterMaterialNo))
                         {
                             rel.MDProdOrderPartslistPosState = posState;
                         }
