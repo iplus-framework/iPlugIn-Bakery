@@ -55,7 +55,7 @@ namespace gipbakery.mes.processapplication
                 int iOffset = 0;
                 if (s7Session.HashCodeValidation == HashCodeValidationEnum.Head || s7Session.HashCodeValidation == HashCodeValidationEnum.Head_WithRead)
                     iOffset += gip.core.communication.ISOonTCP.Types.DInt.Length;
-                iOffset += 38;
+                iOffset += 36;
                 iOffset += gip.core.communication.ISOonTCP.Types.Real.Length; // WaterTemp
                 OnReadObjectGetLength(response, dbNo, offset, miscParams, readParameter, ref iOffset);
 
@@ -68,7 +68,7 @@ namespace gipbakery.mes.processapplication
                 iOffset = 0;
                 if (s7Session.HashCodeValidation == HashCodeValidationEnum.Head || s7Session.HashCodeValidation == HashCodeValidationEnum.Head_WithRead)
                     iOffset += gip.core.communication.ISOonTCP.Types.DInt.Length;
-                iOffset += 38;
+                iOffset += 36;
                 response.ParameterValueList.GetACValue("WaterTemp").Value = gip.core.communication.ISOonTCP.Types.Real.FromByteArray(readPackage1, iOffset);
                 iOffset += gip.core.communication.ISOonTCP.Types.Real.Length;
 
@@ -100,7 +100,7 @@ namespace gipbakery.mes.processapplication
                 return false;
 
             int iOffset = 0;
-            iOffset += 38;
+            iOffset += 36;
             iOffset += gip.core.communication.ISOonTCP.Types.Real.Length; // WaterTemp
 
             if (s7Session.HashCodeValidation != HashCodeValidationEnum.Off)
@@ -110,7 +110,7 @@ namespace gipbakery.mes.processapplication
             iOffset = 0;
             if (s7Session.HashCodeValidation == HashCodeValidationEnum.Head || s7Session.HashCodeValidation == HashCodeValidationEnum.Head_WithRead)
                 iOffset += gip.core.communication.ISOonTCP.Types.DInt.Length;
-            iOffset += 38;
+            iOffset += 36;
             Array.Copy(gip.core.communication.ISOonTCP.Types.Real.ToByteArray(request.ParameterValueList.GetDouble("WaterTemp")),
                 0, sendPackage1, iOffset, gip.core.communication.ISOonTCP.Types.Real.Length);
             iOffset += gip.core.communication.ISOonTCP.Types.Real.Length;

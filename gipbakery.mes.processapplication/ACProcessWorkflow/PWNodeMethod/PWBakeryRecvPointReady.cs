@@ -309,8 +309,11 @@ namespace gipbakery.mes.processapplication
                 {
                     foreach (var scaleRef in _AckScales)
                     {
-                        scaleRef.ValueT.ActualValue.PropertyChanged -= ActualValue_PropertyChanged;
-                        scaleRef.ValueT.NotStandStill.PropertyChanged -= ActualValue_PropertyChanged;
+                        if (scaleRef.ValueT != null)
+                        {
+                            scaleRef.ValueT.ActualValue.PropertyChanged -= ActualValue_PropertyChanged;
+                            scaleRef.ValueT.NotStandStill.PropertyChanged -= ActualValue_PropertyChanged;
+                        }
                         scaleRef.Detach();
                     }
                 }
