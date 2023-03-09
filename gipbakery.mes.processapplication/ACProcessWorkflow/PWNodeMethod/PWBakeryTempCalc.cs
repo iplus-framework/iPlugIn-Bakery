@@ -867,11 +867,11 @@ namespace gipbakery.mes.processapplication
                 double suggestedWaterTemp = CalculateWaterTemperatureSuggestion(UseWaterTemp, isOnlyWaterCompsInPartslist, cityWaterComp.SourceProdOrderPartslistPos.Material, DoughTemp.Value,
                                                                                 doughTargetTempBeforeKneeding, componentsQ, waterTargetQuantity, out defaultWaterTemp);
 
-                CalculateWaterTypes(compTemps, suggestedWaterTemp, waterTargetQuantity.Value, defaultWaterTemp, componentsQ, isOnlyWaterCompsInPartslist, doughTargetTempBeforeKneeding,
-                                    false);
-
                 if (onlyCalculation)
                     return suggestedWaterTemp;
+
+                CalculateWaterTypes(compTemps, suggestedWaterTemp, waterTargetQuantity.Value, defaultWaterTemp, componentsQ, isOnlyWaterCompsInPartslist, doughTargetTempBeforeKneeding,
+                                    false);
 
                 FillInfoForBSO(compTemps, kneedingRiseTemperature, cityWaterComp, endBatchPos);
             }
