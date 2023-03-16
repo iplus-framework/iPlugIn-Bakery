@@ -314,6 +314,10 @@ namespace gipbakery.mes.processapplication
 
         public override void AckStart()
         {
+            BakeryReceivingPoint receivingPoint = ParentPWGroup?.AccessedProcessModule as BakeryReceivingPoint;
+            if (receivingPoint != null && (AckScaleWeight > 0.0000001 || AckScaleWeight < -0.0000001))
+                receivingPoint.StoreGrossWeightOfEmptyContainer(AckScaleWeight < -0.0000001);
+
             UnSubscribeToProjectWorkCycle();
             base.AckStart();
         }

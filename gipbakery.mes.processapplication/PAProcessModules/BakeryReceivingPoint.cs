@@ -168,26 +168,41 @@ namespace gipbakery.mes.processapplication
         /// <summary>
         /// Represents the room temperature. It can be fix defined or can be bounded to the sensor.
         /// </summary>
-        [ACPropertyBindingTarget(IsPersistable = true)]
+        [ACPropertyBindingTarget(IsPersistable = false)]
         public IACContainerTNet<double> RoomTemperature
         {
             get;
             set;
         }
 
-        [ACPropertyBindingTarget(IsPersistable = true)]
+        [ACPropertyBindingSource(IsPersistable = true)]
         public IACContainerTNet<string> WaterTankACUrl
         {
             get;
             set;
         }
 
-        [ACPropertyBindingTarget(IsPersistable = true)]
+        [ACPropertyBindingSource(602, "" , "en{'Is filling floor scale'}de{'Wird Boodenwaage gerade befüllt'}")]
         public IACContainerTNet<RecvPointDosingInfoEnum> IsDosingOnFloorScale
         {
             get;
             set;
         }
+
+        [ACPropertyInfo(true, 650, "", "en{'Stored gross weight of placed bin'}de{'Gespeichertes Bruttogewicht vom leeren Behälter'}")]
+        public double GrossWeightOfEmptyContainer
+        {
+            get; set;
+        }
+
+        [ACPropertyBindingSource(651, "", "en{'Weight of content in bin'}de{'Gewicht des Inhaltes des Behälters'}")]
+        public IACContainerTNet<double> ContentWeightOfContainer
+        {
+            get;
+            set;
+        }
+
+        private IACContainerTNet<double> _ActualGrossWeightOfFloorScale;
 
         private bool _SearchTempService = true;
         private ACRef<ACComponent> _TemperatureService;
@@ -289,6 +304,20 @@ namespace gipbakery.mes.processapplication
             {
                 IsDosingOnFloorScale.ValueT = RecvPointDosingInfoEnum.NotPossible;
             }
+
+            List<PAEScaleBase> detectionScales = GetWeightDetectionScales();
+            if (detectionScales != null && detectionScales.Any())
+            {
+                PAEScaleGravimetric floorScale = detectionScales.Where(c => c.WeightPlacedBin.HasValue)
+                                                        .OrderBy(c => c.MaxScaleWeight.ValueT)
+                                                        .FirstOrDefault() as PAEScaleGravimetric;
+                if (floorScale != null && floorScale.ActualValue != null)
+                {
+                    _ActualGrossWeightOfFloorScale = floorScale.ActualValue;
+                    (floorScale.ActualValue as IACPropertyNetServer).ValueUpdatedOnReceival += FloorScaleActualValue_ValueUpdatedOnReceival;
+                    RecalcContentWeightOfContainer();
+                }
+            }
         }
 
         private void UnRegisterDosingOnFloorScale()
@@ -302,6 +331,19 @@ namespace gipbakery.mes.processapplication
                     pafDosing.ACState.PropertyChanged -= PAFDosingACState_PropertyChanged;
                 }
             }
+
+            List<PAEScaleBase> detectionScales = GetWeightDetectionScales();
+            if (detectionScales != null && detectionScales.Any())
+            {
+                PAEScaleGravimetric floorScale = detectionScales.Where(c => c.WeightPlacedBin.HasValue)
+                                                        .OrderBy(c => c.MaxScaleWeight.ValueT)
+                                                        .FirstOrDefault() as PAEScaleGravimetric;
+                if (floorScale != null)
+                {
+                    (floorScale.ActualValue as IACPropertyNetServer).ValueUpdatedOnReceival -= FloorScaleActualValue_ValueUpdatedOnReceival;
+                    _ActualGrossWeightOfFloorScale = null;
+                }
+            }
         }
 
         private void PAFDosingACState_PropertyChanged(object sender, PropertyChangedEventArgs e)
@@ -313,6 +355,20 @@ namespace gipbakery.mes.processapplication
                                                                           && c.CurrentScaleForWeighing is PAEScaleGravimetric) ? RecvPointDosingInfoEnum.DosingActive : RecvPointDosingInfoEnum.DosingIdle;
             }
         }
+
+        private void FloorScaleActualValue_ValueUpdatedOnReceival(object sender, ACPropertyChangedEventArgs e, ACPropertyChangedPhase phase)
+        {
+            if (phase == ACPropertyChangedPhase.BeforeBroadcast)
+                return;
+            RecalcContentWeightOfContainer();
+        }
+
+        private void RecalcContentWeightOfContainer()
+        {
+            if (_ActualGrossWeightOfFloorScale != null && ContentWeightOfContainer != null)
+                ContentWeightOfContainer.ValueT = _ActualGrossWeightOfFloorScale.ValueT - GrossWeightOfEmptyContainer;
+        }
+
 
         public bool WaitIfMeasureWaterIsBound(PWBakeryWaitWaterM requester)
         {
@@ -427,6 +483,13 @@ namespace gipbakery.mes.processapplication
         //    }
         //}
 
+        public void StoreGrossWeightOfEmptyContainer(bool reset)
+        {
+            if (_ActualGrossWeightOfFloorScale != null)
+                GrossWeightOfEmptyContainer = reset ? 0.0 : _ActualGrossWeightOfFloorScale.ValueT;
+            RecalcContentWeightOfContainer();
+        }
+
         #endregion
 
         #region Points
@@ -518,16 +581,16 @@ namespace gipbakery.mes.processapplication
             result = null;
             switch (acMethodName)
             {
-                case "GetComponentTemperatures":
+                case nameof(GetComponentTemperatures):
                     result = GetComponentTemperatures();
                     return true;
-                case "GetWaterComponentsFromTempService":
+                case nameof(GetWaterComponentsFromTempService):
                     result = GetWaterComponentsFromTempService();
                     return true;
-                case "IsCoverDownPropertyBounded":
+                case nameof(IsCoverDownPropertyBounded):
                     result = IsCoverDownPropertyBounded();
                     return true;
-                case "IsTemperatureServiceInitialized":
+                case nameof(IsTemperatureServiceInitialized):
                     result = IsTemperatureServiceInitialized();
                     return true;
             }

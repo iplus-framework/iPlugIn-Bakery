@@ -288,6 +288,22 @@ namespace gipbakery.mes.processapplication
             set;
         }
 
+
+        private IACContainerTNet<double> _ContentWeightOfContainer = null;
+        [ACPropertyInfo(608, "", "en{'Weight of content in bin'}de{'Gewicht des Inhaltes des Behälters'}", IsProxyProperty = true)]
+        public IACContainerTNet<double> ContentWeightOfContainer
+        {
+            get
+            {
+                return _ContentWeightOfContainer;
+            }
+            set
+            {
+                _ContentWeightOfContainer = value;
+                OnPropertyChanged();
+            }
+        }
+
         #endregion
 
         #region Properties => SingleDosing dialog
@@ -376,6 +392,8 @@ namespace gipbakery.mes.processapplication
                             IsCoverUpDown = isCoverUpDown;
                         }
                     }
+
+                    ContentWeightOfContainer = selectedProcessModule.GetPropertyNet(nameof(BakeryReceivingPoint.ContentWeightOfContainer)) as IACContainerTNet<double>;
                 }
             }
         }
