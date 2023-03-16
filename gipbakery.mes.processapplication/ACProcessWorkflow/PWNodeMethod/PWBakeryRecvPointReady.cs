@@ -37,6 +37,9 @@ namespace gipbakery.mes.processapplication
             method.ParameterValueList.Add(new ACValue("PasswordDlg", typeof(bool), false, Global.ParamOption.Required));
             paramTranslation.Add("PasswordDlg", "en{'With password dialogue'}de{'Mit Passwort-Dialog'}");
 
+            method.ParameterValueList.Add(new ACValue("AutoTareScales", typeof(bool), false, Global.ParamOption.Optional));
+            paramTranslation.Add("AutoTareScales", "en{'Auto tare scales'}de{'Automatische Waagenterierung'}");
+
             var wrapper = new ACMethodWrapper(method, "en{'Receiving point ready'}de{'Abnahmestelle bereit'}", typeof(PWBakeryRecvPointReady), paramTranslation, null);
             ACMethod.RegisterVirtualMethod(typeof(PWBakeryRecvPointReady), ACStateConst.SMStarting, wrapper);
         }
@@ -67,6 +70,22 @@ namespace gipbakery.mes.processapplication
                     return false;
 
                 ACValue acValue = method.ParameterValueList.GetACValue("AckOverScale");
+                if (acValue == null)
+                    return false;
+
+                return acValue.ParamAsBoolean;
+            }
+        }
+
+        protected bool AutoTareScales
+        {
+            get
+            {
+                var method = MyConfiguration;
+                if (method == null)
+                    return false;
+
+                ACValue acValue = method.ParameterValueList.GetACValue("AutoTareScales");
                 if (acValue == null)
                     return false;
 
@@ -154,7 +173,9 @@ namespace gipbakery.mes.processapplication
             if (!_DischargeOverHose.HasValue)
                 _DischargeOverHose = false;
 
-            if (!AckOverScale)
+            bool ackOverScale = AckOverScale;
+            bool autoTareScales = AutoTareScales;
+            if (!ackOverScale && !autoTareScales)
                 return;
 
             List<ACRef<PAEScaleBase>> ackScales = null;
@@ -178,12 +199,21 @@ namespace gipbakery.mes.processapplication
                     ackScales = new List<ACRef<PAEScaleBase>>();
                     foreach (PAEScaleBase detScale in detectionScales)
                     {
-                        if (   (AckScaleWeight > 0.000001 && detScale.WeightPlacedBin.HasValue)
-                            || (AckScaleWeight < -0.000001 && detScale.WeightRemovedBin.HasValue))
+                        if (autoTareScales)
                         {
-                            ackScales.Add(new ACRef<PAEScaleBase>(detScale, this));
-                            detScale.ActualValue.PropertyChanged += ActualValue_PropertyChanged;
-                            detScale.NotStandStill.PropertyChanged += ActualValue_PropertyChanged;
+                            var gravScale = detScale as PAEScaleGravimetric;
+                            if (gravScale != null)
+                                gravScale.Tare();
+                        }
+                        if (ackOverScale)
+                        {
+                            if ((AckScaleWeight > 0.000001 && detScale.WeightPlacedBin.HasValue)
+                                || (AckScaleWeight < -0.000001 && detScale.WeightRemovedBin.HasValue))
+                            {
+                                ackScales.Add(new ACRef<PAEScaleBase>(detScale, this));
+                                detScale.ActualValue.PropertyChanged += ActualValue_PropertyChanged;
+                                detScale.NotStandStill.PropertyChanged += ActualValue_PropertyChanged;
+                            }
                         }
                     }
 
@@ -193,8 +223,11 @@ namespace gipbakery.mes.processapplication
                     }
                 }
             }
-            if (!AckStartOverWeight(true))
-                SubscribeToProjectWorkCycle();
+            if (ackOverScale)
+            {
+                if (!AckStartOverWeight(true))
+                    SubscribeToProjectWorkCycle();
+            }
         }
 
         private bool AckRecvPointReadyOverTempCalc()
