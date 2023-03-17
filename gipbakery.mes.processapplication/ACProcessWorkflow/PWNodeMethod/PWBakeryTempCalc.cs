@@ -1058,7 +1058,7 @@ namespace gipbakery.mes.processapplication
                 {
                     double? waterTemp = WaterTemp.Value;
 
-                    if (waterTemp.HasValue && (waterTemp > 0.00001 || waterTemp < -0.0001))
+                    if (waterTemp.HasValue /*&& (waterTemp > 0.00001 || waterTemp < -0.0001)*/)
                     {
                         suggestedWaterTemperature = WaterTemp.Value;
                     }
@@ -1071,7 +1071,7 @@ namespace gipbakery.mes.processapplication
                     suggestedWaterTemperature = doughTargetTempAfterKneeding;
                     defaultWaterTemp = doughTargetTempAfterKneeding;
                 }
-                else if (waterTargetQuantity.HasValue && waterTargetQuantity > 0.00001 && waterSpecHeatCapacity > 0.00001)
+                else if (waterTargetQuantity.HasValue /*&& waterTargetQuantity > 0.00001*/ && waterSpecHeatCapacity > 0.00001)
                 {
                     suggestedWaterTemperature = (componentsQ / (waterTargetQuantity.Value * waterSpecHeatCapacity)) + doughTargetTempBeforeKneeding;
                 }
