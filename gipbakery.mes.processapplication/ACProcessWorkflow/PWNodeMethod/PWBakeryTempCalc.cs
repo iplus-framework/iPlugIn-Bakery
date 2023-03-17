@@ -1026,7 +1026,7 @@ namespace gipbakery.mes.processapplication
 
             foreach (ProdOrderPartslistPosRelation rel in relationsWithoutWater)
             {
-                double componentTemperature = recvPoint.RoomTemperature.ValueT;
+                double componentTemperature = recvPoint.RoomTemp;
                 MaterialTemperature compTemp = compTemps.FirstOrDefault(c => c.Material.MaterialNo == rel.SourceProdOrderPartslistPos.Material.MaterialNo);
                 if (compTemp != null && compTemp.AverageTemperature.HasValue)
                     componentTemperature = compTemp.AverageTemperature.Value;
@@ -2247,7 +2247,7 @@ namespace gipbakery.mes.processapplication
                 }
             }
 
-            DetermineCompTempFromPartslistOrMaterial(componentTemp, partslistPosList, recvPoint.RoomTemperature.ValueT);
+            DetermineCompTempFromPartslistOrMaterial(componentTemp, partslistPosList, recvPoint.RoomTemp);
 
             if (dryIceTemp != null && !dryIceTemp.AverageTemperature.HasValue)
             {
@@ -2258,7 +2258,7 @@ namespace gipbakery.mes.processapplication
                 OnNewAlarmOccurred(ProcessAlarm, msg);
             }
 
-            SetRoomTemp(componentTemp, recvPoint.RoomTemperature.ValueT, matNoDryIce);
+            SetRoomTemp(componentTemp, recvPoint.RoomTemp, matNoDryIce);
 
             return componentTemp;
         }
@@ -2376,7 +2376,7 @@ namespace gipbakery.mes.processapplication
                 }
             }
 
-            DetermineCompTempFromMaterial(componentTemp, picking, recvPoint.RoomTemperature.ValueT);
+            DetermineCompTempFromMaterial(componentTemp, picking, recvPoint.RoomTemp);
 
             if (dryIceTemp != null && !dryIceTemp.AverageTemperature.HasValue)
             {
@@ -2387,7 +2387,7 @@ namespace gipbakery.mes.processapplication
                 OnNewAlarmOccurred(ProcessAlarm, msg);
             }
 
-            SetRoomTemp(componentTemp, recvPoint.RoomTemperature.ValueT, matNoDryIce);
+            SetRoomTemp(componentTemp, recvPoint.RoomTemp, matNoDryIce);
 
             return componentTemp;
         }

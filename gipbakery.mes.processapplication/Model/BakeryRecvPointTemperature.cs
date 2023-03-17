@@ -145,11 +145,11 @@ namespace gipbakery.mes.processapplication
             {
                 if (mt.IsRoomTemperature)
                 {
-                    mt.AverageTemperature = recvPoint.RoomTemperature.ValueT;
+                    mt.AverageTemperature = recvPoint.RoomTemp;
                 }
                 else
                 {
-                    mt.CalculateAverageTemperature(recvPoint.RoomTemperature.ValueT);
+                    mt.CalculateAverageTemperature(recvPoint.RoomTemp);
                 }
             }
         }
@@ -162,7 +162,7 @@ namespace gipbakery.mes.processapplication
             mt.IsRoomTemperature = true;
             mt.Water = WaterType.NotWater;
             mt.MaterialNo = TemperatureService.Root.Environment.TranslateText(TemperatureService, "RoomTemp");
-            mt.AverageTemperature = recvPoint.RoomTemperature.ValueT;
+            mt.AverageTemperature = recvPoint.RoomTemp;
             MaterialTempInfos.Add(mt);
         }
 

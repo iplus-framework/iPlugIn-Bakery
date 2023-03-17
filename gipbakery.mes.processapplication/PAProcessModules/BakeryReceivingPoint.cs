@@ -95,17 +95,7 @@ namespace gipbakery.mes.processapplication
 
         #region Properties 
 
-        //private ACPropertyConfigValue<string> _RecvPointReadyScaleACUrl;
-        //[ACPropertyConfig("en{'Scale ACUrl for PWBakeryRecvPointReady'}de{'Waage ACUrl für PWBakeryRecvPointReady'}")]
-        //public string RecvPointReadyScaleACUrl
-        //{
-        //    get => _RecvPointReadyScaleACUrl.ValueT;
-        //    set
-        //    {
-        //        _RecvPointReadyScaleACUrl.ValueT = value;
-        //        OnPropertyChanged("RecvPointReadyScaleACUrl");
-        //    }
-        //}
+        private const double _DefaultRoomTemperature = 22;
 
         private ACPropertyConfigValue<bool> _WithCover;
         [ACPropertyConfig("en{'Receiving point with cover'}de{'Abnahmestelle mit Abdeckung'}")]
@@ -144,7 +134,7 @@ namespace gipbakery.mes.processapplication
         }
 
 
-        [ACPropertyBindingSource(IsPersistable = true)]
+        [ACPropertyBindingSource(600, "", "en{'Dough correction temperature'}de{'Raumtemperatur'}", IsPersistable = true)]
         public IACContainerTNet<double> DoughCorrTemp
         {
             get;
@@ -166,23 +156,48 @@ namespace gipbakery.mes.processapplication
         }
 
         /// <summary>
-        /// Represents the room temperature. It can be fix defined or can be bounded to the sensor.
+        /// Represents the room temperature.
         /// </summary>
-        [ACPropertyBindingTarget(IsPersistable = false)]
+        [ACPropertyBindingTarget(604, "", "en{'Room temperature'}de{'Raumtemperatur'}", IsPersistable = false)]
         public IACContainerTNet<double> RoomTemperature
         {
             get;
             set;
         }
 
-        [ACPropertyBindingSource(IsPersistable = true)]
+        [ACPropertyInfo(605, "", "en{'Default room temperature'}de{'Standard-Raumtemperatur'}", IsPersistable = true)]
+        public double? DefaultRoomTemperature
+        {
+            get;
+            set;
+        }
+
+        /// <summary>
+        /// Returns the RoomTemperature if is bounded to the sensor, otherwise returns the DefaultRoomTemperature.
+        /// </summary>
+        public double RoomTemp
+        {
+            get
+            {
+                IACPropertyNetTarget roomTemp = RoomTemperature as IACPropertyNetTarget;
+                if (roomTemp != null && roomTemp.Source != null)
+                    return RoomTemperature.ValueT;
+
+                if (DefaultRoomTemperature.HasValue)
+                    return DefaultRoomTemperature.Value;
+
+                return _DefaultRoomTemperature;
+            }
+        }
+
+        [ACPropertyBindingSource(610, "", "en{'ACUrl of water tank'}de{'ACUrl von Wassertank'}", IsPersistable = true)]
         public IACContainerTNet<string> WaterTankACUrl
         {
             get;
             set;
         }
 
-        [ACPropertyBindingSource(602, "" , "en{'Is filling floor scale'}de{'Wird Boodenwaage gerade befüllt'}")]
+        [ACPropertyBindingSource(611, "" , "en{'Is filling floor scale'}de{'Wird Boodenwaage gerade befüllt'}")]
         public IACContainerTNet<RecvPointDosingInfoEnum> IsDosingOnFloorScale
         {
             get;
