@@ -945,7 +945,7 @@ namespace gipbakery.mes.processapplication
             return result;
         }
 
-        private bool AddDischargingConfig(vd.DatabaseApp dbApp, vd.Picking picking, List<SingleDosingConfigItem> configItems, Route validRoute, gip.core.datamodel.ACClassWF rootWF)
+        protected virtual bool AddDischargingConfig(vd.DatabaseApp dbApp, vd.Picking picking, List<SingleDosingConfigItem> configItems, Route validRoute, gip.core.datamodel.ACClassWF rootWF)
         {
             if (!DischargeOverHose)
                 return true;
@@ -1003,7 +1003,7 @@ namespace gipbakery.mes.processapplication
             return true;
         }
 
-        private bool InsertOverHoseConfiguration(gip.core.datamodel.ACClassWF pwNode, gip.core.datamodel.ACClassWF rootWF, gip.mes.datamodel.Picking picking, object configValue)
+        protected virtual bool InsertOverHoseConfiguration(gip.core.datamodel.ACClassWF pwNode, gip.core.datamodel.ACClassWF rootWF, gip.mes.datamodel.Picking picking, object configValue)
         {
             if (pwNode == null || rootWF == null)
                 return false;
