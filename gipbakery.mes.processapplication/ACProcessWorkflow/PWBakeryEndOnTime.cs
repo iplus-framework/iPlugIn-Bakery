@@ -103,6 +103,9 @@ namespace gipbakery.mes.processapplication
 
             if (DurationMustExpire)
             {
+                DateTime now = DateTime.Now;
+                DateTime newEndTime = now.AddDurationDSTCorrected(GetPlannedDuration());
+                SetEndOnTime(newEndTime);
                 base.SMStarting();
             }
             else

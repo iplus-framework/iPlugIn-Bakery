@@ -1267,7 +1267,7 @@ namespace gipbakery.mes.processapplication
 
         protected override List<MessageItem> OnHandleWFNodesRemoveMessageItems(List<MessageItem> messageItems)
         {
-            if (messageItems.Any(c => c.UserAckPWNode != null && c.UserAckPWNode.ValueT.ACIdentifier.Contains(nameof(PWBakeryFlourDischargingAck))))
+            if (messageItems.Any(c => c.UserAckPWNode != null && c.UserAckPWNode.ValueT != null && c.UserAckPWNode.ValueT.ACIdentifier.Contains(nameof(PWBakeryFlourDischargingAck))))
             {
                 BtnFlourBlink = false;
             }

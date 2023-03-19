@@ -179,15 +179,21 @@ namespace gipbakery.mes.processapplication
         {
             get
             {
-                IACPropertyNetTarget roomTemp = RoomTemperature as IACPropertyNetTarget;
-                if (roomTemp != null && roomTemp.Source != null)
+                if (RoomTemperature != null)
+                {
+                    if (Math.Abs(RoomTemperature.ValueT) <= double.Epsilon && IsSimulationOn)
+                        RoomTemperature.ValueT = GetDefaultRoomTemperature();
                     return RoomTemperature.ValueT;
-
-                if (DefaultRoomTemperature.HasValue)
-                    return DefaultRoomTemperature.Value;
-
-                return _DefaultRoomTemperature;
+                }
+                return GetDefaultRoomTemperature();
             }
+        }
+
+        public double GetDefaultRoomTemperature()
+        {
+            if (DefaultRoomTemperature.HasValue)
+                return DefaultRoomTemperature.Value;
+            return _DefaultRoomTemperature;
         }
 
         [ACPropertyBindingSource(610, "", "en{'ACUrl of water tank'}de{'ACUrl von Wassertank'}", IsPersistable = true)]
@@ -247,6 +253,18 @@ namespace gipbakery.mes.processapplication
                     _SearchTempService = false;
                 }
                 return null;
+            }
+        }
+
+        public virtual bool IsSimulationOn
+        {
+            get
+            {
+                if (ACOperationMode != ACOperationModes.Live)
+                    return true;
+                if (ApplicationManager == null)
+                    return false;
+                return ApplicationManager.IsSimulationOn;
             }
         }
 
