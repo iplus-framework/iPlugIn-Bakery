@@ -963,10 +963,10 @@ namespace gipbakery.mes.processapplication
                 double suggestedWaterTemp = CalculateWaterTemperatureSuggestion(UseWaterTemp, isOnlyWaterCompsInPartslist, cityWaterComp, WaterTemp.Value, 0,
                                                                                 0, waterTargetQuantity, out defaultWaterTemp);
 
-                CalculateWaterTypes(compTemps, suggestedWaterTemp, waterTargetQuantity.Value, defaultWaterTemp, 0, isOnlyWaterCompsInPartslist, 0, true);
-
                 if (onlyCalculation)
                     return suggestedWaterTemp;
+
+                CalculateWaterTypes(compTemps, suggestedWaterTemp, waterTargetQuantity.Value, defaultWaterTemp, 0, isOnlyWaterCompsInPartslist, 0, true);
 
                 FillInfoForBSO(compTemps, null, null, null);
             }
@@ -1944,6 +1944,22 @@ namespace gipbakery.mes.processapplication
                                 return;
                         }
                         warmWaterPos.PickingQuantityUOM = warmWaterQ;
+                    }
+
+                    if (dryIceQ > 0.00001)
+                    {
+                        PickingPos dryIcePos = picking.PickingPos_Picking.FirstOrDefault(c => c.Material.MaterialNo == DryIceMaterialNo);
+                        if (dryIcePos == null)
+                        {
+                            dryIcePos = AddPickingPos(dbApp, picking, DryIceMaterialNo, targetFacility);
+                            if (dryIcePos == null)
+                                return;
+                        }
+
+                        if (CompSequenceNo > 0)
+                            dryIcePos.Sequence = CompSequenceNo;
+
+                        dryIcePos.PickingQuantityUOM = dryIceQ;
                     }
 
                     //TODO: ice, picking in manual weighing 
