@@ -241,7 +241,7 @@ namespace gipbakery.mes.processapplication
             {
                 if (!outwardEnabled)
                 {
-                    StateLackOfMaterial.ValueT = PANotifyState.AlarmOrFault;
+                    ForceSetLackOfMaterial();
                 }
             }
             base.OnSiloStateChanged(silo, outwardEnabled);
