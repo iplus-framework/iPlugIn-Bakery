@@ -30,7 +30,7 @@ namespace gipbakery.mes.processapplication
             var wrapper = new ACMethodWrapper(method, "en{'End on time'}de{'Beenden bei Uhrzeit'}", typeof(PWNodeWait), paramTranslation, null);
             ACMethod.RegisterVirtualMethod(typeof(PWBakeryEndOnTime), ACStateConst.SMStarting, wrapper);
 
-            RegisterExecuteHandler(typeof(PWBakeryEndOnTime), HandleExecuteACMethod_PWNodeStartAtTimet);
+            RegisterExecuteHandler(typeof(PWBakeryEndOnTime), HandleExecuteACMethod_PWBakeryEndOnTime);
         }
 
         public PWBakeryEndOnTime(ACClass acType, IACObject content, IACObject parentACObject, ACValueList parameter, string acIdentifier = "") :
@@ -41,9 +41,6 @@ namespace gipbakery.mes.processapplication
         public override bool ACPostInit()
         {
             bool result = base.ACPostInit();
-
-            EndOnTimeNew = EndOnTimeSafe;
-
             return result;
         }
 
@@ -51,22 +48,9 @@ namespace gipbakery.mes.processapplication
 
         #region Properties
 
-        private ACMonitorObject _65100_MembersLock = new ACMonitorObject(65100);
-
-        [ACPropertyBindingSource(800, "ACConfig", "en{'End on time'}de{'Beenden bei Uhrzeit'}", "", false, true)]
-        public IACContainerTNet<DateTime> EndOnTime { get; set; }
-
-        public DateTime EndOnTimeSafe
-        {
-            get
-            {
-                using (ACMonitor.Lock(_65100_MembersLock))
-                {
-                    return EndOnTime.ValueT;
-                }
-            }
-        }
-
+        /// <summary>
+        /// New Time set from User-Interface (with daylight saving)
+        /// </summary>
         [ACPropertyInfo(801, "", "en{'End on time new'}de{'Beenden bei Uhrzeit neu'}", "", true)]
         public DateTime EndOnTimeNew
         {
@@ -74,7 +58,7 @@ namespace gipbakery.mes.processapplication
             set;
         }
 
-        protected bool DurationMustExpire
+        public bool DurationMustExpire
         {
             get
             {
@@ -91,6 +75,14 @@ namespace gipbakery.mes.processapplication
             }
         }
 
+        public override bool ActsAsAlarmClock
+        {
+            get
+            {
+                return !DurationMustExpire;
+            }
+        }
+
         #endregion
 
         #region Methods
@@ -100,29 +92,8 @@ namespace gipbakery.mes.processapplication
         {
             if (!CheckParentGroupAndHandleSkipMode())
                 return;
-
-            if (DurationMustExpire)
-            {
-                DateTime now = DateTime.Now;
-                DateTime newEndTime = now.AddDurationDSTCorrected(GetPlannedDuration());
-                SetEndOnTime(newEndTime);
-                base.SMStarting();
-            }
-            else
-            {
-                RecalcTimeInfo();
-                var newMethod = NewACMethodWithConfiguration();
-                CreateNewProgramLog(newMethod, true);
-                CurrentACState = ACStateEnum.SMRunning;
-            }
-
-            PWBakeryGroupFermentation fermentationGroup = ParentPWGroup as PWBakeryGroupFermentation;
-            if (fermentationGroup != null)
-            {
-                fermentationGroup.OnChildPWBakeryEndOnTimeStart(this);
-            }
-
-            CheckIsStartTooLate();
+            base.SMStarting();
+            RefreshFermentationStageInfo(false);
         }
 
         public override void SMRunning()
@@ -142,24 +113,34 @@ namespace gipbakery.mes.processapplication
 
         public override void SMCompleted()
         {
+            base.SMCompleted();
+            EndTime.ValueT = DateTimeUtils.NowDST;
+            RefreshFermentationStageInfo(true);
+        }
+
+        protected override void OnViewTimeChanged()
+        {
+            EndOnTimeNew = EndTimeView.ValueT;
+            base.OnViewTimeChanged();
+            RefreshFermentationStageInfo(false);
+        }
+
+        private void RefreshFermentationStageInfo(bool nodeStateChanged)
+        {
+            if (Root == null || !Root.Initialized)
+                return;
             PWBakeryGroupFermentation fermentationGroup = ParentPWGroup as PWBakeryGroupFermentation;
             if (fermentationGroup != null)
-            {
-                fermentationGroup.OnChildPWBakeryEndOnTimeCompleted(this);
-            }
-
-            base.SMCompleted();
+                fermentationGroup.RefreshFermentationStageInfo(nodeStateChanged);
         }
 
         private void CheckIsStartTooLate()
         {
             DateTime? start = TimeInfo.ValueT.ActualTimes?.StartTime;
             if (!start.HasValue)
-            {
-                start = DateTime.Now;
-            }
+                start = DateTimeUtils.NowDST;
 
-            DateTime endTime = EndOnTimeSafe;
+            DateTime endTime = EndTime.ValueT;
             TimeSpan waitingTime = Duration;
 
             if (endTime > DateTime.MinValue)
@@ -170,6 +151,8 @@ namespace gipbakery.mes.processapplication
                 if (diff.TotalMinutes > 1)
                 {
                     //Error50486 : The production is late. The node was supposed to start at {0} to ensure waiting time of {1}.
+                    if (DateTime.Now.IsDaylightSavingTime())
+                        targetStartTime = targetStartTime.AddHours(1);
                     Msg msg = new Msg(this, eMsgLevel.Error, PWClassName, "CheckIsStartToLate", 148, "Error50486", targetStartTime, waitingTime);
                     if (IsAlarmActive(ProcessAlarm, msg.Message) == null)
                     {
@@ -181,65 +164,26 @@ namespace gipbakery.mes.processapplication
 
         }
 
-        public void SetEndOnTime(DateTime dateTime)
-        {
-            using (ACMonitor.Lock(_65100_MembersLock))
-            {
-                EndOnTime.ValueT = dateTime;
-                EndOnTimeNew = dateTime;
-            }
-        }
-
         [ACMethodInfo("", "en{'Apply new time'}de{'Neue Zeit anwenden'}", 800, true)]
         public void ApplyEndOnTimeNew()
         {
-            PWBakeryGroupFermentation fermentation = ParentPWGroup as PWBakeryGroupFermentation;
-            if (fermentation != null)
-            {
-                DateTime dt, dtNew;
-                using (ACMonitor.Lock(_65100_MembersLock))
-                {
-                    dt = EndOnTime.ValueT;
-                    dtNew = EndOnTimeNew;
-                    EndOnTime.ValueT = EndOnTimeNew;
-                }
-
-                fermentation.ChangeStartNextFermentationStageTime(dt, dtNew);
-            }
+            EndTime.ValueT = EndOnTimeNew.GetWinterTime();
+            RefreshFermentationStageInfo(true);
         }
 
-        protected override void objectManager_ProjectTimerCycle200ms(object sender, EventArgs e)
+        protected override bool HandleExecuteACMethod(out object result, AsyncMethodInvocationMode invocationMode, string acMethodName, gip.core.datamodel.ACClassMethod acClassMethod, params object[] acParameter)
         {
-            if (DurationMustExpire)
+            result = null;
+            switch (acMethodName)
             {
-                base.objectManager_ProjectTimerCycle200ms(sender, e);
+                case nameof(ApplyEndOnTimeNew):
+                    ApplyEndOnTimeNew();
+                    return true;
             }
-            else
-            {
-                if (this.InitState == ACInitState.Destructed || this.InitState == ACInitState.DisposingToPool || this.InitState == ACInitState.DisposedToPool)
-                {
-                    gip.core.datamodel.Database.Root.Messages.LogError("PWNodeWait", "objectManager_ProjectTimerCycle200ms(1)", String.Format("Unsubcribed from Workcycle. Init-State is {0}, _SubscribedToTimerCycle is {1}, at Type {2}. Ensure that you unsubscribe from Work-Cycle in ACDeinit().", this.InitState, _SubscribedToTimerCycle, this.GetType().AssemblyQualifiedName));
-
-                    using (ACMonitor.Lock(_20015_LockValue))
-                    {
-                        (sender as ApplicationManager).ProjectWorkCycleR1sec -= objectManager_ProjectTimerCycle200ms;
-                        _SubscribedToTimerCycle = false;
-                    }
-                    return;
-                }
-
-                DateTime dt = EndOnTimeSafe;
-
-                if ((dt < DateTime.Now || dt == DateTime.MinValue)
-                     && CurrentACState >= ACStateEnum.SMStarting
-                     && CurrentACState <= ACStateEnum.SMCompleted)
-                {
-                    CurrentACState = ACStateEnum.SMCompleted;
-                }
-            }
+            return base.HandleExecuteACMethod(out result, invocationMode, acMethodName, acClassMethod, acParameter);
         }
 
-        public static bool HandleExecuteACMethod_PWNodeStartAtTimet(out object result, IACComponent acComponent, string acMethodName, gip.core.datamodel.ACClassMethod acClassMethod, params object[] acParameter)
+        public static bool HandleExecuteACMethod_PWBakeryEndOnTime(out object result, IACComponent acComponent, string acMethodName, gip.core.datamodel.ACClassMethod acClassMethod, params object[] acParameter)
         {
             return HandleExecuteACMethod_PWNodeWait(out result, acComponent, acMethodName, acClassMethod, acParameter);
         }
