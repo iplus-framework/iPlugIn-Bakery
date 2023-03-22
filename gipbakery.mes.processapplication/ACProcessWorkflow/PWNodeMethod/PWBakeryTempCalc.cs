@@ -1921,6 +1921,11 @@ namespace gipbakery.mes.processapplication
                     Facility targetFacility = cityWaterPos.ToFacility;
 
                     cityWaterPos.PickingQuantityUOM = cityWaterQ;
+                    if (cityWaterQ < 0.00001)
+                    {
+                        cityWaterPos.MDDelivPosLoadState = DatabaseApp.s_cQry_GetMDDelivPosLoadState(dbApp, MDDelivPosLoadState.DelivPosLoadStates.LoadToTruck)
+                                                                      .FirstOrDefault();
+                    }
 
                     if (coldWaterQ > 0.00001)
                     {
