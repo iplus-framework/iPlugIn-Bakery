@@ -1967,8 +1967,6 @@ namespace gipbakery.mes.processapplication
                         dryIcePos.PickingQuantityUOM = dryIceQ;
                     }
 
-                    //TODO: ice, picking in manual weighing 
-
                     Msg result = dbApp.ACSaveChanges();
                     if (result != null)
                     {
