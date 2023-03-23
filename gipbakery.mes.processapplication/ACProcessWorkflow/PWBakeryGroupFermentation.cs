@@ -225,13 +225,17 @@ namespace gipbakery.mes.processapplication
             {
                 short stage = 0;
                 bool hasStarted = false;
-                PWBakeryEndOnTime nextActiveNode = GetNextActiveEndOnTimeNode(out stage, out hasStarted);
+                IEnumerable<PWBakeryEndOnTime> nodes = null;
+                PWBakeryEndOnTime nextActiveNode = GetNextActiveEndOnTimeNode(out stage, out hasStarted, out nodes);
                 if (hasStarted && nextActiveNode != null && nextActiveNode.DurationMustExpire)
                     CalculateDurationForewardFromCurrentPosition();
                 else
                     CalculateDurationBackwardFromEnd();
                 IsTimeCalculated.ValueT = true;
                 CheckIfStartIsTooLate();
+                BakeryFermenter fermenter = AccessedProcessModule as BakeryFermenter;
+                if (fermenter != null)
+                    fermenter.RefreshFermentationInfo(nodes);
             }
             UnSubscribeToProjectWorkCycle();
         }
@@ -252,6 +256,15 @@ namespace gipbakery.mes.processapplication
             NextFermentationStage.ValueT = 0;
 
             DeactivatePreProdFunctions();
+        }
+
+
+        protected override void OnProcessModuleReleased(PAProcessModule module)
+        {
+            BakeryFermenter fermenter = module as BakeryFermenter;
+            if (fermenter != null)
+                fermenter.RefreshFermentationInfo(null);
+            base.OnProcessModuleReleased(module);
         }
 
 
@@ -517,6 +530,7 @@ namespace gipbakery.mes.processapplication
                 ReadyForDosingTime.ValueT = lastNode.EndTimeView.ValueT;
         }
 
+
         public IEnumerable<IACComponentPWNode> FindParallelNodes(PWBaseInOut pwNode)
         {
             var prevEndSources = pwNode.PWPointIn.ConnectionList.Select(c => c.ValueT).Cast<PWBaseInOut>();
@@ -632,7 +646,8 @@ namespace gipbakery.mes.processapplication
         {
             short stage = 0;
             bool hasStarted = false;
-            PWBakeryEndOnTime nextActiveNode = GetNextActiveEndOnTimeNode(out stage, out hasStarted);
+            IEnumerable<PWBakeryEndOnTime> nodes = null;
+            PWBakeryEndOnTime nextActiveNode = GetNextActiveEndOnTimeNode(out stage, out hasStarted, out nodes);
             if (nextActiveNode != null)
             {
                 if (hasStarted && nextActiveNode.DurationMustExpire && recalcDurations)
@@ -642,6 +657,9 @@ namespace gipbakery.mes.processapplication
             else
                 StartNextFermentationStageTime.ValueT = ReadyForDosingTime.ValueT;
             NextFermentationStage.ValueT = stage;
+            BakeryFermenter fermenter = AccessedProcessModule as BakeryFermenter;
+            if (fermenter != null)
+                fermenter.RefreshFermentationInfo(nodes);
         }
 
 
@@ -659,12 +677,12 @@ namespace gipbakery.mes.processapplication
         }
 
 
-        protected PWBakeryEndOnTime GetNextActiveEndOnTimeNode(out short stage, out bool hasStarted)
+        protected PWBakeryEndOnTime GetNextActiveEndOnTimeNode(out short stage, out bool hasStarted, out IEnumerable<PWBakeryEndOnTime> nodes)
         {
             hasStarted = false;
             stage = 0;
             PWBakeryEndOnTime nextActiveNode = null;
-            IEnumerable<PWBakeryEndOnTime> nodes = GetSortedEndOnTimes();
+            nodes = GetSortedEndOnTimes();
             if (nodes != null && nodes.Any())
             {
                 foreach (var node in nodes)
@@ -683,11 +701,11 @@ namespace gipbakery.mes.processapplication
         }
 
 
-        protected PWBakeryEndOnTime GetLastActiveEndOnTimeNode(out short stage)
+        protected PWBakeryEndOnTime GetLastActiveEndOnTimeNode(out short stage, out IEnumerable<PWBakeryEndOnTime> nodes)
         {
             stage = 0;
             PWBakeryEndOnTime lastActiveNode = null;
-            IEnumerable<PWBakeryEndOnTime> nodes = GetSortedEndOnTimes();
+            nodes = GetSortedEndOnTimes();
             if (nodes != null && nodes.Any())
             {
                 foreach (var node in nodes)
