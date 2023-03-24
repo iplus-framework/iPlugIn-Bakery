@@ -103,6 +103,13 @@ namespace gipbakery.mes.processapplication
             set;
         }
 
+        [ACPropertyBindingSource(900, "", "en{'Show only order measure items'}de{'Nur Auftragsmessungspositionen anzeigen'}", IsPersistable = true)]
+        public IACContainerTNet<bool> ShowOnlyOrderMeasureItems
+        {
+            get;
+            set;
+        }
+
         #endregion
 
         #region Methods
