@@ -798,7 +798,8 @@ namespace gipbakery.mes.processapplication
                 if (cityWaterComp == null)
                 {
                     // If partslist not contains city water, skip node
-                    CurrentACState = ACStateEnum.SMCompleted;
+                    if (!onlyCalculation)
+                        CurrentACState = ACStateEnum.SMCompleted;
                     return null;
                 }
 
