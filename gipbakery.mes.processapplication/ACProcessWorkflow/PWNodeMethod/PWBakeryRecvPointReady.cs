@@ -374,6 +374,14 @@ namespace gipbakery.mes.processapplication
             return HandleExecuteACMethod_PWNodeUserAck(out result, acComponent, acMethodName, acClassMethod, acParameter);
         }
 
+        public override bool IsSkippable
+        {
+            get
+            {
+                return !AckOverScale;
+            }
+        }
+
 
         public bool IsDischargeOverHose()
         {
