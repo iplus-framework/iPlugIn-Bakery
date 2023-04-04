@@ -412,7 +412,6 @@ namespace gipbakery.mes.processapplication
             if (endOnTimeNodes == null || !endOnTimeNodes.Any())
                 return;
             PWBakeryEndOnTime lastNode = endOnTimeNodes.LastOrDefault();
-            //PWBakeryEndOnTime lastNode = endOnTimeNodes.FirstOrDefault(x => x.FindSuccessors<PWDischarging>(true, c => c is PWDischarging, d => d is PWDosing, 0).Any());
 
             if (lastNode == null)
             {
@@ -434,7 +433,6 @@ namespace gipbakery.mes.processapplication
             ReadyForDosingTime.ValueT = plannedEndTime; // Time with DST
 
             lastNode = null;
-            //while (true)
             for (int i = endOnTimeNodes.Count - 1; i >= 0; i--)
             {
                 if (lastNode == null)
@@ -443,11 +441,6 @@ namespace gipbakery.mes.processapplication
                     continue;
                 }
                 PWBakeryEndOnTime currentNode = endOnTimeNodes[i];
-                //if (currentNode == null)
-                //{
-                //    StartNextFermentationStageTime.ValueT = lastNode.EndTimeView.ValueT;
-                //    break;
-                //}
 
                 IEnumerable<IACComponentPWNode> parallelNodes = FindParallelNodes(currentNode);
                 List<PWBakeryDosingPreProd> pwDosings = FindVariableDurationNodes(lastNode, currentNode, parallelNodes);
@@ -459,28 +452,6 @@ namespace gipbakery.mes.processapplication
                 TimeSpan durationPerStage = fixedDuration + variableDuration;
 
                 DateTime prevTime = lastNode.EndTime.ValueT - durationPerStage;
-
-                //if (useDSTSwitch)
-                //{
-                //    bool isCurrentTimeDST = TimeZoneInfo.Local.IsDaylightSavingTime(prevTime);
-
-                //    if (isEndTimeDST != isCurrentTimeDST)
-                //    {
-                //        if (isEndTimeDST)
-                //        {
-                //            // switch summer to winter
-                //            prevTime = prevTime.AddHours(-1);
-                //        }
-                //        else
-                //        {
-                //            // switch winter to summer
-                //            prevTime = prevTime.AddHours(1);
-                //        }
-
-                //        //change time only once, all predecessors will be calculated on this changed node end time
-                //        useDSTSwitch = false;
-                //    }
-                //}
 
                 currentNode.EndTime.ValueT = prevTime;
                 lastNode = currentNode;
