@@ -226,12 +226,22 @@ namespace gipbakery.mes.processapplication
                 short stage = 0;
                 bool hasStarted = false;
                 IEnumerable<PWBakeryEndOnTime> nodes = null;
-                PWBakeryEndOnTime nextActiveNode = GetNextActiveEndOnTimeNode(out stage, out hasStarted, out nodes);
-                if (hasStarted && nextActiveNode != null && nextActiveNode.DurationMustExpire)
-                    CalculateDurationForewardFromCurrentPosition();
-                else
-                    CalculateDurationBackwardFromEnd();
-                IsTimeCalculated.ValueT = true;
+                try
+                {
+                    PWBakeryEndOnTime nextActiveNode = GetNextActiveEndOnTimeNode(out stage, out hasStarted, out nodes);
+                    if (hasStarted && nextActiveNode != null && nextActiveNode.DurationMustExpire)
+                        CalculateDurationForewardFromCurrentPosition();
+                    else
+                        CalculateDurationBackwardFromEnd();
+                }
+                catch (Exception ex)
+                {
+                    Messages.LogException(this.GetACUrl(), nameof(SMRunning), ex);
+                }
+                finally
+                {
+                    IsTimeCalculated.ValueT = true;
+                }
                 CheckIfStartIsTooLate();
                 BakeryFermenter fermenter = AccessedProcessModule as BakeryFermenter;
                 if (fermenter != null)
@@ -581,12 +591,14 @@ namespace gipbakery.mes.processapplication
 
             //TODO: check if nodes parallel
 
+            if (!ts.Any())
+                return TimeSpan.Zero;
+
             if (doseSim)
             {
                 TimeSpan dosTimeWaterControl = TimeSpan.Zero;
                 if (waterFunc != null)
                     dosTimeWaterControl = TimeSpan.FromSeconds(waterFunc.DosTimeWaterControl.ValueT);
-                    
                 return ts.Max() + dosTimeWaterControl;
             }
             else
