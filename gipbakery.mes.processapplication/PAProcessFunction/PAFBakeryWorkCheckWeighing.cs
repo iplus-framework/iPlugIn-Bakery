@@ -89,7 +89,15 @@ namespace gipbakery.mes.processapplication
 
         protected override WorkTaskScanResult OnOccupyingProcessModuleOnScan(PAProcessModule parentPM, PWWorkTaskScanBase pwNode, PAProdOrderPartslistWFInfo releaseOrderInfo, BarcodeSequenceBase sequence, PAProdOrderPartslistWFInfo selectedPOLWf, Guid facilityChargeID, int scanSequence, short? sQuestionResult)
         {
-            var test = parentPM.Semaphore.ConnectionList.FirstOrDefault()?.ValueT;
+            PWGroup pwGroup = parentPM.Semaphore.ConnectionList.FirstOrDefault()?.ValueT as PWGroup;
+            if (pwGroup != null)
+            {
+                PWBakeryWorkCheckWeighing checkWeighing = pwGroup.FindChildComponents<PWBakeryWorkCheckWeighing>(c => c is PWBakeryWorkCheckWeighing).FirstOrDefault();
+                if (checkWeighing != null)
+                {
+                    checkWeighing.ReleaseProcessModuleOnScan(this, true);
+                }
+            }
 
             return base.OnOccupyingProcessModuleOnScan(parentPM, pwNode, releaseOrderInfo, sequence, selectedPOLWf, facilityChargeID, scanSequence, sQuestionResult);
         }
