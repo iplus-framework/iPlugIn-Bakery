@@ -107,9 +107,9 @@ namespace gipbakery.mes.processapplication
             return base.OnReleasingProcessModuleOnScan(pwNode, releaseOrderInfo, sequence, selectedPOLWf, facilityChargeID, scanSequence, sQuestionResult);
         }
 
-        public override WorkTaskScanResult OnScanEvent(BarcodeSequenceBase sequence, PAProdOrderPartslistWFInfo selectedPOLWf, Guid facilityChargeID, int scanSequence, short? sQuestionResult, ACMethod acMethod)
+        public override WorkTaskScanResult OnScanEvent(BarcodeSequenceBase sequence, PAProdOrderPartslistWFInfo selectedPOLWf, Guid facilityChargeID, int scanSequence, short? sQuestionResult, ACMethod acMethod, bool? machineMalfuntion)
         {
-            WorkTaskScanResult tempResult = base.OnScanEvent(sequence, selectedPOLWf, facilityChargeID, scanSequence, sQuestionResult, acMethod);
+            WorkTaskScanResult tempResult = base.OnScanEvent(sequence, selectedPOLWf, facilityChargeID, scanSequence, sQuestionResult, acMethod, machineMalfuntion);
 
             if (tempResult != null && tempResult.Result.State == BarcodeSequenceBase.ActionState.Selection)
             {
