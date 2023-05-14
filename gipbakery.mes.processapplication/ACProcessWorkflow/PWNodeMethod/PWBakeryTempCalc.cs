@@ -2823,6 +2823,9 @@ namespace gipbakery.mes.processapplication
                     _UserResponse = null;
                     _NewWaterQuantity = null;
                     _WaterTopParentPlPosRelQ = null;
+                    _CityWaterMaterialNo = null;
+                    _WarmWaterMaterialNo = null;
+                    _ColdWaterMaterialNo = null;
                 }
             }
         }

@@ -391,7 +391,7 @@ namespace gipbakery.mes.processapplication
                                 bakeryThermometer = null;
                         }
 
-                        var materialTempInfo = cacheItem.Value.MaterialTempInfos.FirstOrDefault(c => c.MaterialNo == materialNo);
+                        var materialTempInfo = cacheItem.Value.MaterialTempInfos.FirstOrDefault(c => c.MaterialNo == materialNo && c.Water == wType);
                         if (materialTempInfo == null)
                         {
                             materialTempInfo = new MaterialTemperature();
