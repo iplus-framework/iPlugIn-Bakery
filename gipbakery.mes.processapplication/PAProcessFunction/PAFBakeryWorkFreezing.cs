@@ -10,7 +10,7 @@ using System.Threading.Tasks;
 namespace gipbakery.mes.processapplication
 {
     [ACClassInfo(Const.PackName_VarioAutomation, "en{'Freezing'}de{'Schockfrosten'}", Global.ACKinds.TPAProcessFunction, Global.ACStorableTypes.Required, false, PWBakeryWorkFreezing.PWClassName, true)]
-    public class PAFBakeryWorkFreezing : PAFWorkTaskGeneric
+    public class PAFBakeryWorkFreezing : PAFWorkInOutOperation
     {
         #region Constructors
 
@@ -85,12 +85,24 @@ namespace gipbakery.mes.processapplication
 
             method.ParameterValueList.Add(new ACValue("Temperature", typeof(double), (double)0.0, Global.ParamOption.Required));
             paramTranslation.Add("Temperature", "en{'Freezing temperature [°C]'}de{'Frosttemperatur [°C]'}");
+
             method.ParameterValueList.Add(new ACValue("TempTolPlus", typeof(Double), (Double)0.0, Global.ParamOption.Optional));
             paramTranslation.Add("TempTolPlus", "en{'Tolerance + [+=°C/-=%]'}de{'Toleranz + [+=°C/-=%]'}");
+
             method.ParameterValueList.Add(new ACValue("TempTolMinus", typeof(Double), (Double)0.0, Global.ParamOption.Optional));
             paramTranslation.Add("TempTolMinus", "en{'Tolerance - [+=°C/-=%]'}de{'Toleranz - [+=°C/-=%]'}");
-            method.ParameterValueList.Add(new ACValue("Duration", typeof(TimeSpan), TimeSpan.Zero, Global.ParamOption.Required));
+
+            method.ParameterValueList.Add(new ACValue("MinDuration", typeof(TimeSpan), TimeSpan.Zero, Global.ParamOption.Optional));
+            paramTranslation.Add("MinDuration", "en{'Minimum duration'}de{'Minimum duration'}");
+
+            method.ParameterValueList.Add(new ACValue("Duration", typeof(TimeSpan), TimeSpan.Zero, Global.ParamOption.Optional));
             paramTranslation.Add("Duration", "en{'Duration'}de{'Dauer'}");
+
+            method.ParameterValueList.Add(new ACValue("Hint", typeof(TimeSpan), TimeSpan.Zero, Global.ParamOption.Optional));
+            paramTranslation.Add("Hint", "en{'Hint'}de{'Hint'}");
+
+            method.ParameterValueList.Add(new ACValue("MaxDuration", typeof(TimeSpan), TimeSpan.Zero, Global.ParamOption.Optional));
+            paramTranslation.Add("MaxDuration", "en{'Maximum duration'}de{'Maximum duration'}");
 
             return new ACMethodWrapper(method, captionTranslation, pwClass, paramTranslation, resultTranslation);
         }
