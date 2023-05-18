@@ -82,16 +82,20 @@ namespace gipbakery.mes.processapplication
                 module.OrderInfo.PropertyChanged -= OrderInfo_PropertyChanged;
             }
 
-            if (_VirtualSourceStore != null)
+            ACRef<PAMParkingspace> virtualSourceStore = null;
+            ACRef<PAMSilo> virtualTargetStore = null;
+            using (ACMonitor.Lock(_20015_LockValue))
             {
-                _VirtualSourceStore.Detach();
+                virtualSourceStore = _VirtualSourceStore;
                 _VirtualSourceStore = null;
-            }
-            if (_VirtualTargetStore != null)
-            {
-                _VirtualTargetStore.Detach();
+                virtualTargetStore = _VirtualTargetStore;
                 _VirtualTargetStore = null;
             }
+            
+            if (virtualSourceStore != null)
+                virtualSourceStore.Detach();
+            if (virtualTargetStore != null)
+                virtualTargetStore.Detach();
             return base.ACDeInit(deleteACClassTask);
         }
 
@@ -252,9 +256,19 @@ namespace gipbakery.mes.processapplication
         {
             get
             {
-                if (_VirtualSourceStore == null)
-                    FindStores();
-                return _VirtualSourceStore?.ValueT;
+                ACRef<PAMParkingspace> virtualSourceStore = null;
+                using (ACMonitor.Lock(_20015_LockValue))
+                {
+                    virtualSourceStore = _VirtualSourceStore;
+                }
+                if (virtualSourceStore != null)
+                    return virtualSourceStore.ValueT;
+                FindStores();
+                using (ACMonitor.Lock(_20015_LockValue))
+                {
+                    virtualSourceStore = _VirtualSourceStore;
+                }
+                return virtualSourceStore?.ValueT;
             }
         }
 
@@ -263,9 +277,19 @@ namespace gipbakery.mes.processapplication
         {
             get
             {
-                if (_VirtualTargetStore == null)
-                    FindStores();
-                return _VirtualTargetStore?.ValueT;
+                ACRef<PAMSilo> virtualTargetStore = null;
+                using (ACMonitor.Lock(_20015_LockValue))
+                {
+                    virtualTargetStore = _VirtualTargetStore;
+                }
+                if (virtualTargetStore != null)
+                    return virtualTargetStore.ValueT;
+                FindStores();
+                using (ACMonitor.Lock(_20015_LockValue))
+                {
+                    virtualTargetStore = _VirtualTargetStore;
+                }
+                return virtualTargetStore?.ValueT;
             }
         }
 
@@ -302,10 +326,13 @@ namespace gipbakery.mes.processapplication
             PAMParkingspace source;
             PAMSilo target;
             FindVirtualStores(out source, out target);
-            if (_VirtualSourceStore == null)
-                _VirtualSourceStore = new ACRef<PAMParkingspace>(source, this);
-            if (_VirtualTargetStore == null)
-                _VirtualTargetStore = new ACRef<PAMSilo>(target, this);
+            using (ACMonitor.Lock(_20015_LockValue))
+            {
+                if (_VirtualSourceStore == null)
+                    _VirtualSourceStore = new ACRef<PAMParkingspace>(source, this);
+                if (_VirtualTargetStore == null)
+                    _VirtualTargetStore = new ACRef<PAMSilo>(target, this);
+            }
 
             if (source == null && IsVirtSourceStoreNecessary)
             {
@@ -333,12 +360,7 @@ namespace gipbakery.mes.processapplication
         [ACMethodInfo("","",9999)]
         public Guid? GetSourceVirtualStoreID()
         {
-            PAMParkingspace parkingSpace = null;
-            using (ACMonitor.Lock(_20015_LockValue))
-            {
-                parkingSpace = VirtualSourceStore;
-            }
-
+            PAMParkingspace parkingSpace = VirtualSourceStore;
             return parkingSpace?.ComponentClass.ACClassID;
         }
 

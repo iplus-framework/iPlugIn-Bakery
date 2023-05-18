@@ -85,8 +85,13 @@ namespace gipbakery.mes.processapplication
         public PAMParkingspace VirtualSourceStore
         {
             get
-            {
-                return _VirtualSourceStore?.ValueT;
+            {   
+                ACRef<PAMParkingspace> virtualSourceStore = null;
+                using (ACMonitor.Lock(_20015_LockValue))
+                {
+                    virtualSourceStore = _VirtualSourceStore;
+                }
+                return virtualSourceStore?.ValueT;
             }
         }
 
@@ -95,7 +100,12 @@ namespace gipbakery.mes.processapplication
         {
             get
             {
-                return _VirtualTargetStore?.ValueT;
+                ACRef<PAMSilo> virtualTargetStore = null;
+                using (ACMonitor.Lock(_20015_LockValue))
+                {
+                    virtualTargetStore = _VirtualTargetStore;
+                }
+                return virtualTargetStore?.ValueT;
             }
         }
 
@@ -491,14 +501,17 @@ namespace gipbakery.mes.processapplication
 
             PAMParkingspace sourceStore = function.VirtualSourceStore;
             PAMSilo targetStore = function.VirtualTargetStore;
-
             if (sourceStore != null)
                 sourceStore.RefreshParkingSpace.PropertyChanged += RefreshParkingSpace_PropertyChanged;
 
-            _VirtualSourceStore = new ACRef<PAMParkingspace>(sourceStore, this);
-            _VirtualTargetStore = new ACRef<PAMSilo>(targetStore, this);
+            var virtualSourceStore = new ACRef<PAMParkingspace>(sourceStore, this);
+            var virtualTargetStore = new ACRef<PAMSilo>(targetStore, this);
+            using (ACMonitor.Lock(_20015_LockValue))
+            {
+                _VirtualSourceStore = virtualSourceStore;
+                _VirtualTargetStore = virtualTargetStore;
+            }
             _SourceStoreMonitored = true;
-
             UnSubscribeToProjectWorkCycle();
         }
 
@@ -511,33 +524,38 @@ namespace gipbakery.mes.processapplication
 
         private void StopMonitorSourceStore()
         {
-            if (_VirtualSourceStore != null)
+            ACRef<PAMParkingspace> virtualSourceStore = null;
+            ACRef<PAMSilo> virtualTargetStore = null;
+            using (ACMonitor.Lock(_20015_LockValue))
             {
-                if (_VirtualSourceStore.ValueT != null)
-                    _VirtualSourceStore.ValueT.RefreshParkingSpace.PropertyChanged -= RefreshParkingSpace_PropertyChanged;
-                _VirtualSourceStore.Detach();
+                virtualSourceStore = _VirtualSourceStore;
                 _VirtualSourceStore = null;
-            }
-            if (_VirtualTargetStore != null)
-            {
-                _VirtualTargetStore.Detach();
+                virtualTargetStore = _VirtualTargetStore;
                 _VirtualTargetStore = null;
             }
+
+            if (virtualSourceStore != null)
+            {
+                if (virtualSourceStore.ValueT != null)
+                    virtualSourceStore.ValueT.RefreshParkingSpace.PropertyChanged -= RefreshParkingSpace_PropertyChanged;
+                virtualSourceStore.Detach();
+            }
+            if (virtualTargetStore != null)
+                virtualTargetStore.Detach();
             _SourceStoreMonitored = false;
         }
 
         private void TryRelocateFromSourceStore()
         {
-            if (   _VirtualSourceStore == null 
-                || _VirtualSourceStore.ValueT == null
-                || _VirtualTargetStore == null 
-                || _VirtualTargetStore.ValueT == null)
+            var virtualSourceStore = VirtualSourceStore;
+            var virtualTargetStore = VirtualTargetStore;
+            if (virtualSourceStore == null  || virtualTargetStore == null)
                 return;
 
             using (DatabaseApp dbApp = new DatabaseApp())
             {
-                Facility sourceFacility = dbApp.Facility.FirstOrDefault(c => c.VBiFacilityACClassID == _VirtualSourceStore.ValueT.ComponentClass.ACClassID);
-                Facility targetFacility = _VirtualTargetStore.ValueT.Facility?.ValueT?.ValueT?.FromAppContext<Facility>(dbApp);
+                Facility sourceFacility = dbApp.Facility.FirstOrDefault(c => c.VBiFacilityACClassID == virtualSourceStore.ComponentClass.ACClassID);
+                Facility targetFacility = virtualTargetStore.Facility?.ValueT?.ValueT?.FromAppContext<Facility>(dbApp);
 
                 if (sourceFacility == null || targetFacility == null)
                     return;
@@ -664,8 +682,9 @@ namespace gipbakery.mes.processapplication
                 xmlChild = doc.CreateElement("SourceStore");
                 if (xmlChild != null)
                 {
-                    if (_VirtualSourceStore != null && _VirtualSourceStore.ValueT != null)
-                        xmlChild.InnerText = _VirtualSourceStore.ValueT.GetACUrl();
+                    var virtualSourceStore = VirtualSourceStore;
+                    if (virtualSourceStore != null)
+                        xmlChild.InnerText = virtualSourceStore.GetACUrl();
                     else
                         xmlChild.InnerText = "null";
                 }
@@ -678,8 +697,9 @@ namespace gipbakery.mes.processapplication
                 xmlChild = doc.CreateElement("TargetStore");
                 if (xmlChild != null)
                 {
-                    if (_VirtualTargetStore != null && _VirtualTargetStore.ValueT != null)
-                        xmlChild.InnerText = _VirtualTargetStore.ValueT.GetACUrl();
+                    var virtualTargetStore = VirtualTargetStore;
+                    if (virtualTargetStore != null)
+                        xmlChild.InnerText = virtualTargetStore.GetACUrl();
                     else
                         xmlChild.InnerText = "null";
                 }

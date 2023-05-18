@@ -88,6 +88,27 @@ namespace gipbakery.mes.processapplication
         /// This property is a reference to the BakeryReceivingPoint.CoverDown-Property if a Source-Value is bound
         /// </summary>
         private IACContainerTNet<bool> _BoundCoverDownProperty;
+        public IACContainerTNet<bool> BoundCoverDownProperty
+        {
+            get
+            {
+                using (ACMonitor.Lock(_20015_LockValue))
+                {
+                    return _BoundCoverDownProperty;
+                }
+            }
+            set
+            {
+                using (ACMonitor.Lock(_20015_LockValue))
+                {
+                    if (_BoundCoverDownProperty != null)
+                        _BoundCoverDownProperty.PropertyChanged -= IsCoverDown_PropertyChanged;
+                    _BoundCoverDownProperty = value;
+                    if (_BoundCoverDownProperty != null)
+                        _BoundCoverDownProperty.PropertyChanged += IsCoverDown_PropertyChanged;
+                }
+            }
+        }
 
         bool? _HasRunSomeDosings;
         public bool? HasRunSomeDosings
@@ -168,19 +189,19 @@ namespace gipbakery.mes.processapplication
             }
 
             bool resetCover = false;
-            if (IsSimulationOn && _BoundCoverDownProperty == null)
+            if (IsSimulationOn && BoundCoverDownProperty == null)
                 resetCover = true;
 
-            _BoundCoverDownProperty = isCoverDown as IACContainerTNet<bool>;
+            IACContainerTNet<bool> boundCoverDownProperty = isCoverDown as IACContainerTNet<bool>;
+            BoundCoverDownProperty = boundCoverDownProperty;
             if (resetCover)
-                _BoundCoverDownProperty.ValueT = false;
-            else if (_BoundCoverDownProperty.ValueT || AutoAck)
+                boundCoverDownProperty.ValueT = false;
+            else if (boundCoverDownProperty.ValueT || AutoAck)
             {
                 AckStart();
                 return;
             }
 
-            _BoundCoverDownProperty.PropertyChanged += IsCoverDown_PropertyChanged;
             base.SMRunning();
         }
 
@@ -200,7 +221,8 @@ namespace gipbakery.mes.processapplication
         {
             if (e.PropertyName == Const.ValueT)
             {
-                if (_BoundCoverDownProperty != null && _BoundCoverDownProperty.ValueT)
+                IACContainerTNet<bool> boundCoverDownProperty = BoundCoverDownProperty;
+                if (boundCoverDownProperty != null && boundCoverDownProperty.ValueT)
                 {
                     AckStart();
                 }
@@ -209,18 +231,15 @@ namespace gipbakery.mes.processapplication
 
         public override void AckStart()
         {
-            if (_BoundCoverDownProperty != null && !_BoundCoverDownProperty.ValueT)
-                _BoundCoverDownProperty.ValueT = true;
+            IACContainerTNet<bool> boundCoverDownProperty = BoundCoverDownProperty;
+            if (boundCoverDownProperty != null && !boundCoverDownProperty.ValueT)
+                boundCoverDownProperty.ValueT = true;
             base.AckStart();
         }
 
         public void ResetMembers()
         {
-            if (_BoundCoverDownProperty != null)
-            {
-                _BoundCoverDownProperty.PropertyChanged -= IsCoverDown_PropertyChanged;
-                _BoundCoverDownProperty = null;
-            }
+            BoundCoverDownProperty = null;
             HasRunSomeDosings = null;
         }
 
