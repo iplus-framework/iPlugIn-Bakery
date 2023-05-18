@@ -10,7 +10,7 @@ using System.Threading.Tasks;
 namespace gipbakery.mes.processapplication
 {
     [ACClassInfo(Const.PackName_VarioAutomation, "en{'Kneading-Start'}de{'Kneter-Start'}", Global.ACKinds.TPAProcessFunction, Global.ACStorableTypes.Required, false, PWBakeryWorkKneading.PWClassName, true)]
-    public class PAFBakeryWorkKneading : PAFWorkTaskGeneric
+    public class PAFBakeryWorkKneading : PAFWorkInOutOperation
     {
         #region Constructors
 
