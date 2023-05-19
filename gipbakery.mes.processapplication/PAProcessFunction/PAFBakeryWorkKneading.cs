@@ -78,7 +78,21 @@ namespace gipbakery.mes.processapplication
         {
             ACMethod method = new ACMethod(acIdentifier);
             Dictionary<string, string> paramTranslation = new Dictionary<string, string>();
+
+            method.ParameterValueList.Add(new ACValue("MinDuration", typeof(TimeSpan), null, Global.ParamOption.Optional));
+            paramTranslation.Add("MinDuration", "en{'Minimum duration'}de{'Minimum duration'}");
+
+            method.ParameterValueList.Add(new ACValue("Duration", typeof(TimeSpan), null, Global.ParamOption.Optional));
+            paramTranslation.Add("Duration", "en{'Duration'}de{'Duration'}");
+
+            method.ParameterValueList.Add(new ACValue("Hint", typeof(TimeSpan), null, Global.ParamOption.Optional));
+            paramTranslation.Add("Hint", "en{'Hint'}de{'Hint'}");
+
+            method.ParameterValueList.Add(new ACValue("MaxDuration", typeof(TimeSpan), null, Global.ParamOption.Optional));
+            paramTranslation.Add("MaxDuration", "en{'Maximum duration'}de{'Maximum duration'}");
+
             Dictionary<string, string> resultTranslation = new Dictionary<string, string>();
+
             return new ACMethodWrapper(method, captionTranslation, pwClass, paramTranslation, resultTranslation);
         }
 

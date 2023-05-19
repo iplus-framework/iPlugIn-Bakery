@@ -95,8 +95,18 @@ namespace gipbakery.mes.processapplication
             paramTranslation.Add("HumTolPlus", "en{'Hum. Tolerance + [+=°C/-=%]'}de{'Feucht. Toleranz + [+=°C/-=%]'}");
             method.ParameterValueList.Add(new ACValue("HumTolMinus", typeof(Double), (Double)0.0, Global.ParamOption.Optional));
             paramTranslation.Add("HumTolMinus", "en{'Hum. Tolerance - [+=°C/-=%]'}de{'Feucht. Toleranz - [+=°C/-=%]'}");
-            method.ParameterValueList.Add(new ACValue("Duration", typeof(TimeSpan), TimeSpan.Zero, Global.ParamOption.Required));
+
+            method.ParameterValueList.Add(new ACValue("MinDuration", typeof(TimeSpan), TimeSpan.Zero, Global.ParamOption.Optional));
+            paramTranslation.Add("MinDuration", "en{'Minimum duration'}de{'Minimum duration'}");
+
+            method.ParameterValueList.Add(new ACValue("Duration", typeof(TimeSpan), TimeSpan.Zero, Global.ParamOption.Optional));
             paramTranslation.Add("Duration", "en{'Duration'}de{'Dauer'}");
+
+            method.ParameterValueList.Add(new ACValue("Hint", typeof(TimeSpan), TimeSpan.Zero, Global.ParamOption.Optional));
+            paramTranslation.Add("Hint", "en{'Hint'}de{'Hint'}");
+
+            method.ParameterValueList.Add(new ACValue("MaxDuration", typeof(TimeSpan), TimeSpan.Zero, Global.ParamOption.Optional));
+            paramTranslation.Add("MaxDuration", "en{'Maximum duration'}de{'Maximum duration'}");
 
             return new ACMethodWrapper(method, captionTranslation, pwClass, paramTranslation, resultTranslation);
         }
