@@ -40,7 +40,7 @@ namespace gipbakery.mes.processapplication
 
         public override uint OnGetSemaphoreCapacity()
         {
-            return 1; // Infinite
+            return 1; 
         }
         #endregion
 
