@@ -81,10 +81,13 @@ namespace gipbakery.mes.processapplication
             Dictionary<string, string> paramTranslation = new Dictionary<string, string>();
             Dictionary<string, string> resultTranslation = new Dictionary<string, string>();
 
+            // ParameterValueList
             method.ParameterValueList.Add(new ACValue("Temperature", typeof(double), (double) 0.0, Global.ParamOption.Required));
             paramTranslation.Add("Temperature", "en{'Baking temperature [°C]'}de{'Backtemperatur [°C]'}");
+
             method.ParameterValueList.Add(new ACValue("TempTolPlus", typeof(Double), (Double)0.0, Global.ParamOption.Optional));
             paramTranslation.Add("TempTolPlus", "en{'Tolerance + [+=°C/-=%]'}de{'Toleranz + [+=°C/-=%]'}");
+
             method.ParameterValueList.Add(new ACValue("TempTolMinus", typeof(Double), (Double)0.0, Global.ParamOption.Optional));
             paramTranslation.Add("TempTolMinus", "en{'Tolerance - [+=°C/-=%]'}de{'Toleranz - [+=°C/-=%]'}");
 
@@ -99,6 +102,10 @@ namespace gipbakery.mes.processapplication
 
             method.ParameterValueList.Add(new ACValue("MaxDuration", typeof(TimeSpan), TimeSpan.Zero, Global.ParamOption.Optional));
             paramTranslation.Add("MaxDuration", "en{'Maximum duration'}de{'Maximum duration'}");
+
+            // ResultValueList
+            method.ResultValueList.Add(new ACValue("Temperature", typeof(double), (double)0.0, Global.ParamOption.Required));
+            resultTranslation.Add("Temperature", "en{'Baking temperature [°C]'}de{'Backtemperatur [°C]'}");
 
             return new ACMethodWrapper(method, captionTranslation, pwClass, paramTranslation, resultTranslation);
         }
