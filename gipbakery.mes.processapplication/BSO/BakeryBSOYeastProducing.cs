@@ -589,7 +589,7 @@ namespace gipbakery.mes.processapplication
                     return;
                 }
 
-                string scaleACUrl = GetConfigValue(funcClass, nameof(PAFBakeryYeastProducing.FermentationStarterScaleACUrl)) as string;
+                string scaleACUrl = BakeryBSOWorkCenterSelector.GetConfigValue(funcClass, nameof(PAFBakeryYeastProducing.FermentationStarterScaleACUrl)) as string;
 
                 ACComponent scale = PAFPreProducing?.ACUrlCommand(scaleACUrl) as ACComponent;
                 if (scale != null)
@@ -628,7 +628,7 @@ namespace gipbakery.mes.processapplication
                     Messages.Error(this, "Error50462");
                 }
 
-                string pumpOverModuleACUrl = GetConfigValue(funcClass, nameof(PAFBakeryYeastProducing.PumpOverProcessModuleACUrl)) as string;
+                string pumpOverModuleACUrl = BakeryBSOWorkCenterSelector.GetConfigValue(funcClass, nameof(PAFBakeryYeastProducing.PumpOverProcessModuleACUrl)) as string;
                 if (!string.IsNullOrEmpty(pumpOverModuleACUrl))
                 {
                     ACComponent pumpOverProcessModule = Root.ACUrlCommand(pumpOverModuleACUrl) as ACComponent;
@@ -654,7 +654,7 @@ namespace gipbakery.mes.processapplication
                     }
                 }
 
-                string tempSensorACUrl = GetConfigValue(funcClass, nameof(PAFBakeryYeastProducing.TemperatureSensorACUrl)) as string;
+                string tempSensorACUrl = BakeryBSOWorkCenterSelector.GetConfigValue(funcClass, nameof(PAFBakeryYeastProducing.TemperatureSensorACUrl)) as string;
                 if (!string.IsNullOrEmpty(tempSensorACUrl))
                 {
                     ACComponent tempSensor = Root.ACUrlCommand(tempSensorACUrl) as ACComponent;
@@ -666,8 +666,8 @@ namespace gipbakery.mes.processapplication
                     }
                 }
 
-                object configVal = GetConfigValue(funcClass, nameof(PAFBakeryYeastProducing.FinishOrderOnPumping));
-                FinishOrderOnPumping = GetConfigValue(funcClass, nameof(PAFBakeryYeastProducing.FinishOrderOnPumping)) != null ? (bool)configVal : false;
+                object configVal = BakeryBSOWorkCenterSelector.GetConfigValue(funcClass, nameof(PAFBakeryYeastProducing.FinishOrderOnPumping));
+                FinishOrderOnPumping = BakeryBSOWorkCenterSelector.GetConfigValue(funcClass, nameof(PAFBakeryYeastProducing.FinishOrderOnPumping)) != null ? (bool)configVal : false;
             }
 
             ACChildInstanceInfo dischFunc = childInstances.FirstOrDefault(c => _PAFDischargingType.IsAssignableFrom(c.ACType.ValueT.ObjectType));
@@ -750,17 +750,17 @@ namespace gipbakery.mes.processapplication
             }
         }
 
-        protected object GetConfigValue(gip.core.datamodel.ACClass acClass, string configName)
-        {
-            if (acClass == null || string.IsNullOrEmpty(configName))
-                return null;
+        //protected object GetConfigValue(gip.core.datamodel.ACClass acClass, string configName)
+        //{
+        //    if (acClass == null || string.IsNullOrEmpty(configName))
+        //        return null;
 
-            var config = acClass.ConfigurationEntries.FirstOrDefault(c => c.KeyACUrl == acClass.ACConfigKeyACUrl && c.LocalConfigACUrl == configName);
-            if (config == null)
-                return null;
+        //    var config = acClass.ConfigurationEntries.FirstOrDefault(c => c.KeyACUrl == acClass.ACConfigKeyACUrl && c.LocalConfigACUrl == configName);
+        //    if (config == null)
+        //        return null;
 
-            return config.Value;
-        }
+        //    return config.Value;
+        //}
 
         #endregion
 

@@ -35,6 +35,9 @@ namespace gipbakery.mes.processapplication
 
         #region Properties
 
+        private Type _PAFBakeryYeastProdType = typeof(PAFBakeryYeastProducing);
+        private Type _PAFBakeryPumpingType = typeof(PAFBakeryPumping);
+
         [ACPropertyInfo(true, 800)]
         public string BakeryTemperatureServiceACUrl
         {
@@ -61,6 +64,64 @@ namespace gipbakery.mes.processapplication
             {
                 item.AdditionalParam1 = temp.Value.ToString() + "°C";
             }
+        }
+
+        public static object GetConfigValue(gip.core.datamodel.ACClass acClass, string configName)
+        {
+            if (acClass == null || string.IsNullOrEmpty(configName))
+                return null;
+
+            var config = acClass.ConfigurationEntries.FirstOrDefault(c => c.KeyACUrl == acClass.ACConfigKeyACUrl && c.LocalConfigACUrl == configName);
+            if (config == null)
+                return null;
+
+            return config.Value;
+        }
+
+        public override WorkCenterItem CreateWorkCenterItem(ACComponent processModule, BSOWorkCenterSelector workCenterSelector)
+        {
+            return new BakeryWorkCenterItem(processModule, workCenterSelector);
+        }
+
+        public override ACComposition[] OnAddFunctionBSOs(gip.core.datamodel.ACClass pafACClass, ACComposition[] bsos, WorkCenterItem workCenterItem)
+        {
+            if (_PAFBakeryYeastProdType.IsAssignableFrom(pafACClass.ObjectType))
+            {
+                string pumpOverModuleACUrl = GetConfigValue(pafACClass, nameof(PAFBakeryYeastProducing.PumpOverProcessModuleACUrl)) as string;
+                if (!string.IsNullOrEmpty(pumpOverModuleACUrl))
+                {
+                    ACComponent pumpOverProcessModule = Root.ACUrlCommand(pumpOverModuleACUrl) as ACComponent;
+                    if (pumpOverProcessModule != null)
+                    {
+                        //PumpOverProcessModule = pumpOverProcessModule;
+
+                        var pumpOverChildInstances = pumpOverProcessModule.GetChildInstanceInfo(1, false);
+
+                        ACChildInstanceInfo func = pumpOverChildInstances.FirstOrDefault(c => _PAFBakeryPumpingType.IsAssignableFrom(c.ACType.ValueT.ObjectType));
+                        if (func != null)
+                        {
+                            ACComponent funcComp = pumpOverProcessModule.ACUrlCommand(func.ACIdentifier) as ACComponent;
+                            if (funcComp != null)
+                            {
+                                BakeryWorkCenterItem bwc = workCenterItem as BakeryWorkCenterItem;
+                                if (bwc != null)
+                                {
+                                    bwc.PAFPumping = funcComp;
+                                }
+
+                            }
+                        }
+                    }
+                    else
+                    {
+                        Messages.LogError(this.GetACUrl(), "InitBSO(30)", "The process module for pumping is null. ACUrl: " + pumpOverModuleACUrl);
+                    }
+                }
+
+
+            }
+
+            return base.OnAddFunctionBSOs(pafACClass, bsos, workCenterItem);
         }
 
         #endregion
