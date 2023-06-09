@@ -104,6 +104,7 @@
     <Compile Include="Model\BakeryCleanInfoItem.cs" />
     <Compile Include="Model\BakeryRecvPointTemperature.cs" />
     <Compile Include="Model\BakeryThermometerInfoItem.cs" />
+    <Compile Include="Model\BakeryWorkCenterItem.cs" />
     <Compile Include="Model\MaterialTemperature.cs" />
     <Compile Include="Model\MaterialTempMeasureItem.cs" />
     <Compile Include="Model\FermentationStageInfo.cs" />
@@ -390,6 +391,9 @@
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
     <None Include="VBControlScripts\2023-03-27 18-23_dlisak.zip">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="VBControlScripts\2023-06-07 10-45_ihrastinski.zip">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
   </ItemGroup>
