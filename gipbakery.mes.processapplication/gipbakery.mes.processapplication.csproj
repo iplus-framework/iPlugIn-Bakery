@@ -95,6 +95,8 @@
     <Compile Include="BSO\BakeryBSOTemperature.cs" />
     <Compile Include="BSO\BakeryBSOWorkCenterSelector.cs" />
     <Compile Include="BSO\BakeryBSOYeastProducing.cs" />
+    <Compile Include="Converter\BakeryConverterBaking.cs" />
+    <Compile Include="Converter\BakeryConverterProofing.cs" />
     <Compile Include="Converter\BakeryFuncSerial2006WaterTempCheck.cs" />
     <Compile Include="Converter\BakeryFuncSerial2006Cleaning.cs" />
     <Compile Include="Converter\BakeryFuncSerial2006Pumping.cs" />
