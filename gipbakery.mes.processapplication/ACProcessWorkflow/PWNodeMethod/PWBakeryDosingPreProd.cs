@@ -550,6 +550,14 @@ namespace gipbakery.mes.processapplication
             }
         }
 
+        public virtual bool WillSiloChangedWithoutAbort
+        {
+            get
+            {
+                return DosingForFlour;
+            }
+        }
+
         public virtual void OnNextSourceSiloFound(int oldSourceSilo, int newSourceSilo)
         {
 

@@ -266,6 +266,38 @@ namespace gipbakery.mes.processapplication
             }
         }
 
+        protected override void OnHandleAcknowlegdeDosingAlarms()
+        {
+            PWBakeryDosingPreProd invokingDosNode = null;
+            if (this.CurrentTask != null && CurrentACMethod.ValueT != null)
+                invokingDosNode = this.CurrentTask.ValueT as PWBakeryDosingPreProd;
+            if (invokingDosNode == null || !invokingDosNode.WillSiloChangedWithoutAbort)
+            {
+                base.OnHandleAcknowlegdeDosingAlarms();
+                return;
+            }
+
+            if (StateTolerance.ValueT != PANotifyState.Off)
+                FaultAckTolerance.ValueT = true;
+            if (StateLackOfMaterial.ValueT != PANotifyState.Off)
+            {
+                if (_LackOfMaterialForced == true)
+                {
+                    // Only reset if function is aborted or stopped, because silo change will happen with new start
+                    // Otherwise StateLackOfMaterial must be hold active for silo change in pwdosing
+                    if (CurrentACState >= ACStateEnum.SMCompleted)
+                    {
+                        StateLackOfMaterial.ValueT = PANotifyState.Off;
+                        _LackOfMaterialForced = false;
+                    }
+                }
+                else
+                    FaultAckLackOfMaterial.ValueT = true;
+            }
+            if (StateDosingTime.ValueT != PANotifyState.Off)
+                FaultAckDosingTime.ValueT = true;
+        }
+
         #endregion
 
         protected override bool HandleExecuteACMethod(out object result, AsyncMethodInvocationMode invocationMode, string acMethodName, ACClassMethod acClassMethod, params object[] acParameter)
