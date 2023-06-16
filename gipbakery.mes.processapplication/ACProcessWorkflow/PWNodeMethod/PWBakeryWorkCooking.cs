@@ -118,8 +118,7 @@ namespace gipbakery.mes.processapplication
                             material = intermediatePosition.BookingMaterial;
                         if (material == null)
                         {
-                            // TODO Error:
-                            return null;
+                            return new Msg(eMsgLevel.Error, "The material for laboratory order is not available!");
                         }
 
                         LabOrder template = GetOrCreateLabOrderTemplate(dbApp, material);
@@ -168,7 +167,8 @@ namespace gipbakery.mes.processapplication
                 }
                 else
                 {
-                    return new Msg(eMsgLevel.Error, "Please enter the cooking temperature!");
+                    //Warning50065 : Please enter the cooking temperature!
+                    return new Msg(this, eMsgLevel.Warning, null, null, 171, "Warning50065");
                 }
 
             }
@@ -259,9 +259,7 @@ namespace gipbakery.mes.processapplication
 
                 Msg msg = dbApp.ACSaveChanges();
                 if (msg != null)
-                {
                     OnNewAlarmOccurred(ProcessAlarm, msg);
-                }
             }
             return template;
         }
