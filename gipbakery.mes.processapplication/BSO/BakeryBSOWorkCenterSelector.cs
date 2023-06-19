@@ -97,18 +97,20 @@ namespace gipbakery.mes.processapplication
 
                         var pumpOverChildInstances = pumpOverProcessModule.GetChildInstanceInfo(1, false);
 
-                        ACChildInstanceInfo func = pumpOverChildInstances.FirstOrDefault(c => _PAFBakeryPumpingType.IsAssignableFrom(c.ACType.ValueT.ObjectType));
-                        if (func != null)
+                        if (pumpOverChildInstances != null)
                         {
-                            ACComponent funcComp = pumpOverProcessModule.ACUrlCommand(func.ACIdentifier) as ACComponent;
-                            if (funcComp != null)
+                            ACChildInstanceInfo func = pumpOverChildInstances.FirstOrDefault(c => _PAFBakeryPumpingType.IsAssignableFrom(c.ACType.ValueT.ObjectType));
+                            if (func != null)
                             {
-                                BakeryWorkCenterItem bwc = workCenterItem as BakeryWorkCenterItem;
-                                if (bwc != null)
+                                ACComponent funcComp = pumpOverProcessModule.ACUrlCommand(func.ACIdentifier) as ACComponent;
+                                if (funcComp != null)
                                 {
-                                    bwc.PAFPumping = funcComp;
+                                    BakeryWorkCenterItem bwc = workCenterItem as BakeryWorkCenterItem;
+                                    if (bwc != null)
+                                    {
+                                        bwc.PAFPumping = funcComp;
+                                    }
                                 }
-
                             }
                         }
                     }
