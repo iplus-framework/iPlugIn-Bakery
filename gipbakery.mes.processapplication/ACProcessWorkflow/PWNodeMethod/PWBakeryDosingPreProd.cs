@@ -453,7 +453,7 @@ namespace gipbakery.mes.processapplication
                     if (silo == null)
                         return;
 
-                    DosingRestInfo restInfo = new DosingRestInfo(silo, dosing, null);// 10);
+                    DosingRestInfo restInfo = new DosingRestInfo(silo, dosing, null, dosing.IsSourceMarkedAsEmpty);// 10);
 
                     //if (silo.MatSensorEmtpy == null
                     //    || (silo.MatSensorEmtpy != null && silo.MatSensorEmtpy.SensorState.ValueT != PANotifyState.Off))
