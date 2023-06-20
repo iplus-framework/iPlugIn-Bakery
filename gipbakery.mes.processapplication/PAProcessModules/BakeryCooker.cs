@@ -13,9 +13,16 @@ namespace gipbakery.mes.processapplication
     [ACClassInfo(Const.PackName_VarioAutomation, "en{'Cooker'}de{'Kocher'}", Global.ACKinds.TPAProcessModule, Global.ACStorableTypes.Required, false, PWGroupVB.PWClassName, true)]
     public class BakeryCooker : PAProcessModuleVB
     {
+        static BakeryCooker()
+        {
+            RegisterExecuteHandler(typeof(BakeryCooker), HandleExecuteACMethod_BakeryCooker);
+        }
+
         public BakeryCooker(ACClass acType, IACObject content, IACObject parentACObject, ACValueList parameter, string acIdentifier = "") : 
             base(acType, content, parentACObject, parameter, acIdentifier)
         {
+            _PAPointMatIn1 = new PAPoint(this, nameof(PAPointMatIn1));
+            _PAPointMatOut1 = new PAPoint(this, nameof(PAPointMatOut1));
         }
 
         PAPoint _PAPointMatIn1;
@@ -42,6 +49,11 @@ namespace gipbakery.mes.processapplication
         public override uint OnGetSemaphoreCapacity()
         {
             return 0;
+        }
+
+        private static bool HandleExecuteACMethod_BakeryCooker(out object result, IACComponent acComponent, string acMethodName, ACClassMethod acClassMethod, object[] acParameter)
+        {
+            return HandleExecuteACMethod_PAProcessModuleVB(out result, acComponent, acMethodName, acClassMethod, acParameter);
         }
     }
 }
