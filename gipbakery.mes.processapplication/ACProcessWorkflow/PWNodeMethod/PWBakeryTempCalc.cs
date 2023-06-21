@@ -7,6 +7,7 @@ using System.Linq;
 using System.Xml;
 using gip.mes.datamodel;
 using System.Runtime.Serialization;
+using gip.mes.facility;
 
 namespace gipbakery.mes.processapplication
 {
@@ -1412,11 +1413,31 @@ namespace gipbakery.mes.processapplication
 
                             if (iceQuantity <= totalWaterQuantity)
                             {
-                                coldWaterQuantity = totalWaterQuantity - iceQuantity;
-                                if (coldWaterQuantity < water.WaterMinDosingQuantity)
+                                if (isForPicking)
                                 {
-                                    iceQuantity = totalWaterQuantity;
-                                    coldWaterQuantity = 0;
+                                    if (WeighIceInPicking)
+                                    {
+                                        coldWaterQuantity = totalWaterQuantity - iceQuantity;
+                                        if (coldWaterQuantity < water.WaterMinDosingQuantity)
+                                        {
+                                            iceQuantity = totalWaterQuantity;
+                                            coldWaterQuantity = 0;
+                                        }
+                                    }
+                                    else
+                                    {
+                                        coldWaterQuantity = totalWaterQuantity;
+                                        iceQuantity = 0;
+                                    }
+                                }
+                                else
+                                {
+                                    coldWaterQuantity = totalWaterQuantity - iceQuantity;
+                                    if (coldWaterQuantity < water.WaterMinDosingQuantity)
+                                    {
+                                        iceQuantity = totalWaterQuantity;
+                                        coldWaterQuantity = 0;
+                                    }
                                 }
                             }
 
@@ -1908,7 +1929,8 @@ namespace gipbakery.mes.processapplication
 
             if (!UseWaterMixer)
             {
-                using (DatabaseApp dbApp = new DatabaseApp())
+                using (Database db = new gip.core.datamodel.Database())
+                using (DatabaseApp dbApp = new DatabaseApp(db))
                 {
                     Picking picking = pwMethodRelocation.CurrentPicking.FromAppContext<Picking>(dbApp);
                     if (picking == null)
@@ -1996,7 +2018,27 @@ namespace gipbakery.mes.processapplication
             }
 
             Facility source = null;
-            var possibleSources = material.Facility_Material.ToList();
+            List<Facility> possibleSources = material.Facility_Material.ToList();
+            //if (!possibleSources.Any())
+            //{
+            //    //PWMethodRelocation pwMethodRelocation = ParentPWMethod<PWMethodRelocation>();
+            //    //if (pwMethodRelocation != null)
+            //    //{
+            //    //    ACPickingManager pManager = pwMethodRelocation.PickingManager;
+            //    //    if (pManager != null)
+            //    //    {
+            //    //        gip.core.datamodel.ACClass module = ParentPWGroup.AccessedProcessModule.ComponentClass.FromIPlusContext<gip.core.datamodel.ACClass>(dbApp.ContextIPlus);
+
+            //    //        IList<Facility> sources = null;
+            //    //        pManager.GetRoutes(material, dbApp, dbApp.ContextIPlus, module, ACPartslistManager.SearchMode.AllSilos, null, out sources, null, null, null, false);
+
+            //    //        if (sources != null && sources.Count > 0)
+            //    //        {
+            //    //            source = sources.FirstOrDefault();
+            //    //        }
+            //    //    }
+            //    //}
+            //}
             if (possibleSources.Count > 1)
             {
                 IEnumerable<string> sources = possibleSources.Where(c => c.VBiFacilityACClassID != null).Select(x => x.VBiFacilityACClass.ACURLComponentCached);
