@@ -41,6 +41,8 @@ namespace gipbakery.mes.processapplication
             paramTranslation.Add("PostingBehaviour", "en{'Posting behaviour'}de{'Buchungsverhalten'}");
             method.ParameterValueList.Add(new ACValue("IgnorePredecessors", typeof(string), null, Global.ParamOption.Optional));
             paramTranslation.Add("IgnorePredecessors", "en{'Ignore predecessor groups'}de{'Ignoriere Vorgangsgruppen'}");
+            method.ParameterValueList.Add(new ACValue("LossCorrectionFactor", typeof(double?), null, Global.ParamOption.Optional));
+            paramTranslation.Add("LossCorrectionFactor", "en{'Loss correction factor 0 = bill of material factor, n=%'}de{'Verlustfaktor 0 = Rezept Faktor, n=%'}");
 
             var wrapper = new ACMethodWrapper(method, "en{'Configuration'}de{'Konfiguration'}", typeof(PWBakeryDischargingPreProd), paramTranslation, null);
             ACMethod.RegisterVirtualMethod(typeof(PWBakeryDischargingPreProd), ACStateConst.SMStarting, wrapper);
@@ -230,7 +232,7 @@ namespace gipbakery.mes.processapplication
                                         if (prodOrderManager != null)
                                         {
                                             double calculatedBatchWeight = 0;
-                                            if (prodOrderManager.CalcProducedBatchWeight(dbApp, currentBatchPos, out calculatedBatchWeight) == null)
+                                            if (prodOrderManager.CalcProducedBatchWeight(dbApp, currentBatchPos, LossCorrectionFactor, out calculatedBatchWeight) == null)
                                             {
                                                 double diff = calculatedBatchWeight - currentBatchPos.ActualQuantityUOM;
                                                 if (diff > 0.00001)
