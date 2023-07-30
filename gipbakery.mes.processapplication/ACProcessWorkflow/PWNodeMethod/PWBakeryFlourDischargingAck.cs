@@ -31,6 +31,9 @@ namespace gipbakery.mes.processapplication
             method.ParameterValueList.Add(new ACValue("AutoAck", typeof(bool), false, Global.ParamOption.Optional));
             paramTranslation.Add("AutoAck", "en{'Auto acknowledge'}de{'Automatisch quittieren'}");
 
+            method.ParameterValueList.Add(new ACValue("ACUrlCmd", typeof(string), "", Global.ParamOption.Required));
+            paramTranslation.Add("ACUrlCmd", "en{'Invoke ACUrl-Command'}de{'ACUrl-Kommando ausführen'}");
+
             var wrapper = new ACMethodWrapper(method, "en{'Flour discharging acknowledge'}de{'Mehlaustragsquittung'}", typeof(PWBakeryFlourDischargingAck), paramTranslation, null);
             ACMethod.RegisterVirtualMethod(typeof(PWBakeryFlourDischargingAck), ACStateConst.SMStarting, wrapper);
         }
@@ -232,12 +235,12 @@ namespace gipbakery.mes.processapplication
             }
         }
 
-        public override void AckStart()
+        protected override void OnAckStart(bool skipped)
         {
             IACContainerTNet<bool> boundCoverDownProperty = BoundCoverDownProperty;
             if (boundCoverDownProperty != null && !boundCoverDownProperty.ValueT)
                 boundCoverDownProperty.ValueT = true;
-            base.AckStart();
+            base.OnAckStart(skipped);
         }
 
         public void ResetMembers()

@@ -501,7 +501,7 @@ namespace gipbakery.mes.processapplication
 
         #endregion
 
-        public override void AckStart()
+        protected override void OnAckStart(bool skipped)
         {
             AcknowledgeAllAlarms();
             if (CurrentACState == ACStateEnum.SMStarting)

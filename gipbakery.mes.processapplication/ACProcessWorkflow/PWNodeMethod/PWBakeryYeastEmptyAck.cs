@@ -30,6 +30,9 @@ namespace gipbakery.mes.processapplication
             method.ParameterValueList.Add(new ACValue("SkipMode", typeof(ushort), 0, Global.ParamOption.Optional));
             paramTranslation.Add("SkipMode", "en{'Skipmode: 1=Always, 2=From the second run'}de{'Überspringen: 1=Ständig, 2=Ab zweitem Durchlauf'}");
 
+            method.ParameterValueList.Add(new ACValue("ACUrlCmd", typeof(string), "", Global.ParamOption.Required));
+            paramTranslation.Add("ACUrlCmd", "en{'Invoke ACUrl-Command'}de{'ACUrl-Kommando ausführen'}");
+
             var wrapper = new ACMethodWrapper(method, "en{'Flour discharging acknowledge'}de{'Mehlaustragsquittung'}", typeof(PWBakeryYeastEmptyAck), paramTranslation, null);
             ACMethod.RegisterVirtualMethod(typeof(PWBakeryYeastEmptyAck), ACStateConst.SMStarting, wrapper);
         }
@@ -66,7 +69,7 @@ namespace gipbakery.mes.processapplication
             }
         }
 
-        public override void AckStart()
+        protected override void OnAckStart(bool skipped)
         {
             PWGroup pwParentGroup = ParentPWGroup;
             if (pwParentGroup != null && pwParentGroup.AccessedProcessModule != null && ACFacilityManager != null)
@@ -113,7 +116,7 @@ namespace gipbakery.mes.processapplication
                 }
 
             }
-            base.AckStart();
+            base.OnAckStart(skipped);
         }
 
         public static bool HandleExecuteACMethod_PWBakeryYeastEmptyAck(out object result, IACComponent acComponent, string acMethodName, gip.core.datamodel.ACClassMethod acClassMethod, params object[] acParameter)

@@ -40,6 +40,9 @@ namespace gipbakery.mes.processapplication
             method.ParameterValueList.Add(new ACValue("SkipMode", typeof(ushort), 0, Global.ParamOption.Optional));
             paramTranslation.Add("SkipMode", "en{'Skipmode: 1=Always, 2=From the second run'}de{'Überspringen: 1=Ständig, 2=Ab zweitem Durchlauf'}");
 
+            method.ParameterValueList.Add(new ACValue("ACUrlCmd", typeof(string), "", Global.ParamOption.Required));
+            paramTranslation.Add("ACUrlCmd", "en{'Invoke ACUrl-Command'}de{'ACUrl-Kommando ausführen'}");
+
             method.ParameterValueList.Add(new ACValue("AutoTareScales", typeof(bool), false, Global.ParamOption.Optional));
             paramTranslation.Add("AutoTareScales", "en{'Auto tare scales'}de{'Automatische Waagenterierung'}");
 
@@ -315,14 +318,14 @@ namespace gipbakery.mes.processapplication
                 || (AckScaleWeight < -0.0000001 && scales.All(c => c.IsBinRemoved.HasValue && c.IsBinRemoved.Value));
         }
 
-        public override void AckStart()
+        protected override void OnAckStart(bool skipped)
         {
             BakeryReceivingPoint receivingPoint = ParentPWGroup?.AccessedProcessModule as BakeryReceivingPoint;
             if (receivingPoint != null && (AckScaleWeight > 0.0000001 || AckScaleWeight < -0.0000001))
                 receivingPoint.StoreGrossWeightOfEmptyContainer(AckScaleWeight < -0.0000001);
 
             UnSubscribeToProjectWorkCycle();
-            base.AckStart();
+            base.OnAckStart(skipped);
         }
 
         public override void SMIdle()
