@@ -246,7 +246,7 @@ namespace gipbakery.mes.processapplication
         }
 
         private double _NewWaterQuantity;
-        [ACPropertyInfo(808)]
+        [ACPropertyInfo(808, "", "en{'New water quantity'}de{'Neue Wassermenge'}", "", true)]
         public double NewWaterQuantity
         {
             get => _NewWaterQuantity;
