@@ -200,6 +200,9 @@ namespace gipbakery.mes.processapplication
         [ACMethodState("en{'Executing'}de{'Ausführend'}", 20, true)]
         public override void SMStarting()
         {
+            if (!Root.Initialized)
+                return;
+
             ACMethod paramMethod = MyConfiguration;
             RecalcTimeInfo();
             CreateNewProgramLog(paramMethod);
@@ -209,9 +212,15 @@ namespace gipbakery.mes.processapplication
 
         public override void SMRunning()
         {
+            if (!Root.Initialized)
+                return;
+
             bool result = StartFermentationStarter();
             if (!result)
                 return;
+
+            string dump = string.Format("UserInteraction = {0}; ScaleDetectionMode = {1}", _UserInteractionMode.ToString(), _ScaleDetectMode.ToString());
+            Messages.LogInfo(this.GetACUrl(), nameof(SMRunning), dump);
 
             base.SMRunning();
         }
@@ -778,6 +787,7 @@ namespace gipbakery.mes.processapplication
                 }
             }
 
+            Messages.LogInfo(this.GetACUrl(), nameof(ForceCompleteFermentationStarter), "Fermentation starter is forced to complete.");
             CurrentACState = ACStateEnum.SMCompleted;
         }
 
@@ -1001,6 +1011,8 @@ namespace gipbakery.mes.processapplication
             {
                 _UserInteractionMode = interaction;
             }
+
+            Messages.LogInfo(this.GetACUrl(), nameof(AckFermentationStarter), "UserInteraction = " + interaction.ToString());
         }
 
         [ACMethodInfo("", "en{'Abort fermentation starter'}de{'Anstellgut abbrechen'}", 701)]
@@ -1011,6 +1023,8 @@ namespace gipbakery.mes.processapplication
                 _UserInteractionMode = UserInteractionEnum.UserAbort;
             }
             SubscribeToProjectWorkCycle();
+
+            Messages.LogInfo(this.GetACUrl(), nameof(AbortFermentationStarter), "UserInteraction = " + UserInteractionEnum.UserAbort.ToString());
         }
 
         protected override bool HandleExecuteACMethod(out object result, AsyncMethodInvocationMode invocationMode, string acMethodName, gip.core.datamodel.ACClassMethod acClassMethod, params object[] acParameter)
