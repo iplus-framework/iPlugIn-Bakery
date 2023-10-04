@@ -116,15 +116,15 @@ namespace gipbakery.mes.processapplication
         }
 
         protected ACMonitorObject _70100_ScaleLock = new ACMonitorObject(70100);
-        private List<ACRef<PAEScaleBase>> _AckScales;
-        public IEnumerable<PAEScaleBase> AckScales
+        private List<ACRef<PAEScaleGravimetric>> _AckScales;
+        public IEnumerable<PAEScaleGravimetric> AckScales
         {
             get
             {
                 using (ACMonitor.Lock(_70100_ScaleLock))
                 {
                     if (_AckScales == null)
-                        return new PAEScaleBase[] { };
+                        return new PAEScaleGravimetric[] { };
                     return _AckScales.Select(c => c.ValueT).ToArray();
                 }
             }
@@ -184,7 +184,7 @@ namespace gipbakery.mes.processapplication
             if (!ackOverScale && !autoTareScales)
                 return;
 
-            List<ACRef<PAEScaleBase>> ackScales = null;
+            List<ACRef<PAEScaleGravimetric>> ackScales = null;
             using (ACMonitor.Lock(_70100_ScaleLock))
             {
                 ackScales = _AckScales;
@@ -202,21 +202,20 @@ namespace gipbakery.mes.processapplication
                         return;
                     }
 
-                    ackScales = new List<ACRef<PAEScaleBase>>();
+                    ackScales = new List<ACRef<PAEScaleGravimetric>>();
                     foreach (PAEScaleBase detScale in detectionScales)
                     {
+                        PAEScaleGravimetric gravScale = detScale as PAEScaleGravimetric;
+                        if (gravScale == null)
+                            continue;
                         if (autoTareScales)
-                        {
-                            var gravScale = detScale as PAEScaleGravimetric;
-                            if (gravScale != null)
-                                gravScale.Tare();
-                        }
+                            gravScale.Tare();
                         if (ackOverScale)
                         {
-                            if ((AckScaleWeight > 0.000001 && detScale.WeightPlacedBin.HasValue)
-                                || (AckScaleWeight < -0.000001 && detScale.WeightRemovedBin.HasValue))
+                            if ((AckScaleWeight > 0.000001 && gravScale.WeightPlacedBin.HasValue)
+                                || (AckScaleWeight < -0.000001 && gravScale.WeightRemovedBin.HasValue))
                             {
-                                ackScales.Add(new ACRef<PAEScaleBase>(detScale, this));
+                                ackScales.Add(new ACRef<PAEScaleGravimetric>(gravScale, this));
                                 detScale.ActualValue.PropertyChanged += ActualValue_PropertyChanged;
                                 detScale.NotStandStill.PropertyChanged += ActualValue_PropertyChanged;
                             }

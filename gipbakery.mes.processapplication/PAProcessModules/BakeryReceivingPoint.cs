@@ -338,12 +338,15 @@ namespace gipbakery.mes.processapplication
                 IsDosingOnFloorScale.ValueT = RecvPointDosingInfoEnum.NotPossible;
             }
 
-            List<PAEScaleBase> detectionScales = GetWeightDetectionScales();
+            IEnumerable<PAEScaleGravimetric> detectionScales = GetWeightDetectionScales()
+                                                                .Where(c => c is PAEScaleGravimetric)
+                                                                .Select(c => c as PAEScaleGravimetric)
+                                                                .ToArray();
             if (detectionScales != null && detectionScales.Any())
             {
                 PAEScaleGravimetric floorScale = detectionScales.Where(c => c.WeightPlacedBin.HasValue)
                                                         .OrderBy(c => c.MaxScaleWeight.ValueT)
-                                                        .FirstOrDefault() as PAEScaleGravimetric;
+                                                        .FirstOrDefault();
                 if (floorScale != null && floorScale.ActualValue != null)
                 {
                     _ActualGrossWeightOfFloorScale = floorScale.ActualValue;
@@ -365,12 +368,15 @@ namespace gipbakery.mes.processapplication
                 }
             }
 
-            List<PAEScaleBase> detectionScales = GetWeightDetectionScales();
+            IEnumerable<PAEScaleGravimetric> detectionScales = GetWeightDetectionScales()
+                                                    .Where(c => c is PAEScaleGravimetric)
+                                                    .Select(c => c as PAEScaleGravimetric)
+                                                    .ToArray();
             if (detectionScales != null && detectionScales.Any())
             {
                 PAEScaleGravimetric floorScale = detectionScales.Where(c => c.WeightPlacedBin.HasValue)
                                                         .OrderBy(c => c.MaxScaleWeight.ValueT)
-                                                        .FirstOrDefault() as PAEScaleGravimetric;
+                                                        .FirstOrDefault();
                 if (floorScale != null)
                 {
                     (floorScale.ActualValue as IACPropertyNetServer).ValueUpdatedOnReceival -= FloorScaleActualValue_ValueUpdatedOnReceival;
