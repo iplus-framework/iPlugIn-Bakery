@@ -63,6 +63,7 @@
     <Compile Include="ACProcessWorkflow\PWNodeMethod\PWBakeryWaterTempCheck.cs" />
     <Compile Include="ACProcessWorkflow\PWNodeMethod\PWBakeryWorkCheckWeighing.cs" />
     <Compile Include="ACProcessWorkflow\PWNodeMethod\PWBakeryWorkCooking.cs" />
+    <Compile Include="ACProcessWorkflow\PWNodeMethod\PWBakeryWorkCutting.cs" />
     <Compile Include="ACProcessWorkflow\PWNodeMethod\PWBakeryWorkTask.cs" />
     <Compile Include="ACProcessWorkflow\PWNodeMethod\PWBakeryCleaning.cs" />
     <Compile Include="ACProcessWorkflow\PWNodeMethod\PWBakeryDischargingPreProd.cs" />
@@ -125,6 +126,7 @@
     <Compile Include="PAProcessFunction\PAFBakeryTempMeasuring.cs" />
     <Compile Include="PAProcessFunction\PAFBakeryWorkBaking.cs" />
     <Compile Include="PAProcessFunction\PAFBakeryWorkCheckWeighing.cs" />
+    <Compile Include="PAProcessFunction\PAFBakeryWorkCutting.cs" />
     <Compile Include="PAProcessFunction\PAFBakeryWorkKneading.cs" />
     <Compile Include="PAProcessFunction\PAFBakeryWorkDecoring.cs" />
     <Compile Include="PAProcessFunction\PAFBakeryWorkCartoning.cs" />
@@ -136,6 +138,7 @@
     <Compile Include="PAProcessFunction\PAFBakeryYeastProducing.cs" />
     <Compile Include="PAProcessModules\BakeryCheckWeightStation.cs" />
     <Compile Include="PAProcessModules\BakeryCooker.cs" />
+    <Compile Include="PAProcessModules\BakeryCutter.cs" />
     <Compile Include="PAProcessModules\BakeryFreezer.cs" />
     <Compile Include="PAProcessModules\BakeryDecorStation.cs" />
     <Compile Include="PAProcessModules\BakeryCartoner.cs" />
