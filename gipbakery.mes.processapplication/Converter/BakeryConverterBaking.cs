@@ -70,7 +70,7 @@ namespace gipbakery.mes.processapplication
             return completeResult;
         }
 
-        public override MsgWithDetails SendACMethod(PAProcessFunction sender, ACMethod acMethod)
+        public override MsgWithDetails SendACMethod(PAProcessFunction sender, ACMethod acMethod, ACMethod previousParams = null)
         {
             MsgWithDetails msgWithDetails = null;
             //throw new System.NotImplementedException();
