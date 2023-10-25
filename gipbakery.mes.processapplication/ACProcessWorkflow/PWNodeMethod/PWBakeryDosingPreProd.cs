@@ -362,7 +362,7 @@ namespace gipbakery.mes.processapplication
                                 return null;
                             }
 
-                            IList<Facility> possibleSilos;
+                            ACPartslistManager.QrySilosResult possibleSilos;
 
                             RouteQueryParams queryParams = new RouteQueryParams(RouteQueryPurpose.StartDosing,
                                 OldestSilo ? ACPartslistManager.SearchMode.OnlyEnabledOldestSilo : ACPartslistManager.SearchMode.SilosWithOutwardEnabled,
@@ -570,7 +570,7 @@ namespace gipbakery.mes.processapplication
 
         private Route FindNextSource()
         {
-            IList<Facility> possibleSilos = null;
+            ACPartslistManager.QrySilosResult possibleSilos = null;
             PAProcessFunction responsibleFunc;
 
             using (Database dbIPlus = new gip.core.datamodel.Database())
@@ -635,18 +635,18 @@ namespace gipbakery.mes.processapplication
                     routes = routesList;
                 }
 
-                if (routes == null || !routes.Any())
+                if (routes == null || !routes.Any() || possibleSilos == null)
                 {
                     return null;
                 }
 
                 // 3. Finde die Route mit der höchsten Siloprioriät
                 Route dosingRoute = null;
-                foreach (var prioSilo in possibleSilos)
+                foreach (var prioSilo in possibleSilos.FilteredResult)
                 {
-                    if (!prioSilo.VBiFacilityACClassID.HasValue)
+                    if (!prioSilo.StorageBin.VBiFacilityACClassID.HasValue)
                         continue;
-                    dosingRoute = routes.Where(c => c.LastOrDefault().Source.ACClassID == prioSilo.VBiFacilityACClassID).FirstOrDefault();
+                    dosingRoute = routes.Where(c => c.LastOrDefault().Source.ACClassID == prioSilo.StorageBin.VBiFacilityACClassID).FirstOrDefault();
                     if (dosingRoute != null)
                         break;
                 }
