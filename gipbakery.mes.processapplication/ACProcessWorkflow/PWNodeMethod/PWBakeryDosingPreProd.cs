@@ -32,6 +32,8 @@ namespace gipbakery.mes.processapplication
             paramTranslation.Add("ComponentsSeqTo", "en{'Components to Seq.-No.'}de{'Komponenten BIS Seq.-Nr.'}");
             method.ParameterValueList.Add(new ACValue("ScaleOtherComp", typeof(bool), false, Global.ParamOption.Optional));
             paramTranslation.Add("ScaleOtherComp", "en{'Scale other components after Dosing'}de{'Restliche Komponenten anpassen'}");
+            method.ParameterValueList.Add(new ACValue("ReservationMode", typeof(short), (short)0, Global.ParamOption.Optional));
+            paramTranslation.Add("ReservationMode", "en{'Allow other lots if reservation'}de{'Erlaube andere Lose bei Reservierungen'}");
             method.ParameterValueList.Add(new ACValue("ManuallyChangeSource", typeof(bool), false, Global.ParamOption.Optional));
             paramTranslation.Add("ManuallyChangeSource", "en{'Manually change source'}de{'Manueller Quellenwechsel'}");
             method.ParameterValueList.Add(new ACValue("MinDosQuantity", typeof(double), 0.0, Global.ParamOption.Optional));
@@ -366,7 +368,7 @@ namespace gipbakery.mes.processapplication
 
                             RouteQueryParams queryParams = new RouteQueryParams(RouteQueryPurpose.StartDosing,
                                 OldestSilo ? ACPartslistManager.SearchMode.OnlyEnabledOldestSilo : ACPartslistManager.SearchMode.SilosWithOutwardEnabled,
-                                null, null, ExcludedSilos);
+                                null, null, ExcludedSilos, ReservationMode);
                             IEnumerable<Route> routes = GetRoutes(relation, dbApp, dbIPlus, queryParams, null, out possibleSilos);
 
                             if (routes != null && routes.Any())
@@ -584,7 +586,7 @@ namespace gipbakery.mes.processapplication
 
                 RouteQueryParams queryParams = new RouteQueryParams(RouteQueryPurpose.StartDosing,
                     OldestSilo ? ACPartslistManager.SearchMode.OnlyEnabledOldestSilo : ACPartslistManager.SearchMode.SilosWithOutwardEnabled,
-                    null, null, ExcludedSilos);
+                    null, null, ExcludedSilos, ReservationMode);
 
 
                 IEnumerable<Route> routes = null;
