@@ -32,6 +32,13 @@ namespace gipbakery.mes.processapplication
 
         #region override methods
 
+        [ACMethodAsync("Process", "en{'Start'}de{'Start'}", (short)MISort.Start, false)]
+        public override ACMethodEventArgs Start(ACMethod acMethod)
+        {
+            return base.Start(acMethod);
+        }
+
+
         #region Execute-Helper-Handlers
         public static bool HandleExecuteACMethod_PAFBakeryKneading(out object result, IACComponent acComponent, string acMethodName, gip.core.datamodel.ACClassMethod acClassMethod, params object[] acParameter)
         {

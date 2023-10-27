@@ -1671,7 +1671,7 @@ namespace gipbakery.mes.processapplication
                                                                                                  && _PWManualWeighingType
                                                                                                     .IsAssignableFrom(x.ACClassWF.PWACClass
                                                                                                                        .FromIPlusContext<gip.core.datamodel.ACClass>(db).ObjectType))
-                                                                                                                       != null).Material;
+                                                                                                                       != null)?.Material;
 
                 if (intermediateManual == null)
                 {
