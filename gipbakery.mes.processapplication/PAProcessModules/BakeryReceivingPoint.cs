@@ -256,18 +256,6 @@ namespace gipbakery.mes.processapplication
             }
         }
 
-        public virtual bool IsSimulationOn
-        {
-            get
-            {
-                if (ACOperationMode != ACOperationModes.Live)
-                    return true;
-                if (ApplicationManager == null)
-                    return false;
-                return ApplicationManager.IsSimulationOn;
-            }
-        }
-
         #endregion
 
         #region Methods 
