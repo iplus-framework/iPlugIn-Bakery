@@ -46,6 +46,10 @@ namespace gipbakery.mes.processapplication
             method.ParameterValueList.Add(new ACValue("AutoTareScales", typeof(bool), false, Global.ParamOption.Optional));
             paramTranslation.Add("AutoTareScales", "en{'Auto tare scales'}de{'Automatische Waagenterierung'}");
 
+            Dictionary<string, string> resultTranslation = new Dictionary<string, string>();
+            method.ResultValueList.Add(new ACValue("UserName", typeof(string), "", Global.ParamOption.Optional));
+            resultTranslation.Add("UserName", "en{'Username'}de{'Benutzername'}");
+
             var wrapper = new ACMethodWrapper(method, "en{'Receiving point ready'}de{'Abnahmestelle bereit'}", typeof(PWBakeryRecvPointReady), paramTranslation, null);
             ACMethod.RegisterVirtualMethod(typeof(PWBakeryRecvPointReady), ACStateConst.SMStarting, wrapper);
         }

@@ -67,6 +67,10 @@ namespace gipbakery.mes.processapplication
             method.ParameterValueList.Add(new ACValue("MaxWaterCorrectionDiff", typeof(double), 10, Global.ParamOption.Optional));
             paramTranslation.Add("MaxWaterCorrectionDiff", "en{'Max water correction difference'}de{'Maximale Wasserkorrekturdifferenz'}");
 
+            Dictionary<string, string> resultTranslation = new Dictionary<string, string>();
+            method.ResultValueList.Add(new ACValue("UserName", typeof(string), "", Global.ParamOption.Optional));
+            resultTranslation.Add("UserName", "en{'Username'}de{'Benutzername'}");
+
             var wrapper = new ACMethodWrapper(method, "en{'User Acknowledge'}de{'Benutzerbestätigung'}", typeof(PWBakeryTempCalc), paramTranslation, null);
             ACMethod.RegisterVirtualMethod(typeof(PWBakeryTempCalc), ACStateConst.SMStarting, wrapper);
 

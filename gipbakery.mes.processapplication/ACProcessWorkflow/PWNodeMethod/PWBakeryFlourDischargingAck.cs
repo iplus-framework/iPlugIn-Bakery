@@ -34,6 +34,10 @@ namespace gipbakery.mes.processapplication
             method.ParameterValueList.Add(new ACValue("ACUrlCmd", typeof(string), "", Global.ParamOption.Required));
             paramTranslation.Add("ACUrlCmd", "en{'Invoke ACUrl-Command'}de{'ACUrl-Kommando ausführen'}");
 
+            Dictionary<string, string> resultTranslation = new Dictionary<string, string>();
+            method.ResultValueList.Add(new ACValue("UserName", typeof(string), "", Global.ParamOption.Optional));
+            resultTranslation.Add("UserName", "en{'Username'}de{'Benutzername'}");
+
             var wrapper = new ACMethodWrapper(method, "en{'Flour discharging acknowledge'}de{'Mehlaustragsquittung'}", typeof(PWBakeryFlourDischargingAck), paramTranslation, null);
             ACMethod.RegisterVirtualMethod(typeof(PWBakeryFlourDischargingAck), ACStateConst.SMStarting, wrapper);
         }
