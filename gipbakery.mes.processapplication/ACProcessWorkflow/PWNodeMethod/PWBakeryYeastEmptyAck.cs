@@ -16,29 +16,15 @@ namespace gipbakery.mes.processapplication
         static PWBakeryYeastEmptyAck()
         {
             RegisterExecuteHandler(typeof(PWBakeryYeastEmptyAck), HandleExecuteACMethod_PWBakeryYeastEmptyAck);
-
-            ACMethod method;
-            method = new ACMethod(ACStateConst.SMStarting);
-            Dictionary<string, string> paramTranslation = new Dictionary<string, string>();
-
-            method.ParameterValueList.Add(new ACValue("MessageText", typeof(string), "", Global.ParamOption.Required));
-            paramTranslation.Add("MessageText", "en{'Question text'}de{'Abfragetext'}");
-
-            method.ParameterValueList.Add(new ACValue("PasswordDlg", typeof(bool), false, Global.ParamOption.Required));
-            paramTranslation.Add("PasswordDlg", "en{'With password dialogue'}de{'Mit Passwort-Dialog'}");
-
-            method.ParameterValueList.Add(new ACValue("SkipMode", typeof(ushort), 0, Global.ParamOption.Optional));
-            paramTranslation.Add("SkipMode", "en{'Skipmode: 1=Always, 2=From the second run'}de{'Überspringen: 1=Ständig, 2=Ab zweitem Durchlauf'}");
-
-            method.ParameterValueList.Add(new ACValue("ACUrlCmd", typeof(string), "", Global.ParamOption.Required));
-            paramTranslation.Add("ACUrlCmd", "en{'Invoke ACUrl-Command'}de{'ACUrl-Kommando ausführen'}");
-
-            Dictionary<string, string> resultTranslation = new Dictionary<string, string>();
-            method.ResultValueList.Add(new ACValue("UserName", typeof(string), "", Global.ParamOption.Optional));
-            resultTranslation.Add("UserName", "en{'Username'}de{'Benutzername'}");
-
-            var wrapper = new ACMethodWrapper(method, "en{'Flour discharging acknowledge'}de{'Mehlaustragsquittung'}", typeof(PWBakeryYeastEmptyAck), paramTranslation, null);
-            ACMethod.RegisterVirtualMethod(typeof(PWBakeryYeastEmptyAck), ACStateConst.SMStarting, wrapper);
+            ACMethod.InheritFromBase(typeof(PWBakeryYeastEmptyAck), ACStateConst.SMStarting);
+            //List<ACMethodWrapper> wrappers = ACMethod.OverrideFromBase(typeof(PWBakeryYeastEmptyAck), ACStateConst.SMStarting);
+            //if (wrappers != null)
+            //{
+            //    foreach (ACMethodWrapper wrapper in wrappers)
+            //    {
+            //        wrapper.CaptionTranslation = "en{'Flour discharging acknowledge'}de{'Mehlaustragsquittung'}";
+            //    }
+            //}
         }
 
         public new const string PWClassName = "PWBakeryYeastEmptyAck";

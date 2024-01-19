@@ -17,19 +17,16 @@ namespace gipbakery.mes.processapplication
 
         static PWBakeryEndOnTime()
         {
-            ACMethod method;
-            method = new ACMethod(ACStateConst.SMStarting);
-            Dictionary<string, string> paramTranslation = new Dictionary<string, string>();
-
-            method.ParameterValueList.Add(new ACValue("Duration", typeof(TimeSpan), TimeSpan.Zero, Global.ParamOption.Optional));
-            paramTranslation.Add("Duration", "en{'Waitingtime'}de{'Wartezeit'}");
-
-            method.ParameterValueList.Add(new ACValue("DurationMustExpire", typeof(bool), false, Global.ParamOption.Optional));
-            paramTranslation.Add("DurationMustExpire", "en{'Waiting time must elapse'}de{'Wartezeit muss verstreichen'}");
-
-            var wrapper = new ACMethodWrapper(method, "en{'End on time'}de{'Beenden bei Uhrzeit'}", typeof(PWNodeWait), paramTranslation, null);
-            ACMethod.RegisterVirtualMethod(typeof(PWBakeryEndOnTime), ACStateConst.SMStarting, wrapper);
-
+            List<ACMethodWrapper> wrappers = ACMethod.OverrideFromBase(typeof(PWBakeryEndOnTime), ACStateConst.SMStarting);
+            if (wrappers != null)
+            {
+                foreach (ACMethodWrapper wrapper in wrappers)
+                {
+                    wrapper.Method.ParameterValueList.Add(new ACValue("DurationMustExpire", typeof(bool), false, Global.ParamOption.Optional));
+                    wrapper.ParameterTranslation.Add("DurationMustExpire", "en{'Waiting time must elapse'}de{'Wartezeit muss verstreichen'}");
+                    wrapper.CaptionTranslation = "en{'End on time'}de{'Beenden bei Uhrzeit'}";
+                }
+            }
             RegisterExecuteHandler(typeof(PWBakeryEndOnTime), HandleExecuteACMethod_PWBakeryEndOnTime);
         }
 

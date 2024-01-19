@@ -17,14 +17,7 @@ namespace gipbakery.mes.processapplication
 
         static PWBakeryWaitWaterM()
         {
-            ACMethod method;
-            method = new ACMethod(ACStateConst.SMStarting);
-            Dictionary<string, string> paramTranslation = new Dictionary<string, string>();
-            method.ParameterValueList.Add(new ACValue("Duration", typeof(TimeSpan), TimeSpan.Zero, Global.ParamOption.Required));
-            paramTranslation.Add("Duration", "en{'Waitingtime'}de{'Wartezeit'}");
-            var wrapper = new ACMethodWrapper(method, "en{'Wait'}de{'Warten'}", typeof(PWBakeryWaitWaterM), paramTranslation, null);
-            ACMethod.RegisterVirtualMethod(typeof(PWBakeryWaitWaterM), ACStateConst.SMStarting, wrapper);
-
+            ACMethod.InheritFromBase(typeof(PWBakeryWaitWaterM), ACStateConst.SMStarting);
             RegisterExecuteHandler(typeof(PWBakeryWaitWaterM), HandleExecuteACMethod_PWBakeryWaitWaterM);
         }
 

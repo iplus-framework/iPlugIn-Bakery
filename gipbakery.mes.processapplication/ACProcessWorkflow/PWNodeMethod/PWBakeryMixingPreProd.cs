@@ -17,17 +17,15 @@ namespace gipbakery.mes.processapplication
 
         static PWBakeryMixingPreProd()
         {
-            ACMethod method;
-            method = new ACMethod(ACStateConst.SMStarting);
-            Dictionary<string, string> paramTranslation = new Dictionary<string, string>();
-            method.ParameterValueList.Add(new ACValue("SkipIfCountComp", typeof(int), 0, Global.ParamOption.Required));
-            paramTranslation.Add("SkipIfCountComp", "en{'Skip if count components lower than'}de{'Überspringe wenn Komponentenanzahl kleiner als'}");
-
-            method.ParameterValueList.Add(new ACValue("DosingGroupNo", typeof(int), 0, Global.ParamOption.Optional));
-            paramTranslation.Add("DosingGroupNo", "en{'Dosing group No for wait when another dosing active with same group No'}de{'Dosiergruppennummer für Warten, wenn eine andere aktive Dosierung mit derselben Gruppennummer'}");
-
-            var wrapper = new ACMethodWrapper(method, "en{'Configuration'}de{'Konfiguration'}", typeof(PWBakeryMixingPreProd), paramTranslation, null);
-            ACMethod.RegisterVirtualMethod(typeof(PWBakeryMixingPreProd), ACStateConst.SMStarting, wrapper);
+            List<ACMethodWrapper> wrappers = ACMethod.OverrideFromBase(typeof(PWBakeryMixingPreProd), ACStateConst.SMStarting);
+            if (wrappers != null)
+            {
+                foreach (ACMethodWrapper wrapper in wrappers)
+                {
+                    wrapper.Method.ParameterValueList.Add(new ACValue("DosingGroupNo", typeof(int), 0, Global.ParamOption.Optional));
+                    wrapper.ParameterTranslation.Add("DosingGroupNo", "en{'Dosing group No for wait when another dosing active with same group No'}de{'Dosiergruppennummer für Warten, wenn eine andere aktive Dosierung mit derselben Gruppennummer'}");
+                }
+            }
             RegisterExecuteHandler(typeof(PWBakeryMixingPreProd), HandleExecuteACMethod_PWMixing);
         }
 

@@ -19,16 +19,15 @@ namespace gipbakery.mes.processapplication
 
         static PWBakeryRisingTimer()
         {
-            ACMethod method;
-            method = new ACMethod(ACStateConst.SMStarting);
-            Dictionary<string, string> paramTranslation = new Dictionary<string, string>();
-            method.ParameterValueList.Add(new ACValue("Duration", typeof(TimeSpan), TimeSpan.Zero, Global.ParamOption.Required));
-            paramTranslation.Add("Duration", "en{'Waitingtime'}de{'Wartezeit'}");
-            method.ParameterValueList.Add(new ACValue("SkipWaiting", typeof(bool), false, Global.ParamOption.Required));
-            paramTranslation.Add("SkipWaiting", "en{'Skip waitingtime'}de{'Wartezeit überspringen'}");
-            var wrapper = new ACMethodWrapper(method, "en{'Wait'}de{'Warten'}", typeof(PWBakeryRisingTimer), paramTranslation, null);
-            ACMethod.RegisterVirtualMethod(typeof(PWBakeryRisingTimer), ACStateConst.SMStarting, wrapper);
-
+            List<ACMethodWrapper> wrappers = ACMethod.OverrideFromBase(typeof(PWBakeryRisingTimer), ACStateConst.SMStarting);
+            if (wrappers != null)
+            {
+                foreach (ACMethodWrapper wrapper in wrappers)
+                {
+                    wrapper.Method.ParameterValueList.Add(new ACValue("SkipWaiting", typeof(bool), false, Global.ParamOption.Required));
+                    wrapper.ParameterTranslation.Add("SkipWaiting", "en{'Skip waitingtime'}de{'Wartezeit überspringen'}");
+                }
+            }
             RegisterExecuteHandler(typeof(PWBakeryRisingTimer), HandleExecuteACMethod_PWBakeryRisingTimer);
         }
 

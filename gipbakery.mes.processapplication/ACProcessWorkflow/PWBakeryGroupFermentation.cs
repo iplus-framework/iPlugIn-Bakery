@@ -19,40 +19,15 @@ namespace gipbakery.mes.processapplication
 
         static PWBakeryGroupFermentation()
         {
-            ACMethod method;
-            method = new ACMethod(ACStateConst.SMStarting);
-            Dictionary<string, string> paramTranslation = new Dictionary<string, string>();
-
-            method.ParameterValueList.Add(new ACValue("IgnoreFIFO", typeof(bool), false, Global.ParamOption.Required));
-            paramTranslation.Add("IgnoreFIFO", "en{'Ignore FIFO for Processmodule-Mapping'}de{'Ignoriere FIFO-Prinzip für Prozessmodul-Belegung'}");
-            method.ParameterValueList.Add(new ACValue("RoutingCheck", typeof(bool), false, Global.ParamOption.Required));
-            paramTranslation.Add("RoutingCheck", "en{'Only routeable modules from predecessor'}de{'Nur erreichbare Module vom Vorgänger'}");
-            method.ParameterValueList.Add(new ACValue("WithoutPM", typeof(bool), false, Global.ParamOption.Required));
-            paramTranslation.Add("WithoutPM", "en{'Ignore Processmodule-Mapping'}de{'Ohne Prozessmodul-Belegung'}");
-            method.ParameterValueList.Add(new ACValue("OccupationByScan", typeof(bool), false, Global.ParamOption.Required));
-            paramTranslation.Add("OccupationByScan", "en{'Processmodule-Mapping manually by user'}de{'Prozessmodulbelegung manuell vom Anwender'}");
-            method.ParameterValueList.Add(new ACValue("Priority", typeof(ushort), 0, Global.ParamOption.Required));
-            paramTranslation.Add("Priority", "en{'Priorization'}de{'Priorisierung'}");
-            method.ParameterValueList.Add(new ACValue("FIFOCheckFirstPM", typeof(bool), false, Global.ParamOption.Required));
-            paramTranslation.Add("FIFOCheckFirstPM", "en{'FIFO check only for WF-Groups which competes for the same process module'}de{'FIFO-Prüfung nur bei WF-Gruppen die das selbe Prozessmodul konkurrieren.'}");
-            method.ParameterValueList.Add(new ACValue("SkipIfNoComp", typeof(bool), false, Global.ParamOption.Required));
-            paramTranslation.Add("SkipIfNoComp", "en{'Skip if no one child has material to process'}de{'Skip if no one child has material to process'}");
-            method.ParameterValueList.Add(new ACValue("MaxBatchWeight", typeof(double), false, Global.ParamOption.Optional));
-            paramTranslation.Add("MaxBatchWeight", "en{'Max. batch weight [kg]'}de{'Maximales Batchgewicht [kg]'}");
-
-            method.ParameterValueList.Add(new ACValue("DoseInSourProdSimultaneously", typeof(bool), false, Global.ParamOption.Optional));
-            paramTranslation.Add("DoseInSourProdSimultaneously", "en{'Dose in sour dough production simultaneously'}de{'Dosiere in der Sauerteigproduktion gleichzeitig'}");
-
-            //method.ParameterValueList.Add(new ACValue("DSTSwitchInTimeCalculation", typeof(bool), false, Global.ParamOption.Optional));
-            //paramTranslation.Add("DSTSwitchInTimeCalculation", "en{'Include daylight savings time switch in time calculation'}de{'Sommerzeitumstellung in die Zeitberechnung einbeziehen'}");
-            //method.ParameterValueList.Add(new ACValue("SourProdDosingUnit", typeof(double), 10.0, Global.ParamOption.Optional));
-            //paramTranslation.Add("SourProdDosingUnit", "en{'Sour dough production dosing unit [kg]'}de{'SauerteigDosiereinheit [kg]'}");
-            //method.ParameterValueList.Add(new ACValue("SourProdDosingPause", typeof(int), 2, Global.ParamOption.Optional));
-            //paramTranslation.Add("SourProdDosingPause", "en{'Sour dough production dosing pause [sec]'}de{'SauerteigDospause [sec]'}");
-
-            var wrapper = new ACMethodWrapper(method, "en{'Configuration'}de{'Konfiguration'}", typeof(PWBakeryGroupFermentation), paramTranslation, null);
-            ACMethod.RegisterVirtualMethod(typeof(PWBakeryGroupFermentation), ACStateConst.SMStarting, wrapper);
-
+            List<ACMethodWrapper> wrappers = ACMethod.OverrideFromBase(typeof(PWBakeryGroupFermentation), ACStateConst.SMStarting);
+            if (wrappers != null)
+            {
+                foreach (ACMethodWrapper wrapper in wrappers)
+                {
+                    wrapper.Method.ParameterValueList.Add(new ACValue("DoseInSourProdSimultaneously", typeof(bool), false, Global.ParamOption.Optional));
+                    wrapper.ParameterTranslation.Add("DoseInSourProdSimultaneously", "en{'Dose in sour dough production simultaneously'}de{'Dosiere in der Sauerteigproduktion gleichzeitig'}");
+                }
+            }
             RegisterExecuteHandler(typeof(PWBakeryGroupFermentation), HandleExecuteACMethod_PWBakeryGroupFermentation);
         }
 

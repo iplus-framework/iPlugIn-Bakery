@@ -19,24 +19,21 @@ namespace gipbakery.mes.processapplication
 
         static PWBakeryPumping()
         {
-            ACMethod method;
-            method = new ACMethod(ACStateConst.SMStarting);
-            Dictionary<string, string> paramTranslation = new Dictionary<string, string>();
-
-            method.ParameterValueList.Add(new ACValue("BlockSourceAtEnd", typeof(bool), false, Global.ParamOption.Required));
-            paramTranslation.Add("BlockSourceAtEnd", "en{'Block Source when function completes'}de{'Quelle sperren bei Funktionsende'}");
-
-            method.ParameterValueList.Add(new ACValue("RelocateToFinalDest", typeof(bool), false, Global.ParamOption.Required));
-            paramTranslation.Add("RelocateToFinalDest", "en{'Post quant into virtual destination bin'}de{'Quant direkt in virtuellen Zielbehälter umbuchen'}");
-
-            method.ParameterValueList.Add(new ACValue("PreventPumpAtProd", typeof(bool), true, Global.ParamOption.Optional));
-            paramTranslation.Add("PreventPumpAtProd", "en{'No pumping during production'}de{'Kein Umpumpen während der Produktion'}");
-
-            method.ParameterValueList.Add(new ACValue("RouteItemIDChangeMode", typeof(ushort), 0, Global.ParamOption.Optional));
-            paramTranslation.Add("RouteItemIDChangeMode", "en{'Changemode of RouteItemID (1=Remove last digit)'}de{'Änderungsmodus der RouteItemID (1=letzte Stelle entfernen)'}");
-
-            var wrapper = new ACMethodWrapper(method, "en{'Configuration'}de{'Konfiguration'}", typeof(PWBakeryPumping), paramTranslation, null);
-            ACMethod.RegisterVirtualMethod(typeof(PWBakeryPumping), ACStateConst.SMStarting, wrapper);
+            List<ACMethodWrapper> wrappers = ACMethod.OverrideFromBase(typeof(PWBakeryPumping), ACStateConst.SMStarting);
+            if (wrappers != null)
+            {
+                foreach (ACMethodWrapper wrapper in wrappers)
+                {
+                    wrapper.Method.ParameterValueList.Add(new ACValue("BlockSourceAtEnd", typeof(bool), false, Global.ParamOption.Required));
+                    wrapper.ParameterTranslation.Add("BlockSourceAtEnd", "en{'Block Source when function completes'}de{'Quelle sperren bei Funktionsende'}");
+                    wrapper.Method.ParameterValueList.Add(new ACValue("RelocateToFinalDest", typeof(bool), false, Global.ParamOption.Required));
+                    wrapper.ParameterTranslation.Add("RelocateToFinalDest", "en{'Post quant into virtual destination bin'}de{'Quant direkt in virtuellen Zielbehälter umbuchen'}");
+                    wrapper.Method.ParameterValueList.Add(new ACValue("PreventPumpAtProd", typeof(bool), true, Global.ParamOption.Optional));
+                    wrapper.ParameterTranslation.Add("PreventPumpAtProd", "en{'No pumping during production'}de{'Kein Umpumpen während der Produktion'}");
+                    wrapper.Method.ParameterValueList.Add(new ACValue("RouteItemIDChangeMode", typeof(ushort), 0, Global.ParamOption.Optional));
+                    wrapper.ParameterTranslation.Add("RouteItemIDChangeMode", "en{'Changemode of RouteItemID (1=Remove last digit)'}de{'Änderungsmodus der RouteItemID (1=letzte Stelle entfernen)'}");
+                }
+            }
             RegisterExecuteHandler(typeof(PWBakeryPumping), HandleExecuteACMethod_PWBakeryPumping);
         }
 

@@ -21,37 +21,19 @@ namespace gipbakery.mes.processapplication
         {
             RegisterExecuteHandler(typeof(PWBakeryRecvPointReady), HandleExecuteACMethod_PWBakeryRecvPointReady);
 
-            ACMethod method;
-            method = new ACMethod(ACStateConst.SMStarting);
-            Dictionary<string, string> paramTranslation = new Dictionary<string, string>();
-
-            method.ParameterValueList.Add(new ACValue("MessageText", typeof(string), "", Global.ParamOption.Required));
-            paramTranslation.Add("MessageText", "en{'Question text'}de{'Abfragetext'}");
-
-            method.ParameterValueList.Add(new ACValue("AckOverScale", typeof(bool), false, Global.ParamOption.Optional));
-            paramTranslation.Add("AckOverScale", "en{'Acknowledge over scale target weight'}de{'Quittieren über Waagenzielgewicht'}");
-
-            method.ParameterValueList.Add(new ACValue("AckScaleWeight", typeof(double), 0, Global.ParamOption.Optional));
-            paramTranslation.Add("AckScaleWeight", "en{'Scale weight for auto acknowledge [kg]'}de{'Waagengewicht für automatische Quittierung [kg]'}");
-
-            method.ParameterValueList.Add(new ACValue("PasswordDlg", typeof(bool), false, Global.ParamOption.Required));
-            paramTranslation.Add("PasswordDlg", "en{'With password dialogue'}de{'Mit Passwort-Dialog'}");
-
-            method.ParameterValueList.Add(new ACValue("SkipMode", typeof(ushort), 0, Global.ParamOption.Optional));
-            paramTranslation.Add("SkipMode", "en{'Skipmode: 1=Always, 2=From the second run'}de{'Überspringen: 1=Ständig, 2=Ab zweitem Durchlauf'}");
-
-            method.ParameterValueList.Add(new ACValue("ACUrlCmd", typeof(string), "", Global.ParamOption.Required));
-            paramTranslation.Add("ACUrlCmd", "en{'Invoke ACUrl-Command'}de{'ACUrl-Kommando ausführen'}");
-
-            method.ParameterValueList.Add(new ACValue("AutoTareScales", typeof(bool), false, Global.ParamOption.Optional));
-            paramTranslation.Add("AutoTareScales", "en{'Auto tare scales'}de{'Automatische Waagenterierung'}");
-
-            Dictionary<string, string> resultTranslation = new Dictionary<string, string>();
-            method.ResultValueList.Add(new ACValue("UserName", typeof(string), "", Global.ParamOption.Optional));
-            resultTranslation.Add("UserName", "en{'Username'}de{'Benutzername'}");
-
-            var wrapper = new ACMethodWrapper(method, "en{'Receiving point ready'}de{'Abnahmestelle bereit'}", typeof(PWBakeryRecvPointReady), paramTranslation, null);
-            ACMethod.RegisterVirtualMethod(typeof(PWBakeryRecvPointReady), ACStateConst.SMStarting, wrapper);
+            List<ACMethodWrapper> wrappers = ACMethod.OverrideFromBase(typeof(PWBakeryRecvPointReady), ACStateConst.SMStarting);
+            if (wrappers != null)
+            {
+                foreach (ACMethodWrapper wrapper in wrappers)
+                {
+                    wrapper.Method.ParameterValueList.Add(new ACValue("AckOverScale", typeof(bool), false, Global.ParamOption.Optional));
+                    wrapper.ParameterTranslation.Add("AckOverScale", "en{'Acknowledge over scale target weight'}de{'Quittieren über Waagenzielgewicht'}");
+                    wrapper.Method.ParameterValueList.Add(new ACValue("AckScaleWeight", typeof(double), 0, Global.ParamOption.Optional));
+                    wrapper.ParameterTranslation.Add("AckScaleWeight", "en{'Scale weight for auto acknowledge [kg]'}de{'Waagengewicht für automatische Quittierung [kg]'}");
+                    wrapper.Method.ParameterValueList.Add(new ACValue("AutoTareScales", typeof(bool), false, Global.ParamOption.Optional));
+                    wrapper.ParameterTranslation.Add("AutoTareScales", "en{'Auto tare scales'}de{'Automatische Waagenterierung'}");
+                }
+            }
         }
 
         public PWBakeryRecvPointReady(ACClass acType, IACObject content, IACObject parentACObject, ACValueList parameter, string acIdentifier = "") : 

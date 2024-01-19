@@ -18,6 +18,12 @@ namespace gipbakery.mes.processapplication
         {
         }
 
+        static PWBakeryDischargingSingleDos()
+        {
+            RegisterExecuteHandler(typeof(PWBakeryDischargingSingleDos), HandleExecuteACMethod_PWBakeryDischargingSingleDos);
+            ACMethod.InheritFromBase(typeof(PWBakeryDischargingSingleDos), ACStateConst.SMStarting);
+        }
+
         public new const string PWClassName = "PWBakeryDischargingSingleDos";
 
         #endregion
@@ -105,6 +111,11 @@ namespace gipbakery.mes.processapplication
                     xmlChild.InnerText = _DischargingDestination?.ToString();
                 xmlACPropertyList.AppendChild(xmlChild);
             }
+        }
+
+        private static bool HandleExecuteACMethod_PWBakeryDischargingSingleDos(out object result, IACComponent acComponent, string acMethodName, gip.core.datamodel.ACClassMethod acClassMethod, object[] acParameter)
+        {
+            return HandleExecuteACMethod_PWDischarging(out result, acComponent, acMethodName, acClassMethod, acParameter);
         }
 
         #endregion

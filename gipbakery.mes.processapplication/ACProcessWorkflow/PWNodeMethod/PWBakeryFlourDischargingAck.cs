@@ -14,32 +14,18 @@ namespace gipbakery.mes.processapplication
         static PWBakeryFlourDischargingAck()
         {
             RegisterExecuteHandler(typeof(PWBakeryFlourDischargingAck), HandleExecuteACMethod_PWBakeryFlourDischargingAck);
-
-            ACMethod method;
-            method = new ACMethod(ACStateConst.SMStarting);
-            Dictionary<string, string> paramTranslation = new Dictionary<string, string>();
-
-            method.ParameterValueList.Add(new ACValue("MessageText", typeof(string), "", Global.ParamOption.Required));
-            paramTranslation.Add("MessageText", "en{'Question text'}de{'Abfragetext'}");
-
-            method.ParameterValueList.Add(new ACValue("SkipIfNoComp", typeof(bool), false, Global.ParamOption.Required));
-            paramTranslation.Add("SkipIfNoComp", "en{'Skip if no components dosed'}de{'Überspringe wenn keine Komponente dosiert'}");
-
-            method.ParameterValueList.Add(new ACValue("SkipMode", typeof(ushort), 0, Global.ParamOption.Optional));
-            paramTranslation.Add("SkipMode", "en{'Skipmode: 1=Always, 2=From the second run'}de{'Überspringen: 1=Ständig, 2=Ab zweitem Durchlauf'}");
-
-            method.ParameterValueList.Add(new ACValue("AutoAck", typeof(bool), false, Global.ParamOption.Optional));
-            paramTranslation.Add("AutoAck", "en{'Auto acknowledge'}de{'Automatisch quittieren'}");
-
-            method.ParameterValueList.Add(new ACValue("ACUrlCmd", typeof(string), "", Global.ParamOption.Required));
-            paramTranslation.Add("ACUrlCmd", "en{'Invoke ACUrl-Command'}de{'ACUrl-Kommando ausführen'}");
-
-            Dictionary<string, string> resultTranslation = new Dictionary<string, string>();
-            method.ResultValueList.Add(new ACValue("UserName", typeof(string), "", Global.ParamOption.Optional));
-            resultTranslation.Add("UserName", "en{'Username'}de{'Benutzername'}");
-
-            var wrapper = new ACMethodWrapper(method, "en{'Flour discharging acknowledge'}de{'Mehlaustragsquittung'}", typeof(PWBakeryFlourDischargingAck), paramTranslation, null);
-            ACMethod.RegisterVirtualMethod(typeof(PWBakeryFlourDischargingAck), ACStateConst.SMStarting, wrapper);
+            
+            List<ACMethodWrapper> wrappers = ACMethod.OverrideFromBase(typeof(PWBakeryFlourDischargingAck), ACStateConst.SMStarting);
+            if (wrappers != null)
+            {
+                foreach (ACMethodWrapper wrapper in wrappers)
+                {
+                    wrapper.Method.ParameterValueList.Add(new ACValue("SkipIfNoComp", typeof(bool), false, Global.ParamOption.Required));
+                    wrapper.ParameterTranslation.Add("SkipIfNoComp", "en{'Skip if no components dosed'}de{'Überspringe wenn keine Komponente dosiert'}");
+                    wrapper.Method.ParameterValueList.Add(new ACValue("AutoAck", typeof(bool), false, Global.ParamOption.Optional));
+                    wrapper.ParameterTranslation.Add("AutoAck", "en{'Auto acknowledge'}de{'Automatisch quittieren'}");
+                }
+            }
         }
 
         public new const string PWClassName = "PWBakeryFlourDischargingAck";

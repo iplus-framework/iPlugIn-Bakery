@@ -20,44 +20,43 @@ namespace gipbakery.mes.processapplication
 
         static PWBakeryKneading()
         {
-            ACMethod method;
-            method = new ACMethod(ACStateConst.SMStarting);
-            Dictionary<string, string> paramTranslation = new Dictionary<string, string>();
-            method.ParameterValueList.Add(new ACValue("SkipIfCountComp", typeof(int), 0, Global.ParamOption.Required));
-            paramTranslation.Add("SkipIfCountComp", "en{'Skip if count components lower than'}de{'Überspringe wenn Komponentenanzahl kleiner als'}");
+            List<ACMethodWrapper> wrappers = ACMethod.OverrideFromBase(typeof(PWBakeryKneading), ACStateConst.SMStarting);
+            if (wrappers != null)
+            {
+                foreach (ACMethodWrapper wrapper in wrappers)
+                {
+                    wrapper.Method.ParameterValueList.Add(new ACValue("TempRiseFix", typeof(double), 0, Global.ParamOption.Optional));
+                    wrapper.ParameterTranslation.Add("TempRiseFix", "en{'Temperature rising fix °C'}de{'Erwärmung Fix °C'}");
+                    wrapper.Method.ParameterValueList.Add(new ACValue("KneadingProgram", typeof(string), 0, Global.ParamOption.Optional));
+                    wrapper.ParameterTranslation.Add("KneadingProgram", "en{'Kneading program no.'}de{'Knetprogramm'}");
+                    wrapper.Method.ParameterValueList.Add(new ACValue("KneadingTimeSlow", typeof(TimeSpan), TimeSpan.Zero, Global.ParamOption.Required));
+                    wrapper.ParameterTranslation.Add("KneadingTimeSlow", "en{'Kneadingtime slow'}de{'Knetzeit langsam'}");
+                    wrapper.Method.ParameterValueList.Add(new ACValue("KneadingTimeFast", typeof(TimeSpan), TimeSpan.Zero, Global.ParamOption.Required));
+                    wrapper.ParameterTranslation.Add("KneadingTimeFast", "en{'Kneadingtime fast'}de{'Knetzeit schnell'}");
+                    wrapper.Method.ParameterValueList.Add(new ACValue("TempRiseSlow", typeof(double), 0, Global.ParamOption.Required));
+                    wrapper.ParameterTranslation.Add("TempRiseSlow", "en{'Temperature rising °C/Min slow'}de{'Erwärmung °C/Min langsam'}");
+                    wrapper.Method.ParameterValueList.Add(new ACValue("TempRiseFast", typeof(double), 0, Global.ParamOption.Required));
+                    wrapper.ParameterTranslation.Add("TempRiseFast", "en{'Temperature rising °C/Min fast'}de{'Erwärmung °C/Min schnell'}");
 
-            method.ParameterValueList.Add(new ACValue("TempRiseFix", typeof(double), 0, Global.ParamOption.Optional));
-            paramTranslation.Add("TempRiseFix", "en{'Temperature rising fix °C'}de{'Erwärmung Fix °C'}");
-            method.ParameterValueList.Add(new ACValue("KneadingProgram", typeof(string), 0, Global.ParamOption.Optional));
-            paramTranslation.Add("KneadingProgram", "en{'Kneading program no.'}de{'Knetprogramm'}");
-            method.ParameterValueList.Add(new ACValue("KneadingTimeSlow", typeof(TimeSpan), TimeSpan.Zero, Global.ParamOption.Required));
-            paramTranslation.Add("KneadingTimeSlow", "en{'Kneadingtime slow'}de{'Knetzeit langsam'}");
-            method.ParameterValueList.Add(new ACValue("KneadingTimeFast", typeof(TimeSpan), TimeSpan.Zero, Global.ParamOption.Required));
-            paramTranslation.Add("KneadingTimeFast", "en{'Kneadingtime fast'}de{'Knetzeit schnell'}");
-            method.ParameterValueList.Add(new ACValue("TempRiseSlow", typeof(double), 0, Global.ParamOption.Required));
-            paramTranslation.Add("TempRiseSlow", "en{'Temperature rising °C/Min slow'}de{'Erwärmung °C/Min langsam'}");
-            method.ParameterValueList.Add(new ACValue("TempRiseFast", typeof(double), 0, Global.ParamOption.Required));
-            paramTranslation.Add("TempRiseFast", "en{'Temperature rising °C/Min fast'}de{'Erwärmung °C/Min schnell'}");
+                    wrapper.Method.ParameterValueList.Add(new ACValue("KneadingTimeSlowHalf", typeof(TimeSpan), TimeSpan.Zero, Global.ParamOption.Required));
+                    wrapper.ParameterTranslation.Add("KneadingTimeSlowHalf", "en{'Kneadingtime slow half quantity'}de{'Knetzeit langsam halbe Menge'}");
+                    wrapper.Method.ParameterValueList.Add(new ACValue("KneadingTimeFastHalf", typeof(TimeSpan), TimeSpan.Zero, Global.ParamOption.Required));
+                    wrapper.ParameterTranslation.Add("KneadingTimeFastHalf", "en{'Kneadingtime fast half quantity'}de{'Knetzeit schnell halbe Menge'}");
+                    wrapper.Method.ParameterValueList.Add(new ACValue("TempRiseSlowHalf", typeof(double), 0, Global.ParamOption.Required));
+                    wrapper.ParameterTranslation.Add("TempRiseSlowHalf", "en{'Temperature rising °C/Min slow half quantity'}de{'Erwärmung °C/Min langsam halbe Menge'}");
+                    wrapper.Method.ParameterValueList.Add(new ACValue("TempRiseFastHalf", typeof(double), 0, Global.ParamOption.Required));
+                    wrapper.ParameterTranslation.Add("TempRiseFastHalf", "en{'Temperature rising °C/Min fast half quantity'}de{'Erwärmung °C/Min schnell halbe Menge'}");
 
-            method.ParameterValueList.Add(new ACValue("KneadingTimeSlowHalf", typeof(TimeSpan), TimeSpan.Zero, Global.ParamOption.Required));
-            paramTranslation.Add("KneadingTimeSlowHalf", "en{'Kneadingtime slow half quantity'}de{'Knetzeit langsam halbe Menge'}");
-            method.ParameterValueList.Add(new ACValue("KneadingTimeFastHalf", typeof(TimeSpan), TimeSpan.Zero, Global.ParamOption.Required));
-            paramTranslation.Add("KneadingTimeFastHalf", "en{'Kneadingtime fast half quantity'}de{'Knetzeit schnell halbe Menge'}");
-            method.ParameterValueList.Add(new ACValue("TempRiseSlowHalf", typeof(double), 0, Global.ParamOption.Required));
-            paramTranslation.Add("TempRiseSlowHalf", "en{'Temperature rising °C/Min slow half quantity'}de{'Erwärmung °C/Min langsam halbe Menge'}");
-            method.ParameterValueList.Add(new ACValue("TempRiseFastHalf", typeof(double), 0, Global.ParamOption.Required));
-            paramTranslation.Add("TempRiseFastHalf", "en{'Temperature rising °C/Min fast half quantity'}de{'Erwärmung °C/Min schnell halbe Menge'}");
+                    // GaerZeit
+                    wrapper.Method.ParameterValueList.Add(new ACValue("GaerZeit", typeof(TimeSpan), TimeSpan.Zero, Global.ParamOption.Optional));
+                    wrapper.ParameterTranslation.Add("GaerZeit", "en{'Gaer Time'}de{'Gär Zeit'}");
 
-            // GaerZeit
-            method.ParameterValueList.Add(new ACValue("GaerZeit", typeof(TimeSpan), TimeSpan.Zero, Global.ParamOption.Optional));
-            paramTranslation.Add("GaerZeit", "en{'Gaer Time'}de{'Gär Zeit'}");
+                    // OfenZeit
+                    wrapper.Method.ParameterValueList.Add(new ACValue("OfenZeit", typeof(TimeSpan), TimeSpan.Zero, Global.ParamOption.Optional));
+                    wrapper.ParameterTranslation.Add("OfenZeit", "en{'Ofentime slow'}de{'Ofen Zeit'}");
+                }
+            }
 
-            // OfenZeit
-            method.ParameterValueList.Add(new ACValue("OfenZeit", typeof(TimeSpan), TimeSpan.Zero, Global.ParamOption.Optional));
-            paramTranslation.Add("OfenZeit", "en{'Ofentime slow'}de{'Ofen Zeit'}");
-
-            var wrapper = new ACMethodWrapper(method, "en{'Configuration'}de{'Konfiguration'}", typeof(PWBakeryKneading), paramTranslation, null);
-            ACMethod.RegisterVirtualMethod(typeof(PWBakeryKneading), ACStateConst.SMStarting, wrapper);
             RegisterExecuteHandler(typeof(PWBakeryKneading), HandleExecuteACMethod_PWBakeryKneading);
         }
 

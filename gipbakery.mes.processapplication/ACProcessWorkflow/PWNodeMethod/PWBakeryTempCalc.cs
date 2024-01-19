@@ -24,55 +24,51 @@ namespace gipbakery.mes.processapplication
 
         static PWBakeryTempCalc()
         {
-            ACMethod method;
-            method = new ACMethod(ACStateConst.SMStarting);
-            Dictionary<string, string> paramTranslation = new Dictionary<string, string>();
+            List<ACMethodWrapper> wrappers = ACMethod.OverrideFromBase(typeof(PWBakeryTempCalc), ACStateConst.SMStarting);
+            if (wrappers != null)
+            {
+                foreach (ACMethodWrapper wrapper in wrappers)
+                {
+                    wrapper.Method.ParameterValueList.Add(new ACValue("DoughTemp", typeof(double?), false, Global.ParamOption.Required));
+                    wrapper.ParameterTranslation.Add("DoughTemp", "en{'Doughtemperature °C'}de{'Teigtemperatur °C'}");
 
-            method.ParameterValueList.Add(new ACValue("DoughTemp", typeof(double?), false, Global.ParamOption.Required));
-            paramTranslation.Add("DoughTemp", "en{'Doughtemperature °C'}de{'Teigtemperatur °C'}");
+                    wrapper.Method.ParameterValueList.Add(new ACValue("WaterTemp", typeof(double?), false, Global.ParamOption.Required));
+                    wrapper.ParameterTranslation.Add("WaterTemp", "en{'Watertemperature °C'}de{'Wassertemperatur °C'}");
 
-            method.ParameterValueList.Add(new ACValue("WaterTemp", typeof(double?), false, Global.ParamOption.Required));
-            paramTranslation.Add("WaterTemp", "en{'Watertemperature °C'}de{'Wassertemperatur °C'}");
+                    wrapper.Method.ParameterValueList.Add(new ACValue("DryIceMatNo", typeof(string), "", Global.ParamOption.Required));
+                    wrapper.ParameterTranslation.Add("DryIceMatNo", "en{'Dry ice MaterialNo'}de{'Eis MaterialNo'}");
 
-            method.ParameterValueList.Add(new ACValue("DryIceMatNo", typeof(string), "", Global.ParamOption.Required));
-            paramTranslation.Add("DryIceMatNo", "en{'Dry ice MaterialNo'}de{'Eis MaterialNo'}");
+                    wrapper.Method.ParameterValueList.Add(new ACValue("UseWaterTemp", typeof(bool), false, Global.ParamOption.Required));
+                    wrapper.ParameterTranslation.Add("UseWaterTemp", "en{'Use Watertemperature'}de{'Wassertemperatur verwenden'}");
 
-            method.ParameterValueList.Add(new ACValue("UseWaterTemp", typeof(bool), false, Global.ParamOption.Required));
-            paramTranslation.Add("UseWaterTemp", "en{'Use Watertemperature'}de{'Wassertemperatur verwenden'}");
+                    wrapper.Method.ParameterValueList.Add(new ACValue("UseWaterMixer", typeof(bool), false, Global.ParamOption.Required));
+                    wrapper.ParameterTranslation.Add("UseWaterMixer", "en{'Calculate for water mixer'}de{'Berechnen für Wassermischer'}");
 
-            method.ParameterValueList.Add(new ACValue("UseWaterMixer", typeof(bool), false, Global.ParamOption.Required));
-            paramTranslation.Add("UseWaterMixer", "en{'Calculate for water mixer'}de{'Berechnen für Wassermischer'}");
+                    wrapper.Method.ParameterValueList.Add(new ACValue("IncludeMeltingHeat", typeof(MeltingHeatOptionEnum), MeltingHeatOptionEnum.Off, Global.ParamOption.Required));
+                    wrapper.ParameterTranslation.Add("IncludeMeltingHeat", "en{'Include melting heat'}de{'Schmelzwärme einrechnen'}");
 
-            method.ParameterValueList.Add(new ACValue("IncludeMeltingHeat", typeof(MeltingHeatOptionEnum), MeltingHeatOptionEnum.Off, Global.ParamOption.Required));
-            paramTranslation.Add("IncludeMeltingHeat", "en{'Include melting heat'}de{'Schmelzwärme einrechnen'}");
+                    wrapper.Method.ParameterValueList.Add(new ACValue("WaterMeltingHeat", typeof(double), 332500, Global.ParamOption.Required));
+                    wrapper.ParameterTranslation.Add("MeltingHeatWater", "en{'Water melting heat[J/kg]'}de{'SchmelzwaermeWasser[J/kg]'}");
 
-            method.ParameterValueList.Add(new ACValue("WaterMeltingHeat", typeof(double), 332500, Global.ParamOption.Required));
-            paramTranslation.Add("MeltingHeatWater", "en{'Water melting heat[J/kg]'}de{'SchmelzwaermeWasser[J/kg]'}");
+                    wrapper.Method.ParameterValueList.Add(new ACValue("MeltingHeatInfluence", typeof(double), 100, Global.ParamOption.Required));
+                    wrapper.ParameterTranslation.Add("MeltingHeatInfluence", "en{'Melting heat influence[%]'}de{'SchmelzwaermeEinfluss[%]'}");
 
-            method.ParameterValueList.Add(new ACValue("MeltingHeatInfluence", typeof(double), 100, Global.ParamOption.Required));
-            paramTranslation.Add("MeltingHeatInfluence", "en{'Melting heat influence[%]'}de{'SchmelzwaermeEinfluss[%]'}");
+                    wrapper.Method.ParameterValueList.Add(new ACValue("AskUserIsWaterNeeded", typeof(bool), false, Global.ParamOption.Optional));
+                    wrapper.ParameterTranslation.Add("AskUserIsWaterNeeded", "en{'Ask user if is water needed'}de{'Ask user if is water needed'}");
 
-            method.ParameterValueList.Add(new ACValue("AskUserIsWaterNeeded", typeof(bool), false, Global.ParamOption.Optional));
-            paramTranslation.Add("AskUserIsWaterNeeded", "en{'Ask user if is water needed'}de{'Ask user if is water needed'}");
+                    wrapper.Method.ParameterValueList.Add(new ACValue("CompSequenceNo", typeof(int), (int)0, Global.ParamOption.Optional));
+                    wrapper.ParameterTranslation.Add("CompSequenceNo", "en{'Sequence-No. for adding into BOM'}de{'Folgenummer beim Hinzufügen in die Rezeptur'}");
 
-            method.ParameterValueList.Add(new ACValue("CompSequenceNo", typeof(int), (int)0, Global.ParamOption.Optional));
-            paramTranslation.Add("CompSequenceNo", "en{'Sequence-No. for adding into BOM'}de{'Folgenummer beim Hinzufügen in die Rezeptur'}");
+                    wrapper.Method.ParameterValueList.Add(new ACValue("WeighIceInPicking", typeof(bool), false, Global.ParamOption.Optional));
+                    wrapper.ParameterTranslation.Add("WeighIceInPicking", "en{'Weigh ice in picking'}de{'Eis beim Kommissionieren wiegen'}");
 
-            method.ParameterValueList.Add(new ACValue("WeighIceInPicking", typeof(bool), false, Global.ParamOption.Optional));
-            paramTranslation.Add("WeighIceInPicking", "en{'Weigh ice in picking'}de{'Eis beim Kommissionieren wiegen'}");
+                    wrapper.Method.ParameterValueList.Add(new ACValue("WaterQCorrectionStep", typeof(double), 0.5, Global.ParamOption.Optional));
+                    wrapper.ParameterTranslation.Add("WaterQCorrectionStep", "en{'Water quantity correction step'}de{'Schritt zur Korrektur der Wassermenge'}");
 
-            method.ParameterValueList.Add(new ACValue("WaterQCorrectionStep", typeof(double), 0.5, Global.ParamOption.Optional));
-            paramTranslation.Add("WaterQCorrectionStep", "en{'Water quantity correction step'}de{'Schritt zur Korrektur der Wassermenge'}");
-
-            method.ParameterValueList.Add(new ACValue("MaxWaterCorrectionDiff", typeof(double), 10, Global.ParamOption.Optional));
-            paramTranslation.Add("MaxWaterCorrectionDiff", "en{'Max water correction difference'}de{'Maximale Wasserkorrekturdifferenz'}");
-
-            Dictionary<string, string> resultTranslation = new Dictionary<string, string>();
-            method.ResultValueList.Add(new ACValue("UserName", typeof(string), "", Global.ParamOption.Optional));
-            resultTranslation.Add("UserName", "en{'Username'}de{'Benutzername'}");
-
-            var wrapper = new ACMethodWrapper(method, "en{'User Acknowledge'}de{'Benutzerbestätigung'}", typeof(PWBakeryTempCalc), paramTranslation, null);
-            ACMethod.RegisterVirtualMethod(typeof(PWBakeryTempCalc), ACStateConst.SMStarting, wrapper);
+                    wrapper.Method.ParameterValueList.Add(new ACValue("MaxWaterCorrectionDiff", typeof(double), 10, Global.ParamOption.Optional));
+                    wrapper.ParameterTranslation.Add("MaxWaterCorrectionDiff", "en{'Max water correction difference'}de{'Maximale Wasserkorrekturdifferenz'}");
+                }
+            }
 
             RegisterExecuteHandler(typeof(PWBakeryTempCalc), HandleExecuteACMethod_PWBakeryTempCalc);
         }

@@ -33,8 +33,6 @@ namespace gipbakery.mes.processapplication
             method.ResultValueList.Add(new ACValue("Temperature", typeof(Double), (Double)(-1.0), Global.ParamOption.Optional));
             resultTranslation.Add("Temperature", "en{'Cooking temperature'}de{'Kochtemperatur'}");
 
-
-
             var wrapper = new ACMethodWrapper(method, "en{'Configuration'}de{'Konfiguration'}", typeof(PWBakeryWorkCooking), paramTranslation, resultTranslation);
             ACMethod.RegisterVirtualMethod(typeof(PWBakeryWorkCooking), ACStateConst.SMStarting, wrapper);
             RegisterExecuteHandler(typeof(PWBakeryWorkCooking), HandleExecuteACMethod_PWBakeryWorkCooking);

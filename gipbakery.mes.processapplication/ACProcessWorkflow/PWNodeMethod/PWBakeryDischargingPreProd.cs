@@ -19,33 +19,7 @@ namespace gipbakery.mes.processapplication
 
         static PWBakeryDischargingPreProd()
         {
-            ACMethod method;
-            method = new ACMethod(ACStateConst.SMStarting);
-            Dictionary<string, string> paramTranslation = new Dictionary<string, string>();
-
-            method.ParameterValueList.Add(new ACValue("SkipIfNoComp", typeof(bool), false, Global.ParamOption.Required));
-            paramTranslation.Add("SkipIfNoComp", "en{'Skip if no components dosed'}de{'Überspringe wenn keine Komponente dosiert'}");
-            method.ParameterValueList.Add(new ACValue("LimitToMaxCapOfDest", typeof(bool), false, Global.ParamOption.Optional));
-            paramTranslation.Add("LimitToMaxCapOfDest", "en{'Limit filling of destination to available space'}de{'Limitiere Zielbefüllung auf rechnerischen Restinhalt'}");
-            method.ParameterValueList.Add(new ACValue("PrePostQOnDest", typeof(double), 0.0, Global.ParamOption.Optional));
-            paramTranslation.Add("PrePostQOnDest", "en{'Pre posting quantity to destination at start'}de{'Vorbuchungsmenge auf Ziel bei Start'}");
-            method.ParameterValueList.Add(new ACValue("NoPostingOnRelocation", typeof(bool), false, Global.ParamOption.Optional));
-            paramTranslation.Add("NoPostingOnRelocation", "en{'No posting at relocation'}de{'Keine Buchung bei Umlagerung'}");
-            method.ParameterValueList.Add(new ACValue("UseScaleWeightOnPost", typeof(bool), false, Global.ParamOption.Optional));
-            paramTranslation.Add("UseScaleWeightOnPost", "en{'Use scale gross weight on posting'}de{'Waagenbruttogewicht bei der Buchung verwenden'}");
-            method.ParameterValueList.Add(new ACValue("KeepPlannedDestOnEmptying", typeof(bool), false, Global.ParamOption.Optional));
-            paramTranslation.Add("KeepPlannedDestOnEmptying", "en{'Keep planned destination on emptying mode'}de{'Geplantes Ziel im Entleerungsmodus beibehalten'}");
-            method.ParameterValueList.Add(new ACValue("SkipPredCount", typeof(short), 0, Global.ParamOption.Optional));
-            paramTranslation.Add("SkipPredCount", "en{'Search limit predecessors (- outside of group)'}de{'Begrenzung Vorgängersuche (- ausserhalb von Gruppe)'}");
-            method.ParameterValueList.Add(new ACValue("PostingBehaviour", typeof(PostingBehaviourEnum), PostingBehaviourEnum.NotSet, Global.ParamOption.Optional));
-            paramTranslation.Add("PostingBehaviour", "en{'Posting behaviour'}de{'Buchungsverhalten'}");
-            method.ParameterValueList.Add(new ACValue("IgnorePredecessors", typeof(string), null, Global.ParamOption.Optional));
-            paramTranslation.Add("IgnorePredecessors", "en{'Ignore predecessor groups'}de{'Ignoriere Vorgangsgruppen'}");
-            method.ParameterValueList.Add(new ACValue("LossCorrectionFactor", typeof(double?), null, Global.ParamOption.Optional));
-            paramTranslation.Add("LossCorrectionFactor", "en{'Loss correction factor 0 = bill of material factor, n=%'}de{'Verlustfaktor 0 = Rezept Faktor, n=%'}");
-
-            var wrapper = new ACMethodWrapper(method, "en{'Configuration'}de{'Konfiguration'}", typeof(PWBakeryDischargingPreProd), paramTranslation, null);
-            ACMethod.RegisterVirtualMethod(typeof(PWBakeryDischargingPreProd), ACStateConst.SMStarting, wrapper);
+            ACMethod.InheritFromBase(typeof(PWBakeryDischargingPreProd), ACStateConst.SMStarting);
             RegisterExecuteHandler(typeof(PWBakeryDischargingPreProd), HandleExecuteACMethod_PWBakeryDischargingPreProd);
         }
 
