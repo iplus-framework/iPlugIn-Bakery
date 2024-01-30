@@ -26,7 +26,7 @@ namespace gipbakery.mes.processapplication
             method.ParameterValueList.Add(new ACValue("Temperature", typeof(double), 0.0, Global.ParamOption.Required));
             paramTranslation.Add("Temperature", "en{'Cooking temperature'}de{'Kochtemperatur'}");
 
-            method.ParameterValueList.Add(new ACValue("LabOrderTemplateName", typeof(string), PWBakeryWorkCooking.Const_LabOrderTemplateName, Global.ParamOption.Required));
+            method.ParameterValueList.Add(new ACValue("LabOrderTemplateName", typeof(string), Const_LabOrderTemplateName, Global.ParamOption.Required));
             paramTranslation.Add("LabOrderTemplateName", "en{'Laborder template name'}de{'Name der Laborauftragsvorlage'}");
 
             Dictionary<string, string> resultTranslation = new Dictionary<string, string>();
@@ -84,91 +84,34 @@ namespace gipbakery.mes.processapplication
 
         protected override Msg OnValidateChangedACMethod(ACMethod acMethod)
         {
-            ACValue temperatureResult = acMethod?.ResultValueList.GetACValue("Temperature");
-            if (temperatureResult != null)
+            using (Database db = new gip.core.datamodel.Database())
+            using (DatabaseApp dbApp = new DatabaseApp(db))
             {
-                double temperature = temperatureResult.ParamAsDouble;
-                if (temperature > 0)
-                {
-                    using (Database db = new gip.core.datamodel.Database())
-                    using (DatabaseApp dbApp = new DatabaseApp(db))
-                    {
-                        ProdOrderPartslistPos intermediateChildPos;
-                        ProdOrderPartslistPos intermediatePosition;
-                        MaterialWFConnection matWFConnection;
-                        ProdOrderBatch batch;
-                        ProdOrderBatchPlan batchPlan;
-                        ProdOrderPartslistPos endBatchPos;
+                ProdOrderPartslistPos intermediateChildPos;
+                ProdOrderPartslistPos intermediatePosition;
+                MaterialWFConnection matWFConnection;
+                ProdOrderBatch batch;
+                ProdOrderBatchPlan batchPlan;
+                ProdOrderPartslistPos endBatchPos;
 
-                        PWMethodProduction pwMethodProduction = ParentPWMethod<PWMethodProduction>();
-                        if (pwMethodProduction == null)
-                            return null;
+                PWMethodProduction pwMethodProduction = ParentPWMethod<PWMethodProduction>();
+                if (pwMethodProduction == null)
+                    return null;
 
-                        bool posFound = PWDosing.GetRelatedProdOrderPosForWFNode(this, db, dbApp, pwMethodProduction, out intermediateChildPos, out intermediatePosition,
-                                                                                 out endBatchPos, out matWFConnection, out batch, out batchPlan);
-                        if (!posFound)
-                            return null;
+                bool posFound = PWDosing.GetRelatedProdOrderPosForWFNode(this, db, dbApp, pwMethodProduction, out intermediateChildPos, out intermediatePosition,
+                                                                            out endBatchPos, out matWFConnection, out batch, out batchPlan);
+                if (!posFound)
+                    return null;
 
-                        Material material = null;
-                        if (endBatchPos != null)
-                            material = endBatchPos.BookingMaterial;
-                        if (material == null)
-                            material = intermediatePosition.BookingMaterial;
-                        if (material == null)
-                        {
-                            return new Msg(eMsgLevel.Error, "The material for laboratory order is not available!");
-                        }
+                var labOrderManager = LabOrderManager;
+                if (labOrderManager == null)
+                    return new Msg(eMsgLevel.Error, "The laboratory order manager is not available!");
 
-                        LabOrder template = GetOrCreateLabOrderTemplate(dbApp, material);
-                        if (template == null)
-                        {
-                            return new Msg(eMsgLevel.Error, "The laboratory order template for cooking is not available!");
-                        }
-
-                        var labOrderManager = LabOrderManager;
-                        if (labOrderManager == null)
-                            return new Msg(eMsgLevel.Error, "The laboratory order manager is not available!");
-
-                        LabOrder currentLabOrder = dbApp.LabOrder.FirstOrDefault(c => c.ProdOrderPartslistPosID == intermediateChildPos.ProdOrderPartslistPosID);
-                        LabOrderPos loPos = null;
-
-                        if (currentLabOrder == null)
-                        {
-                            Msg msg = labOrderManager.CreateNewLabOrder(dbApp, template, "", null, null, intermediateChildPos, null, out currentLabOrder);
-                            if (msg != null)
-                                return msg;
-                        }
-
-                        loPos = currentLabOrder.LabOrderPos_LabOrder.OrderByDescending(c => c.Sequence).FirstOrDefault(c => c.MDLabTag.MDLabTagName == Const_LabOrderTag);
-                        if (loPos != null && !loPos.ActualValue.HasValue)
-                        {
-                            loPos.ActualValue = temperature;
-                        }
-                        else
-                        {
-                            Msg msg = labOrderManager.CopyLabOrderTemplatePos(dbApp, currentLabOrder, template);
-                            if (msg != null)
-                                return msg;
-
-                            int nextSequence = loPos.Sequence + 1;
-
-                            loPos = currentLabOrder.LabOrderPos_LabOrder.FirstOrDefault(c => c.MDLabTag.MDLabTagName == Const_LabOrderTag && !c.ActualValue.HasValue);
-                            loPos.Sequence = nextSequence;
-                            if (loPos != null)
-                            {
-                                loPos.ActualValue = temperature;
-                            }
-                        }
-
-                        dbApp.ACSaveChanges();
-                    }
-                }
-                else
-                {
-                    //Warning50065 : Please enter the cooking temperature!
-                    return new Msg(this, eMsgLevel.Warning, null, null, 171, "Warning50065");
-                }
-
+                Msg msg = labOrderManager.CreateOrUpdateLabOrderForPWNode(dbApp, LabOrderTemplateName, acMethod, intermediateChildPos, intermediatePosition, endBatchPos, new string[] { Const_LabOrderTag }, null);
+                if (msg != null)
+                    return msg;
+             
+                dbApp.ACSaveChanges();
             }
 
             return base.OnValidateChangedACMethod(acMethod);
@@ -197,69 +140,19 @@ namespace gipbakery.mes.processapplication
                     if (!posFound)
                         return null;
 
-                    Material material = null;
-                    if (endBatchPos != null)
-                        material = endBatchPos.BookingMaterial;
-                    if (material == null)
-                        material = intermediatePosition.BookingMaterial;
-                    if (material == null)
-                    {
-                        // TODO Error:
-                        return null;
-                    }
+                    var labOrderManager = LabOrderManager;
+                    if (labOrderManager == null)
+                        return new Msg(eMsgLevel.Error, "The laboratory order manager is not available!");
 
-                    MDLabOrderState mdLabOrderState = dbApp.MDLabOrderState.FirstOrDefault(c => c.MDLabOrderStateIndex == (short)MDLabOrderState.LabOrderStates.Finished);
-                    if (mdLabOrderState != null)
-                    {
-                        LabOrder currentLabOrder = dbApp.LabOrder.FirstOrDefault(c => c.ProdOrderPartslistPosID == intermediateChildPos.ProdOrderPartslistPosID);
-                        if (currentLabOrder != null)
-                            currentLabOrder.MDLabOrderState = mdLabOrderState;
+                    Msg msg = labOrderManager.CompleteLabOrderForPWNode(dbApp, intermediateChildPos, intermediatePosition, endBatchPos);
+                    if (msg != null)
+                        return msg;
 
-                        dbApp.ACSaveChanges();
-                    }
+                    dbApp.ACSaveChanges();
                 }
             }
 
             return base.OnGetMessageOnReleasingProcessModule(invoker, pause);
-        }
-
-
-        private LabOrder GetOrCreateLabOrderTemplate(DatabaseApp dbApp, Material material)
-        {
-            LabOrder template = dbApp.LabOrder.FirstOrDefault(c => c.LabOrderTypeIndex == (short)GlobalApp.LabOrderType.Template
-                                                                && c.TemplateName == Const_LabOrderTemplateName
-                                                                && c.MaterialID == material.MaterialID);
-            if (template == null)
-            {
-                string secondaryKey = Root.NoManager.GetNewNo(Database, typeof(LabOrder), LabOrder.NoColumnName, LabOrder.FormatNewNo, this);
-                template = LabOrder.NewACObject(dbApp, null, secondaryKey);
-                template.LabOrderTypeIndex = (short)GlobalApp.LabOrderType.Template;
-                template.MDLabOrderState = dbApp.MDLabOrderState.FirstOrDefault(c => c.IsDefault);
-                template.TemplateName = Const_LabOrderTemplateName;
-                template.Material = material;
-                dbApp.LabOrder.AddObject(template);
-
-                MDLabTag temperatureTag = dbApp.MDLabTag.FirstOrDefault(c => c.MDKey == Const_LabOrderTag);
-                if (temperatureTag == null)
-                {
-                    temperatureTag = MDLabTag.NewACObject(dbApp, null);
-                    temperatureTag.MDKey = Const_LabOrderTag;
-                    temperatureTag.MDLabTagIndex = (short)MDLabTag.LabTags.Maesure;
-                    temperatureTag.MDNameTrans = "en{'Temperature'}de{'Temperatur'}";
-                    dbApp.MDLabTag.AddObject(temperatureTag);
-                }
-
-                LabOrderPos pos = LabOrderPos.NewACObject(dbApp, template);
-                pos.MDLabTag = temperatureTag;
-
-                dbApp.LabOrderPos.AddObject(pos);
-
-
-                Msg msg = dbApp.ACSaveChanges();
-                if (msg != null)
-                    OnNewAlarmOccurred(ProcessAlarm, msg);
-            }
-            return template;
         }
 
     }
