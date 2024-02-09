@@ -59,9 +59,9 @@ namespace gipbakery.mes.processapplication
             return base.HandleExecuteACMethod(out result, invocationMode, acMethodName, acClassMethod, acParameter);
         }
 
-        protected override MsgWithDetails CompleteACMethodOnSMStarting(ACMethod acMethod)
+        protected override MsgWithDetails CompleteACMethodOnSMStarting(ACMethod acMethod, ACMethod previousParams)
         {
-            return base.CompleteACMethodOnSMStarting(acMethod);
+            return base.CompleteACMethodOnSMStarting(acMethod, previousParams);
         }
 
         public override void InitializeRouteAndConfig(Database dbIPlus)
