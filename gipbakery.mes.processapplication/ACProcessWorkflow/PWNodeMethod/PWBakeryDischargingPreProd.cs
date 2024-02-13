@@ -277,6 +277,14 @@ namespace gipbakery.mes.processapplication
                                     {
                                         try
                                         {
+                                            PAMSilo targetSilo = targetModule as PAMSilo;
+                                            Facility inwardFacility = null;
+                                            if (targetSilo != null && targetSilo.Facility.ValueT != null && targetSilo.Facility.ValueT.ValueT != null)
+                                            {
+                                                Guid facilityId = targetSilo.Facility.ValueT.ValueT.FacilityID;
+                                                inwardFacility = dbApp.Facility.Where(c => c.FacilityID == facilityId).FirstOrDefault();
+                                            }
+
                                             if (IsIntake)
                                             {
                                                 var pwMethod = ParentPWMethod<PWMethodIntake>();
@@ -287,13 +295,13 @@ namespace gipbakery.mes.processapplication
                                                     picking = pwMethod.CurrentPicking.FromAppContext<Picking>(dbApp);
                                                     PickingPos pickingPos = pwMethod.CurrentPickingPos != null ? pwMethod.CurrentPickingPos.FromAppContext<PickingPos>(dbApp) : null;
                                                     if (picking != null)
-                                                        DoInwardBooking(actualQuantity, dbApp, routeItem, picking, pickingPos, e, true);
+                                                        DoInwardBooking(actualQuantity, dbApp, routeItem, inwardFacility, picking, pickingPos, e, true);
                                                 }
                                                 else if (pwMethod.CurrentDeliveryNotePos != null)
                                                 {
                                                     notePos = pwMethod.CurrentDeliveryNotePos.FromAppContext<DeliveryNotePos>(dbApp);
                                                     if (notePos != null)
-                                                        DoInwardBooking(actualQuantity, dbApp, routeItem, notePos, e, true);
+                                                        DoInwardBooking(actualQuantity, dbApp, routeItem, inwardFacility, notePos, e, true);
                                                 }
                                             }
                                             else if (IsRelocation)
@@ -328,7 +336,7 @@ namespace gipbakery.mes.processapplication
 
                                                         if (this.IsSimulationOn && actualQuantity <= 0.000001 && pickingPos != null)
                                                             actualQuantity = pickingPos.TargetQuantityUOM;
-                                                        DoInwardBooking(actualQuantity, dbApp, routeItem, picking, pickingPos, e, true);
+                                                        DoInwardBooking(actualQuantity, dbApp, routeItem, null, picking, pickingPos, e, true);
                                                     }
                                                 }
                                                 else if (pwMethod.CurrentFacilityBooking != null)
@@ -439,7 +447,7 @@ namespace gipbakery.mes.processapplication
             }
         }
 
-        public override Msg DoInwardBooking(double actualQuantity, DatabaseApp dbApp, RouteItem dischargingDest, Picking picking, PickingPos pickingPos, ACEventArgs e, bool isDischargingEnd)
+        public override Msg DoInwardBooking(double actualWeight, DatabaseApp dbApp, RouteItem dischargingDest, Facility facilityDest, Picking picking, PickingPos pickingPos, ACEventArgs e, bool isDischargingEnd)
         {
             //if (NoPostingOnRelocation)
             //{
@@ -459,7 +467,7 @@ namespace gipbakery.mes.processapplication
                 return dbApp.ACSaveChanges();
             }
             //}
-            return base.DoInwardBooking(actualQuantity, dbApp, dischargingDest, picking, pickingPos, e, isDischargingEnd);
+            return base.DoInwardBooking(actualWeight, dbApp, dischargingDest, facilityDest, picking, pickingPos, e, isDischargingEnd);
         }
 
         private void StartMonitorSourceStore()

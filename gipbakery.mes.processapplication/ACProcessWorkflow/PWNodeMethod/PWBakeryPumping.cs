@@ -425,7 +425,7 @@ namespace gipbakery.mes.processapplication
                                     PickingPos pickingPos = pwMethod.CurrentPickingPos != null ? pwMethod.CurrentPickingPos.FromAppContext<PickingPos>(dbApp) : null;
                                     if (picking != null)
                                     {
-                                        DoInwardBooking(actualWeight, dbApp, routeItem, picking, pickingPos, e, true);
+                                        DoInwardBooking(actualWeight, dbApp, routeItem, null, picking, pickingPos, e, true);
                                     }
                                 }
                             }
@@ -442,9 +442,9 @@ namespace gipbakery.mes.processapplication
             base.TaskCallback(sender, e, wrapObject);
         }
 
-        public override Msg DoInwardBooking(double actualQuantity, DatabaseApp dbApp, RouteItem dischargingDest, Picking picking, PickingPos pickingPos, ACEventArgs e, bool isDischargingEnd)
+        public override Msg DoInwardBooking(double actualWeight, DatabaseApp dbApp, RouteItem dischargingDest, Facility facilityDest, Picking picking, PickingPos pickingPos, ACEventArgs e, bool isDischargingEnd)
         {
-            Msg msg = base.DoInwardBooking(actualQuantity, dbApp, dischargingDest, picking, pickingPos, e, isDischargingEnd);
+            Msg msg = base.DoInwardBooking(actualWeight, dbApp, dischargingDest, facilityDest, picking, pickingPos, e, isDischargingEnd);
 
             if (msg != null && msg.MessageLevel >= eMsgLevel.Failure)
                 return msg;
