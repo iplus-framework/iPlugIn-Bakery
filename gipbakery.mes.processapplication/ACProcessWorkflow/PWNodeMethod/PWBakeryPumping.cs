@@ -248,17 +248,27 @@ namespace gipbakery.mes.processapplication
                 gip.core.datamodel.ACClass sourceFacilityClass = pickingPos.FromFacility.GetFacilityACClass(db);
                 gip.core.datamodel.ACClass targetModuleClass = targetModule.ComponentClass.FromIPlusContext<gip.core.datamodel.ACClass>(db);
 
-                RoutingResult rResult = ACRoutingService.FindSuccessors(RoutingService, db, false, sourceFacilityClass,
-                                                                        PAProcessModule.SelRuleID_ProcessModule, RouteDirections.Backwards, null, null, null, 0,
-                                                                        true, true);
+                ACRoutingParameters routingParameters = new ACRoutingParameters()
+                {
+                    RoutingService = this.RoutingService,
+                    Database = db,
+                    AttachRouteItemsToContext = false,
+                    SelectionRuleID = PAProcessModule.SelRuleID_ProcessModule,
+                    Direction = RouteDirections.Backwards,
+                    MaxRouteAlternativesInLoop = 0,
+                    IncludeReserved = true,
+                    IncludeAllocated = true
+                };
+
+                RoutingResult rResult = ACRoutingService.FindSuccessors(sourceFacilityClass, routingParameters);
 
                 currentRoute = rResult.Routes.FirstOrDefault();
 
                 sModule = currentRoute?.GetRouteSource()?.SourceACComponent as PAProcessModule;
 
-                rResult = ACRoutingService.FindSuccessors(RoutingService, db, false, targetModuleClass,
-                                                          PAProcessModule.SelRuleID_ProcessModule, RouteDirections.Forwards, null, null, null, 0,
-                                                          true, true);
+                routingParameters.Direction = RouteDirections.Forwards;
+
+                rResult = ACRoutingService.FindSuccessors(targetModuleClass, routingParameters);
 
                 tModule = rResult?.Routes?.FirstOrDefault()?.GetRouteTarget()?.TargetACComponent as PAProcessModule;
             }
@@ -457,9 +467,19 @@ namespace gipbakery.mes.processapplication
                     PAProcessModule tModule = null;
                     using (Database db = new Database())
                     {
-                        RoutingResult rResult = ACRoutingService.FindSuccessors(RoutingService, db, false, virtStoreComp,
-                                                                  PAMSilo.SelRuleID_Storage, RouteDirections.Forwards, null, null, null, 0,
-                                                                  true, true);
+                        ACRoutingParameters routingParameters = new ACRoutingParameters()
+                        {
+                            RoutingService = this.RoutingService,
+                            Database = db,
+                            AttachRouteItemsToContext = false,
+                            SelectionRuleID = PAMSilo.SelRuleID_Storage,
+                            Direction = RouteDirections.Forwards,
+                            MaxRouteAlternativesInLoop = 0,
+                            IncludeReserved = true,
+                            IncludeAllocated = true
+                        };
+
+                        RoutingResult rResult = ACRoutingService.FindSuccessors(virtStoreComp.GetACUrl(), routingParameters);
 
                         tModule = rResult?.Routes?.FirstOrDefault()?.GetRouteTarget()?.TargetACComponent as PAProcessModule;
                         if (tModule != null)

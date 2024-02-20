@@ -63,11 +63,21 @@ namespace gipbakery.mes.processapplication
             {
                 using (Database db = new gip.core.datamodel.Database())
                 {
-                    RoutingResult routeResult = ACRoutingService.FindSuccessors(RoutingService, db, false, this,
-                                BakeryIntermWaterTank.SelRuleID_IntermWaterTank, RouteDirections.Backwards, new object[] { },
-                                (c, p, r) => typeof(BakeryIntermWaterTank).IsAssignableFrom(c.ObjectFullType),
-                                (c, p, r) => typeof(BakeryIntermWaterTank).IsAssignableFrom(c.ObjectFullType),
-                                0, true, true);
+                    ACRoutingParameters routingParameters = new ACRoutingParameters()
+                    {
+                        RoutingService = this.RoutingService,
+                        Database = db,
+                        AttachRouteItemsToContext = false,
+                        SelectionRuleID = BakeryIntermWaterTank.SelRuleID_IntermWaterTank,
+                        Direction = RouteDirections.Backwards,
+                        DBSelector = (c, p, r) => typeof(BakeryIntermWaterTank).IsAssignableFrom(c.ObjectFullType),
+                        DBDeSelector = (c, p, r) => typeof(BakeryIntermWaterTank).IsAssignableFrom(c.ObjectFullType),
+                        MaxRouteAlternativesInLoop = 0,
+                        IncludeReserved = true,
+                        IncludeAllocated = true
+                    };
+
+                    RoutingResult routeResult = ACRoutingService.FindSuccessors(this.GetACUrl(), routingParameters);
 
                     if (routeResult != null && routeResult.Routes != null)
                     {
@@ -417,11 +427,23 @@ namespace gipbakery.mes.processapplication
                     compClass = ComponentClass.FromIPlusContext<gip.core.datamodel.ACClass>(db);
                 }
 
-                RoutingResult routeResult = ACRoutingService.FindSuccessorsFromPoint(RoutingService, Database.ContextIPlus, false, compClass, PAPointMatIn1.PropertyInfo, PAMHopperscale.SelRuleID_Hopperscale, RouteDirections.Backwards,
-                                                                     null, null, null, 0, true, true);
+                ACRoutingParameters routingParameters = new ACRoutingParameters()
+                {
+                    RoutingService = this.RoutingService,
+                    Database = Database.ContextIPlus,
+                    AttachRouteItemsToContext = false,
+                    SelectionRuleID = PAMHopperscale.SelRuleID_Hopperscale,
+                    Direction = RouteDirections.Backwards,
+                    MaxRouteAlternativesInLoop = 0,
+                    IncludeReserved = true,
+                    IncludeAllocated = true
+                };
 
-                RoutingResult rResult = ACRoutingService.FindSuccessors(RoutingService, db, false, compClass, PAMSilo.SelRuleID_SiloDirect, RouteDirections.Backwards,
-                                                        null, null, null, 0, true, true);
+                RoutingResult routeResult = ACRoutingService.FindSuccessorsFromPoint(compClass, PAPointMatIn1.PropertyInfo, routingParameters);
+
+                routingParameters.SelectionRuleID = PAMSilo.SelRuleID_SiloDirect;
+
+                RoutingResult rResult = ACRoutingService.FindSuccessors(compClass, routingParameters);
 
                 List<Route> routes = new List<Route>();
 
@@ -442,8 +464,9 @@ namespace gipbakery.mes.processapplication
 
                             if (sourceComp != null)
                             {
-                                RoutingResult rr = ACRoutingService.FindSuccessors(RoutingService, db, false, sourceComp, PAMSilo.SelRuleID_Silo, RouteDirections.Backwards,
-                                                                    null, null, null, 0, true, true);
+                                routingParameters.SelectionRuleID = PAMSilo.SelRuleID_Silo;
+
+                                RoutingResult rr = ACRoutingService.FindSuccessors(sourceComp.GetACUrl(), routingParameters);
 
                                 if (rr != null && rr.Routes.Any())
                                 {

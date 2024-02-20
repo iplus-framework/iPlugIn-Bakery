@@ -1050,8 +1050,19 @@ namespace gipbakery.mes.processapplication
 
             using (Database db = new Database())
             {
-                RoutingResult rResult = ACRoutingService.FindSuccessors(RoutingService, db, true, CurrentProcessModule.ComponentClass,
-                                                                        BakeryReceivingPoint.SelRuleID_RecvPoint, RouteDirections.Forwards, null, null, null, 0, true, false);
+                ACRoutingParameters routingParameters = new ACRoutingParameters()
+                {
+                    RoutingService = this.RoutingService,
+                    Database = db,
+                    AttachRouteItemsToContext = true,
+                    SelectionRuleID = BakeryReceivingPoint.SelRuleID_RecvPoint,
+                    Direction = RouteDirections.Forwards,
+                    MaxRouteAlternativesInLoop = 0,
+                    IncludeReserved = true,
+                    IncludeAllocated = false
+                };
+
+                RoutingResult rResult = ACRoutingService.FindSuccessors(CurrentProcessModule.ComponentClass, routingParameters);
 
                 IEnumerable<IACComponent> possbileDestinations = rResult?.Routes?.SelectMany(c => c.GetRouteTargets()).Select(x => x.TargetACComponent);
 

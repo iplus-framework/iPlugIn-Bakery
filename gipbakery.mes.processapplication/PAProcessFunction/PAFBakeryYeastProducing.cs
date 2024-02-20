@@ -499,28 +499,34 @@ namespace gipbakery.mes.processapplication
                 if (compClass == null)
                     return null;
 
-                RoutingResult rResult = ACRoutingService.FindSuccessors(RoutingService, db, false, compClass, PAMIntermediatebin.SelRuleID_Intermediatebin, RouteDirections.Forwards,
-                                                                        null, null, null, 0, true, true);
+                ACRoutingParameters routingParameters = new ACRoutingParameters()
+                {
+                    RoutingService = this.RoutingService,
+                    Database = db,
+                    AttachRouteItemsToContext = false,
+                    SelectionRuleID = PAMIntermediatebin.SelRuleID_Intermediatebin,
+                    Direction = RouteDirections.Forwards,
+                    MaxRouteAlternativesInLoop = 0,
+                    IncludeReserved = true,
+                    IncludeAllocated= true
+                };
+
+                RoutingResult rResult = ACRoutingService.FindSuccessors(compClass, routingParameters);
 
                 if (rResult == null)
-                {
                     return null;
-                }
 
                 if (rResult.Message != null && rResult.Message.MessageLevel == eMsgLevel.Error)
-                {
                     return null;
-                }
 
                 ACComponent pumpModule = rResult.Routes?.FirstOrDefault().GetRouteTarget()?.TargetACComponent as ACComponent;
 
                 if (pumpModule == null)
-                {
                     return null;
-                }
 
-                rResult = ACRoutingService.FindSuccessors(RoutingService, db, false, pumpModule.ComponentClass, PAMParkingspace.SelRuleID_ParkingSpace, RouteDirections.Forwards,
-                                                                        null, null, null, 0, true, true);
+                routingParameters.SelectionRuleID = PAMParkingspace.SelRuleID_ParkingSpace;
+
+                rResult = ACRoutingService.FindSuccessors(pumpModule.ComponentClass, routingParameters);
 
                 if (rResult == null || rResult.Routes == null)
                 {

@@ -68,9 +68,19 @@ namespace gipbakery.mes.processapplication
                 using (Database db = new Database())
                 using (DatabaseApp dbApp = new DatabaseApp(db))
                 {
-                    RoutingResult rResult = ACRoutingService.FindSuccessors(RoutingService, db, false, pwParentGroup.AccessedProcessModule,
-                                                              PAMSilo.SelRuleID_Storage, RouteDirections.Forwards, null, null, null, 0,
-                                                              true, true);
+                    ACRoutingParameters routingParameters = new ACRoutingParameters()
+                    {
+                        RoutingService = this.RoutingService,
+                        Database = db,
+                        AttachRouteItemsToContext = false,
+                        SelectionRuleID = PAMSilo.SelRuleID_Storage,
+                        Direction = RouteDirections.Forwards,
+                        MaxRouteAlternativesInLoop = 0,
+                        IncludeReserved = true,
+                        IncludeAllocated = true
+                    };
+
+                    RoutingResult rResult = ACRoutingService.FindSuccessors(pwParentGroup.AccessedProcessModule.GetACUrl(), routingParameters);
 
                     tModule = rResult?.Routes?.FirstOrDefault()?.GetRouteTarget()?.TargetACComponent as PAProcessModule;
                     if (tModule != null)

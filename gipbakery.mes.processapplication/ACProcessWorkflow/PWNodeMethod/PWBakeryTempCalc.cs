@@ -2044,8 +2044,19 @@ namespace gipbakery.mes.processapplication
                 IEnumerable<string> sources = possibleSources.Where(c => c.VBiFacilityACClassID != null).Select(x => x.VBiFacilityACClass.ACURLComponentCached);
                 gip.core.datamodel.ACClass module = ParentPWGroup.AccessedProcessModule.ComponentClass.FromIPlusContext<gip.core.datamodel.ACClass>(dbApp.ContextIPlus);
 
-                RoutingResult rResult = ACRoutingService.SelectRoutes(RoutingService, dbApp.ContextIPlus, false, module, sources, RouteDirections.Backwards, PAMTank.SelRuleID_Silo,
-                                                                      null, null, null, 10, true, true);
+                ACRoutingParameters routingParameters = new ACRoutingParameters()
+                {
+                    RoutingService = this.RoutingService,
+                    Database = dbApp.ContextIPlus,
+                    AttachRouteItemsToContext = false,
+                    Direction = RouteDirections.Backwards,
+                    SelectionRuleID = PAMTank.SelRuleID_Silo,
+                    MaxRouteAlternativesInLoop = 10,
+                    IncludeReserved = true,
+                    IncludeAllocated = true
+                };
+                
+                RoutingResult rResult = ACRoutingService.SelectRoutes(module, sources, routingParameters);
 
                 if (rResult != null)
                 {

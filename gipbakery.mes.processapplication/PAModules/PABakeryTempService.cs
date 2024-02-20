@@ -218,20 +218,28 @@ namespace gipbakery.mes.processapplication
             using (Database db = new gip.core.datamodel.Database())
             using (gip.mes.datamodel.DatabaseApp dbApp = new gip.mes.datamodel.DatabaseApp(db))
             {
+                ACRoutingParameters routingParameters = new ACRoutingParameters()
+                {
+                    RoutingService = this.RoutingService,
+                    Database = db,
+                    AttachRouteItemsToContext = false,
+                    Direction = RouteDirections.Forwards,
+                    SelectionRuleID = PAMParkingspace.SelRuleID_ParkingSpace_Deselector,
+                    MaxRouteAlternativesInLoop = 1,
+                    IncludeReserved = true,
+                    IncludeAllocated = true
+                };
+
                 foreach (var receivingPoint in receivingPoints)
                 {
                     BakeryRecvPointTemperature tempInfo = new BakeryRecvPointTemperature(this);
 
                     foreach (var silo in silosWithBakeryPTC)
                     {
-                        RoutingResult routingResult = ACRoutingService.SelectRoutes(RoutingService, db, false, silo.ValueT.ComponentClass, receivingPoint.ComponentClass,
-                                                                                    RouteDirections.Forwards, PAMParkingspace.SelRuleID_ParkingSpace_Deselector, null, 
-                                                                                    null, null, 1, true, true);
+                        RoutingResult routingResult = ACRoutingService.SelectRoutes(silo.ValueT.ComponentClass, receivingPoint.ComponentClass, routingParameters);
 
                         if (routingResult != null && routingResult.Routes != null && routingResult.Routes.Any())
-                        {
                             tempInfo.AddSilo(silo.ValueT);
-                        }
                     }
 
                     temperatures.Add(receivingPoint, tempInfo);
@@ -340,9 +348,19 @@ namespace gipbakery.mes.processapplication
         {
             OnInitializeWaterSensor(cacheItem, paPointMatIn, dbApp, wType);
 
-            RoutingResult rr = ACRoutingService.FindSuccessorsFromPoint(RoutingService, dbApp.ContextIPlus, false, cacheItem.Key.ComponentClass,
-                                                            paPointMatIn.PropertyInfo, PAMTank.SelRuleID_Silo, RouteDirections.Backwards,
-                                                            null, null, null, 1, true, true);
+            ACRoutingParameters routingParameters = new ACRoutingParameters()
+            {
+                RoutingService = this.RoutingService,
+                Database = dbApp.ContextIPlus,
+                AttachRouteItemsToContext = false,
+                SelectionRuleID = PAMTank.SelRuleID_Silo,
+                Direction = RouteDirections.Backwards,
+                MaxRouteAlternativesInLoop = 1,
+                IncludeReserved = true,
+                IncludeAllocated = true
+            };
+
+            RoutingResult rr = ACRoutingService.FindSuccessorsFromPoint(cacheItem.Key.ComponentClass, paPointMatIn.PropertyInfo, routingParameters);
 
             if (rr != null && rr.Routes != null && rr.Routes.Any())
             {
