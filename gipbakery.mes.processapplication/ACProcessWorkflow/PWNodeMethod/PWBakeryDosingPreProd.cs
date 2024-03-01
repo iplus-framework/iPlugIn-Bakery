@@ -20,7 +20,16 @@ namespace gipbakery.mes.processapplication
 
         static PWBakeryDosingPreProd()
         {
-            ACMethod.InheritFromBase(typeof(PWBakeryDosingPreProd), ACStateConst.SMStarting);
+            List<ACMethodWrapper> wrappers = ACMethod.OverrideFromBase(typeof(PWBakeryDosingPreProd), ACStateConst.SMStarting);
+            if (wrappers != null)
+            {
+                foreach (ACMethodWrapper wrapper in wrappers)
+                {
+                    wrapper.Method.ParameterValueList.Add(new ACValue("DosingForFlour", typeof(bool), false, Global.ParamOption.Optional));
+                    wrapper.ParameterTranslation.Add("DosingForFlour", "en{'Silo change without abort'}de{'Silowechsel ohne Abbrechen'}");
+                }
+            }
+
             RegisterExecuteHandler(typeof(PWBakeryDosingPreProd), HandleExecuteACMethod_PWDosing);
         }
 
