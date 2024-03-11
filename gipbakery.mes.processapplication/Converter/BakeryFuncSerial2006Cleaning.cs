@@ -23,7 +23,7 @@ namespace gipbakery.mes.processapplication
             return MethodNameEquals(typeOrACMethodName, "BakeryCleaning");
         }
 
-        public override object ReadObject(object complexObj, int dbNo, int offset, object miscParams)
+        public override object ReadObject(object complexObj, int dbNo, int offset, int? routeOffset, object miscParams)
         {
             S7TCPSession s7Session = ParentACComponent as S7TCPSession;
             if (s7Session == null || complexObj == null)
