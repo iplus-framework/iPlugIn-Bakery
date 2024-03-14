@@ -1174,7 +1174,7 @@ namespace gipbakery.mes.processapplication
             }
 
 
-            if (CombineWarmCityWater(warmWater, cityWater, targetWaterTemperature, totalWaterQuantity))
+            if (warmWater.WaterDefaultTemperature != 9999 && cityWater.WaterDefaultTemperature != 9999 && CombineWarmCityWater(warmWater, cityWater, targetWaterTemperature, totalWaterQuantity))
             {
                 //The calculated water temperature is {0} °C and the target quantity is {1} {2}.
                 TemperatureCalculationResult.ValueT = Root.Environment.TranslateText(this, "TempCalcResult", targetWaterTemperature.ToString("F2"),
@@ -1184,7 +1184,7 @@ namespace gipbakery.mes.processapplication
             }
 
 
-            if (coldWater.WaterDefaultTemperature != 9999 && CombineColdCityWater(coldWater, cityWater, targetWaterTemperature, totalWaterQuantity))
+            if (coldWater.WaterDefaultTemperature != 9999 && cityWater.WaterDefaultTemperature != 9999 && CombineColdCityWater(coldWater, cityWater, targetWaterTemperature, totalWaterQuantity))
             {
                 //The calculated water temperature is {0} °C and the target quantity is {1} {2}.
                 TemperatureCalculationResult.ValueT = Root.Environment.TranslateText(this, "TempCalcResult", targetWaterTemperature.ToString("F2"),
@@ -1192,6 +1192,19 @@ namespace gipbakery.mes.processapplication
                 WaterCalcResult.ValueT = targetWaterTemperature;
                 return;
             }
+
+            if (coldWater.WaterDefaultTemperature != 9999 && warmWater.WaterDefaultTemperature != 9999 && CombineWarmCityWater(warmWater, coldWater, targetWaterTemperature, totalWaterQuantity))
+            {
+                //The calculated water temperature is {0} °C and the target quantity is {1} {2}.
+                TemperatureCalculationResult.ValueT = Root.Environment.TranslateText(this, "TempCalcResult", targetWaterTemperature.ToString("F2"),
+                                                                                                             totalWaterQuantity.ToString("F2"), "kg");
+                WaterCalcResult.ValueT = targetWaterTemperature;
+                return;
+            }
+
+            MaterialTemperature waterWithIce = coldWater;
+            if (coldWater.WaterDefaultTemperature == 9999 && cityWater.WaterDefaultTemperature != 9999)
+                waterWithIce = cityWater;
 
             if (!CombineWatersWithDryIce(coldWater, dryIce, targetWaterTemperature, totalWaterQuantity, defaultWaterTemp, 
                                                                                    isOnlyWaterCompInPartslist, componentsQ, doughTempBeforeKneeding, isForPicking))
