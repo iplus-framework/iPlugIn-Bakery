@@ -93,13 +93,14 @@ namespace gipbakery.mes.processapplication
                 ProdOrderBatch batch;
                 ProdOrderBatchPlan batchPlan;
                 ProdOrderPartslistPos endBatchPos;
+                MaterialWFConnection[] matWFConnections;
 
                 PWMethodProduction pwMethodProduction = ParentPWMethod<PWMethodProduction>();
                 if (pwMethodProduction == null)
                     return null;
 
                 bool posFound = PWDosing.GetRelatedProdOrderPosForWFNode(this, db, dbApp, pwMethodProduction, out intermediateChildPos, out intermediatePosition,
-                                                                            out endBatchPos, out matWFConnection, out batch, out batchPlan);
+                                                                            out endBatchPos, out matWFConnection, out batch, out batchPlan, out matWFConnections);
                 if (!posFound)
                     return null;
 
@@ -130,13 +131,14 @@ namespace gipbakery.mes.processapplication
                     ProdOrderBatch batch;
                     ProdOrderBatchPlan batchPlan;
                     ProdOrderPartslistPos endBatchPos;
+                    MaterialWFConnection[] matWFConnections;
 
                     PWMethodProduction pwMethodProduction = ParentPWMethod<PWMethodProduction>();
                     if (pwMethodProduction == null)
                         return null;
 
                     bool posFound = PWDosing.GetRelatedProdOrderPosForWFNode(this, db, dbApp, pwMethodProduction, out intermediateChildPos, out intermediatePosition,
-                                                                             out endBatchPos, out matWFConnection, out batch, out batchPlan);
+                                                                             out endBatchPos, out matWFConnection, out batch, out batchPlan, out matWFConnections);
                     if (!posFound)
                         return null;
 
