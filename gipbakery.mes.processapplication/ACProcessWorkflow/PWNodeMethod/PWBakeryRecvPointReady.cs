@@ -136,6 +136,12 @@ namespace gipbakery.mes.processapplication
                 return;
             }
 
+            if (ParentPWGroup == null)
+            {
+                Reset();
+                return;
+            }
+
             bool ack = AckRecvPointReadyOverTempCalc();
             if (ack)
                 AckStart();

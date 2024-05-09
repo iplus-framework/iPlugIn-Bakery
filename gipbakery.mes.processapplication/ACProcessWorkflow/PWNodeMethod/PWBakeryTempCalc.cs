@@ -1673,6 +1673,7 @@ namespace gipbakery.mes.processapplication
                 var intermediateAutomatic = matWFConnections.FirstOrDefault(c => c.Material
                                                                                   .MaterialWFConnection_Material
                                                                                   .FirstOrDefault(x => x.MaterialWFACClassMethodID == c.MaterialWFACClassMethodID
+                                                                                                    && c.ACClassWF.ACClassMethodID == x.ACClassWF.ACClassMethodID
                                                                                                     && _PWDosingType
                                                                                                        .IsAssignableFrom(x.ACClassWF.PWACClass
                                                                                                                           .FromIPlusContext<gip.core.datamodel.ACClass>(db).ObjectType))
@@ -1681,6 +1682,7 @@ namespace gipbakery.mes.processapplication
                 var intermediateManual = matWFConnections.FirstOrDefault(c => c.Material
                                                                                .MaterialWFConnection_Material
                                                                                .FirstOrDefault(x => x.MaterialWFACClassMethodID == c.MaterialWFACClassMethodID
+                                                                                                 && c.ACClassWF.ACClassMethodID == x.ACClassWF.ACClassMethodID
                                                                                                  && _PWManualWeighingType
                                                                                                     .IsAssignableFrom(x.ACClassWF.PWACClass
                                                                                                                        .FromIPlusContext<gip.core.datamodel.ACClass>(db).ObjectType))
