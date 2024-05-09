@@ -136,7 +136,7 @@ namespace gipbakery.mes.processapplication
                 return;
             }
 
-            if (ParentPWGroup == null)
+            if (ParentPWGroup != null && ParentPWGroup.CurrentACState == ACStateEnum.SMIdle)
             {
                 Reset();
                 return;
