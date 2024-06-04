@@ -735,6 +735,11 @@ namespace gipbakery.mes.processapplication
                     }
                 }
             }
+            else if (VirtualSourceFacility != null)
+            {
+                VirtualSourceFacility = null;
+                SourceFCList = null;
+            }
         }
 
         public virtual void InitPreProdFunction(ACComponent processModule, IEnumerable<ACChildInstanceInfo> childInstances)
