@@ -1258,9 +1258,25 @@ namespace gipbakery.mes.processapplication
 
                             if (sourceFacility == null)
                             {
-                                //Error50465: The virtual source facility can not be found!
-                                Messages.Error(this, "Error50465");
-                                return;
+                                IACConfig virtualStoreMode = PAFPreProducing.GetConfigurationValue(nameof(PAFBakeryYeastProducing.VirtualStoreMode));
+                                if (virtualStoreMode != null)
+                                {
+                                    ushort? storeMode = virtualStoreMode.Value as ushort?;
+                                    if (storeMode.HasValue)
+                                    {
+                                        PAFBakeryYeastProducing.VirtualStoreModeEnum storeModeEnum = (PAFBakeryYeastProducing.VirtualStoreModeEnum)storeMode;
+                                        if (storeModeEnum == PAFBakeryYeastProducing.VirtualStoreModeEnum.OnlyTarget)
+                                        {
+                                            sourceFacility = inFacility;
+                                        }
+                                    }
+                                }
+                                if (sourceFacility == null)
+                                {
+                                    //Error50465: The virtual source facility can not be found!
+                                    Messages.Error(this, "Error50465");
+                                    return;
+                                }
                             }
 
                             try
