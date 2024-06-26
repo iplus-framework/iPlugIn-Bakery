@@ -4,13 +4,8 @@ using gip.core.datamodel;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using vd = gip.mes.datamodel;
-using System.Text;
-using System.Threading.Tasks;
+using VD = gip.mes.datamodel;
 using gip.mes.processapplication;
-using gip.mes.facility;
-using System.Data.Entity.Core.Mapping;
-using gip.mes.datamodel;
 
 namespace gipbakery.mes.processapplication
 {
@@ -884,7 +879,7 @@ namespace gipbakery.mes.processapplication
 
         #region Methods => SingleDosing
 
-        public override bool OnPreStartWorkflow(vd.DatabaseApp dbApp, gip.mes.datamodel.Picking picking, List<SingleDosingConfigItem> configItems, Route validRoute, gip.core.datamodel.ACClassWF rootWF)
+        public override bool OnPreStartWorkflow(VD.DatabaseApp dbApp, gip.mes.datamodel.Picking picking, List<SingleDosingConfigItem> configItems, Route validRoute, gip.core.datamodel.ACClassWF rootWF)
         {
             base.OnPreStartWorkflow(dbApp, picking, configItems, validRoute, rootWF);
 
@@ -945,7 +940,7 @@ namespace gipbakery.mes.processapplication
             return result;
         }
 
-        protected virtual bool AddDischargingConfig(vd.DatabaseApp dbApp, vd.Picking picking, List<SingleDosingConfigItem> configItems, Route validRoute, gip.core.datamodel.ACClassWF rootWF)
+        protected virtual bool AddDischargingConfig(VD.DatabaseApp dbApp, VD.Picking picking, List<SingleDosingConfigItem> configItems, Route validRoute, gip.core.datamodel.ACClassWF rootWF)
         {
             if (!DischargeOverHose)
                 return true;
