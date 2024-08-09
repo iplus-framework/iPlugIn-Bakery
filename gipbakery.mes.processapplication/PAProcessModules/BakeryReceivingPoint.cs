@@ -23,7 +23,7 @@ namespace gipbakery.mes.processapplication
         static BakeryReceivingPoint()
         {
             RegisterExecuteHandler(typeof(BakeryReceivingPoint), HandleExecuteACMethod_BakeryReceivingPoint);
-            ACRoutingService.RegisterSelectionQuery(SelRuleID_RecvPoint, (c, p) => c.Component.ValueT is BakeryReceivingPoint, null);
+            ACRoutingService.RegisterSelectionQuery(SelRuleID_RecvPoint, (c, p) => c.ComponentInstance is BakeryReceivingPoint, null);
         }
 
         public BakeryReceivingPoint(gip.core.datamodel.ACClass acType, IACObject content, IACObject parentACObject, ACValueList parameter, string acIdentifier = "")

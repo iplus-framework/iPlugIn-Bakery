@@ -17,7 +17,7 @@ namespace gipbakery.mes.processapplication
 
         static BakeryIntermWaterTank()
         {
-            ACRoutingService.RegisterSelectionQuery(SelRuleID_IntermWaterTank, (c, p) => c.Component.ValueT is BakeryIntermWaterTank, (c, p) => c.Component.ValueT is PAProcessModule);
+            ACRoutingService.RegisterSelectionQuery(SelRuleID_IntermWaterTank, (c, p) => c.ComponentInstance is BakeryIntermWaterTank, (c, p) => c.ComponentInstance is PAProcessModule);
         }
 
         public BakeryIntermWaterTank(ACClass acType, IACObject content, IACObject parentACObject, ACValueList parameter, string acIdentifier = "") : 
