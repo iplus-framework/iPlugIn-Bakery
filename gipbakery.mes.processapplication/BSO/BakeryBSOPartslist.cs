@@ -3,7 +3,8 @@ using gip.core.autocomponent;
 using gip.core.datamodel;
 using gip.mes.datamodel;
 using System.Linq;
-using System.Runtime.Remoting.Contexts;
+using System.Runtime.CompilerServices;
+using Microsoft.EntityFrameworkCore;
 
 namespace gipbakery.mes.processapplication
 {
@@ -25,7 +26,7 @@ namespace gipbakery.mes.processapplication
                 + @"inner join PartslistPos pos on pMat.MaterialID = pos.MaterialID left "
                 + @" join Partslist pl on pl.MaterialID = pMat.MaterialID "
                 + @" where pl.MaterialID is null and pMat.IsIntermediate = 0 and pMat.SpecHeatCapacity < 0.001 ";
-                dbApp.ExecuteStoreCommand(sqlCmd);
+                dbApp.Database.ExecuteSql(FormattableStringFactory.Create(sqlCmd));
 
                 MsgWithDetails msgWithDetails = new MsgWithDetails();
                 for (int i = 0; i < 10; i++)

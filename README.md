@@ -1,2 +1,2 @@
 # iPlugIn-Bakery
-iPlugIn-Bakery
+Componentes for bakery industry

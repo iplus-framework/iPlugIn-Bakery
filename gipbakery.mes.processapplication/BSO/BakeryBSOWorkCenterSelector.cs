@@ -53,7 +53,7 @@ namespace gipbakery.mes.processapplication
         {
             using (ACMonitor.Lock(dbApp.QueryLock_1X000))
             {
-                relation?.SourceProdOrderPartslistPos?.Material.MaterialConfig_Material.AutoRefresh();
+                relation?.SourceProdOrderPartslistPos?.Material.MaterialConfig_Material.AutoRefresh(relation?.SourceProdOrderPartslistPos?.Material.MaterialConfig_MaterialReference, relation?.SourceProdOrderPartslistPos?.Material);
             }
 
             MaterialConfig temp = relation?.SourceProdOrderPartslistPos?.Material

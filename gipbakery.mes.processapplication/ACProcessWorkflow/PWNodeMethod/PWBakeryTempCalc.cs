@@ -8,6 +8,7 @@ using System.Xml;
 using gip.mes.datamodel;
 using System.Runtime.Serialization;
 using gip.mes.facility;
+using Microsoft.EntityFrameworkCore;
 
 namespace gipbakery.mes.processapplication
 {
@@ -1821,7 +1822,7 @@ namespace gipbakery.mes.processapplication
             }
             pos.MDUnit = water.BaseMDUnit;
 
-            dbApp.ProdOrderPartslistPos.AddObject(pos);
+            dbApp.ProdOrderPartslistPos.Add(pos);
 
             return pos;
         }
@@ -1840,7 +1841,7 @@ namespace gipbakery.mes.processapplication
                 targetPos = ProdOrderPartslistPos.NewACObject(dbApp, null);
                 targetPos.Sequence = 1;
                 targetPos.MaterialPosTypeIndex = (short)GlobalApp.MaterialPosTypes.InwardIntern;
-                dbApp.ProdOrderPartslistPos.AddObject(targetPos);
+                dbApp.ProdOrderPartslistPos.Add(targetPos);
             }
 
             ProdOrderPartslistPosRelation topRelation = sourcePos.ProdOrderPartslistPosRelation_SourceProdOrderPartslistPos
@@ -1857,7 +1858,7 @@ namespace gipbakery.mes.processapplication
                                                          && c.TargetProdOrderPartslistPos.MaterialPosType == GlobalApp.MaterialPosTypes.InwardIntern)
                                                 .Max(x => x.Sequence) + 1 : relSequenceNo.Value;
 
-                dbApp.ProdOrderPartslistPosRelation.AddObject(topRelation);
+                dbApp.ProdOrderPartslistPosRelation.Add(topRelation);
             }
 
             result = topRelation.Sequence;
@@ -2095,7 +2096,7 @@ namespace gipbakery.mes.processapplication
             pos.MDDelivPosLoadState = dbApp.MDDelivPosLoadState.FirstOrDefault(c => c.MDDelivPosLoadStateIndex == (short)MDDelivPosLoadState.DelivPosLoadStates.ReadyToLoad);
 
             picking.PickingPos_Picking.Add(pos);
-            dbApp.PickingPos.AddObject(pos);
+            dbApp.PickingPos.Add(pos);
 
             return pos;
         }

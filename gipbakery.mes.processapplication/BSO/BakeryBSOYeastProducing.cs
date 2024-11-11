@@ -995,11 +995,12 @@ namespace gipbakery.mes.processapplication
             //DelegateToMainThread((object state) =>
             //{
                 if (VirtualSourceFacility == null)
-                    return;
+                return;
 
-                VirtualSourceFacility.FacilityCharge_Facility.AutoLoad();
-                VirtualSourceFacility.FacilityCharge_Facility.AutoRefresh();
-                SourceFCList = new ObservableCollection<FacilityCharge>(VirtualSourceFacility.FacilityCharge_Facility.Where(c => !c.NotAvailable));
+                
+            VirtualSourceFacility.FacilityCharge_Facility.AutoLoad(VirtualSourceFacility.FacilityCharge_FacilityReference, VirtualSourceFacility);
+            VirtualSourceFacility.FacilityCharge_Facility.AutoRefresh(VirtualSourceFacility.FacilityCharge_FacilityReference, VirtualSourceFacility);
+            SourceFCList = new ObservableCollection<FacilityCharge>(VirtualSourceFacility.FacilityCharge_Facility.Where(c => !c.NotAvailable));
             //});
         }
 

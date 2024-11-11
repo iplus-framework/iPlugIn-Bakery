@@ -3,10 +3,10 @@ using gip.mes.datamodel;
 using gip.mes.processapplication;
 using System;
 using System.Collections.Generic;
-using System.Data.Objects.DataClasses;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Microsoft.EntityFrameworkCore;
 
 namespace gipbakery.mes.processapplication
 {
@@ -126,7 +126,7 @@ namespace gipbakery.mes.processapplication
             return false;
         }
 
-        private void InsertOrModifyConfig(EntityCollection<MaterialConfig> materialConfigs, DatabaseApp dbApp, Material material, Guid? partslistPosID, bool isTempMeasurement)
+        private void InsertOrModifyConfig(ICollection<MaterialConfig> materialConfigs, DatabaseApp dbApp, Material material, Guid? partslistPosID, bool isTempMeasurement)
         {
             Guid? processModuleID = ParentPWGroup?.AccessedProcessModule?.ComponentClass.ACClassID;
 
@@ -144,7 +144,7 @@ namespace gipbakery.mes.processapplication
                 materialConfig.Comment = partslistPosID.HasValue ? partslistPosID.ToString() : null;
 
                 materialConfigs.Add(materialConfig);
-                dbApp.MaterialConfig.AddObject(materialConfig);
+                dbApp.MaterialConfig.Add(materialConfig);
             }
             else if (materialConfig.Expression == TempMeasurementModeEnum.Off.ToString())
             {

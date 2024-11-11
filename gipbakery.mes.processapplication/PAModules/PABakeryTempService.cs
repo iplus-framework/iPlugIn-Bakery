@@ -520,7 +520,7 @@ namespace gipbakery.mes.processapplication
                             materialConfig.SetValueTypeACClass(dbApp.ContextIPlus.GetACType("double"));
 
                             mt.MaterialConfig_Material.Add(materialConfig);
-                            dbApp.MaterialConfig.AddObject(materialConfig);
+                            dbApp.MaterialConfig.Add(materialConfig);
                         }
 
                         materialConfig.Value = material.AverageTemperatureWithOffset;

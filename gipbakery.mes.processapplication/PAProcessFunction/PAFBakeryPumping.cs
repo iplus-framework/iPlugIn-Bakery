@@ -2,6 +2,7 @@
 using gip.core.datamodel;
 using gip.mes.datamodel;
 using gip.mes.processapplication;
+using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -190,8 +191,8 @@ namespace gipbakery.mes.processapplication
                                 using (var dbApp = new DatabaseApp())
                                 {
                                     // 1. Hole Material-Konfiguration spezielle fü diesen Weg
-                                    materialConfigList = dbApp.MaterialConfig.Where(c => c.VBiACClassPropertyRelationID == logicalRelation.ACClassPropertyRelationID && c.MaterialID == materialID.Value).SetMergeOption(System.Data.Objects.MergeOption.NoTracking).ToList();
-                                    var wayIndependent = dbApp.MaterialConfig.Where(c => c.MaterialID == materialID.Value && c.VBiACClassID == acClassIDOfParent).SetMergeOption(System.Data.Objects.MergeOption.NoTracking);
+                                    materialConfigList = dbApp.MaterialConfig.Where(c => c.VBiACClassPropertyRelationID == logicalRelation.ACClassPropertyRelationID && c.MaterialID == materialID.Value).AsNoTracking().ToList();
+                                    var wayIndependent = dbApp.MaterialConfig.Where(c => c.MaterialID == materialID.Value && c.VBiACClassID == acClassIDOfParent).AsNoTracking();
                                     foreach (var matConfigIndepedent in wayIndependent)
                                     {
                                         if (!materialConfigList.Where(c => c.LocalConfigACUrl == matConfigIndepedent.LocalConfigACUrl).Any())
@@ -234,7 +235,7 @@ namespace gipbakery.mes.processapplication
             }
             // Überschreibe Parameter mit materialabhängigen Einstellungen
             if (!isConfigInitialization
-                && config.EntityState != System.Data.EntityState.Added
+                && config.EntityState != EntityState.Added
                 && materialConfigList != null
                 && materialConfigList.Any())
             {
@@ -253,7 +254,7 @@ namespace gipbakery.mes.processapplication
             }
             if (!isNewDefaultedMethod)
                 ACUrlCommand("!InheritParamsFromConfig", acMethod, storedACMethod, isConfigInitialization);
-            if (config.EntityState == System.Data.EntityState.Added || isNewDefaultedMethod)
+            if (config.EntityState == EntityState.Added || isNewDefaultedMethod)
                 config.Value = storedACMethod;
             else if (isConfigInitialization)
             {
@@ -262,7 +263,7 @@ namespace gipbakery.mes.processapplication
                 else
                     config.Value = acMethod;
             }
-            if (config.EntityState == System.Data.EntityState.Added || logicalRelation.EntityState == System.Data.EntityState.Added || isNewDefaultedMethod || isConfigInitialization || differentVirtualMethod)
+            if (config.EntityState == EntityState.Added || logicalRelation.EntityState == EntityState.Added || isNewDefaultedMethod || isConfigInitialization || differentVirtualMethod)
             {
                 MsgWithDetails msg = db.ACSaveChanges();
                 if (msg != null)

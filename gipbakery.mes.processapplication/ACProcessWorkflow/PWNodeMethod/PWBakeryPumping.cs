@@ -4,6 +4,7 @@ using gip.core.processapplication;
 using gip.mes.datamodel;
 using gip.mes.facility;
 using gip.mes.processapplication;
+using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
 using System.IO.Packaging;

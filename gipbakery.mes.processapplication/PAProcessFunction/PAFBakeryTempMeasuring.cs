@@ -241,7 +241,7 @@ namespace gipbakery.mes.processapplication
                 if (item == null)
                     return;
 
-                dbApp.DeleteObject(item);
+                dbApp.Remove(item);
                 Msg msg = dbApp.ACSaveChanges();
                 if (msg != null)
                 {

@@ -501,7 +501,7 @@ namespace gipbakery.mes.processapplication
                 targetPos = ProdOrderPartslistPos.NewACObject(dbApp, null);
                 targetPos.Sequence = 1;
                 targetPos.MaterialPosTypeIndex = (short)GlobalApp.MaterialPosTypes.InwardIntern;
-                dbApp.ProdOrderPartslistPos.AddObject(targetPos);
+                dbApp.ProdOrderPartslistPos.Add(targetPos);
             }
 
             ProdOrderPartslistPosRelation topRelation = sourcePos.ProdOrderPartslistPosRelation_SourceProdOrderPartslistPos
@@ -518,7 +518,7 @@ namespace gipbakery.mes.processapplication
                                                          && c.TargetProdOrderPartslistPos.MaterialPosType == GlobalApp.MaterialPosTypes.InwardIntern)
                                                 .Max(x => x.Sequence) + 1;
 
-                dbApp.ProdOrderPartslistPosRelation.AddObject(topRelation);
+                dbApp.ProdOrderPartslistPosRelation.Add(topRelation);
             }
 
             ProdOrderPartslistPosRelation batchRelation = batch.ProdOrderPartslistPosRelation_ProdOrderBatch
@@ -958,7 +958,7 @@ namespace gipbakery.mes.processapplication
                                 }
                                 component.MDUnit = material.BaseMDUnit;
 
-                                dbApp.ProdOrderPartslistPos.AddObject(component);
+                                dbApp.ProdOrderPartslistPos.Add(component);
 
                                 msg = dbApp.ACSaveChanges();
                                 if (msg != null)
