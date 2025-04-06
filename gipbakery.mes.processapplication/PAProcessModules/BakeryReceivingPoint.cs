@@ -468,7 +468,7 @@ namespace gipbakery.mes.processapplication
 
                                 RoutingResult rr = ACRoutingService.FindSuccessors(sourceComp.GetACUrl(), routingParameters);
 
-                                if (rr != null && rr.Routes.Any())
+                                if (rr != null && rr.Routes != null && rr.Routes.Any())
                                 {
                                     routes.AddRange(rr.Routes);
                                 }
