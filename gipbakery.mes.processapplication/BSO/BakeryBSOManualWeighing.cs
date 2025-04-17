@@ -367,7 +367,7 @@ namespace gipbakery.mes.processapplication
                             }
                             else
                             {
-                                Messages.Error(this, "Can not find the configuration property WithCover on a receiving point!");
+                                Messages.LogMessage(eMsgLevel.Error, this.GetACUrl(), nameof(Activate), "Can not find the configuration property WithCover on the receiving point!");
                             }
 
                             //bool CanAckInAdvance = false;
@@ -386,9 +386,27 @@ namespace gipbakery.mes.processapplication
 
                             IsCoverUpDown = isCoverUpDown;
                         }
+                        else
+                        {
+                            if (!isBounded.HasValue)
+                                Messages.LogMessage(eMsgLevel.Error, this.GetACUrl(), nameof(Activate), "The member isBounded is null!");
+                            else
+                                Messages.LogMessage(eMsgLevel.Error, this.GetACUrl(), nameof(Activate), "The member isBounded is false!");
+                        }
+                    }
+                    else
+                    {
+                        Messages.LogMessage(eMsgLevel.Error, this.GetACUrl(), nameof(Activate), "The property IsCoverDown is null!");
                     }
 
                     ContentWeightOfContainer = selectedProcessModule.GetPropertyNet(nameof(BakeryReceivingPoint.ContentWeightOfContainer)) as IACContainerTNet<double>;
+                }
+                else
+                {
+                    if (recvPointClass != null)
+                        Messages.LogMessage(eMsgLevel.Error, this.GetACUrl(), nameof(Activate), "The recvPointClass is not assignable from _BakeryRecvPointType!");
+                    else
+                        Messages.LogMessage(eMsgLevel.Error, this.GetACUrl(), nameof(Activate), "The recvPointClass is null!");
                 }
             }
         }

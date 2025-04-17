@@ -11,7 +11,7 @@ using System.Threading.Tasks;
 
 namespace gipbakery.mes.processapplication
 {
-    [ACClassInfo(Const.PackName_VarioAutomation, "en{'Cyclic temperature measuring'}de{'Zyklische Temperaturmessung'}", Global.ACKinds.TPAProcessFunction, Global.ACStorableTypes.Required, false, true, "", BSOConfig = BakeryBSOTemperature.ClassName, SortIndex = 200)]
+    [ACClassInfo(Const.PackName_VarioAutomation, "en{'Temperature'}de{'Temperatur'}", Global.ACKinds.TPAProcessFunction, Global.ACStorableTypes.Required, false, true, "", BSOConfig = BakeryBSOTemperature.ClassName, SortIndex = 200)]
     public class PAFBakeryTempMeasuring : PAFWorkCenterSelItemBase
     {
         static PAFBakeryTempMeasuring()
