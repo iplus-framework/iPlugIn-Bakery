@@ -204,7 +204,7 @@
     <Reference Include="gip.mes.processapplication">
       <HintPath>$(IPlusIncludeDir)\gip.mes.processapplication.dll</HintPath>
     </Reference>
-    <Reference Include="gip.mes.processapplication">
+    <Reference Include="gip2006.variobatch.processapplication">
       <HintPath>$(IPlusIncludeDir)\gip2006.variobatch.processapplication.dll</HintPath>
     </Reference>
   </ItemGroup>
