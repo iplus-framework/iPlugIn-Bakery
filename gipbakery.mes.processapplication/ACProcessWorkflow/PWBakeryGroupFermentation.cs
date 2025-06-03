@@ -17,6 +17,8 @@ namespace gipbakery.mes.processapplication
     {
         #region c'tors
 
+        public const string SelRuleID_ReachableDestOverVirutalStores = "PWGroupVB_RDestOverVStores";
+
         static PWBakeryGroupFermentation()
         {
             List<ACMethodWrapper> wrappers = ACMethod.OverrideFromBase(typeof(PWBakeryGroupFermentation), ACStateConst.SMStarting);
@@ -26,9 +28,17 @@ namespace gipbakery.mes.processapplication
                 {
                     wrapper.Method.ParameterValueList.Add(new ACValue("DoseInSourProdSimultaneously", typeof(bool), false, Global.ParamOption.Optional));
                     wrapper.ParameterTranslation.Add("DoseInSourProdSimultaneously", "en{'Dose in sour dough production simultaneously'}de{'Dosiere in der Sauerteigproduktion gleichzeitig'}");
+
+                    wrapper.Method.ParameterValueList.Add(new ACValue("TargetOverVirtualSilos", typeof(bool), false, Global.ParamOption.Optional));
+                    wrapper.ParameterTranslation.Add("TargetOverVirtualSilos", "en{'Target over virutal silos/tanks'}de{'Target over virutal silos/tanks'}");
                 }
             }
             RegisterExecuteHandler(typeof(PWBakeryGroupFermentation), HandleExecuteACMethod_PWBakeryGroupFermentation);
+
+            ACRoutingService.RegisterSelectionQuery(SelRuleID_ReachableDestOverVirutalStores,
+                (c, p) => c.ComponentInstance is PAProcessModule
+                            && (p[0] as Guid[]).Contains(c.ComponentInstance.ComponentClass.ACClassID),
+                null);
         }
 
         public PWBakeryGroupFermentation(gip.core.datamodel.ACClass acType, IACObject content, IACObject parentACObject, ACValueList parameter, string acIdentifier = "") :
@@ -162,6 +172,23 @@ namespace gipbakery.mes.processapplication
         }
 
         #endregion
+
+        public bool TargetOverVirtualSilos
+        {
+            get
+            {
+                var method = MyConfiguration;
+                if (method != null)
+                {
+                    var acValue = method.ParameterValueList.GetACValue("TargetOverVirtualSilos");
+                    if (acValue != null)
+                    {
+                        return acValue.ParamAsBoolean;
+                    }
+                }
+                return false;
+            }
+        }
 
         #endregion
 
@@ -782,6 +809,32 @@ namespace gipbakery.mes.processapplication
         }
         #endregion
 
+        #region Methods => Overrides
+
+        protected override ACRoutingParameters GetRoutingParametersForProdOrder(Database db, Guid[] targets, Guid[] allPossibleModulesinThisWF, Type typeOfSilo, Guid thisMethodID)
+        {
+            if (!TargetOverVirtualSilos)
+                return base.GetRoutingParametersForProdOrder(db, targets, allPossibleModulesinThisWF, typeOfSilo, thisMethodID);
+
+            return new ACRoutingParameters()
+            {
+                RoutingService = this.RoutingService,
+                Database = db,
+                SelectionRuleID = SelRuleID_ReachableDestOverVirutalStores,
+                Direction = RouteDirections.Forwards,
+                SelectionRuleParams = new object[] { targets, allPossibleModulesinThisWF },
+                DBSelector = (c, p, r) => targets.Contains(c.ACClassID),
+                DBDeSelector = (c, p, r) => (c.ACKind == Global.ACKinds.TPAProcessModule
+                                            && (typeOfSilo.IsAssignableFrom(c.ObjectType)
+                                                || !c.BasedOnACClassID.HasValue
+                                                || (c.BasedOnACClassID.HasValue && !c.ACClass1_BasedOnACClass.ACClassWF_RefPAACClass.Where(refc => refc.ACClassMethodID == thisMethodID).Any()))),
+                MaxRouteAlternativesInLoop = ACRoutingService.DefaultAlternatives,
+                IncludeReserved = true,
+                IncludeAllocated = true
+            };
+        }
+
+        #endregion
 
         #region Dump and HandleExecute
         protected override void DumpPropertyList(XmlDocument doc, XmlElement xmlACPropertyList, ref DumpStats dumpStats)
