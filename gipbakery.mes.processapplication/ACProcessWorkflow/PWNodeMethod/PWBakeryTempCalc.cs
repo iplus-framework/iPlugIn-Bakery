@@ -67,6 +67,9 @@ namespace gipbakery.mes.processapplication
 
                     wrapper.Method.ParameterValueList.Add(new ACValue("MaxWaterCorrectionDiff", typeof(double), 10, Global.ParamOption.Optional));
                     wrapper.ParameterTranslation.Add("MaxWaterCorrectionDiff", "en{'Max water correction difference'}de{'Maximale Wasserkorrekturdifferenz'}");
+
+                    wrapper.Method.ParameterValueList.Add(new ACValue("MinIceQuantity", typeof(double), 0, Global.ParamOption.Optional));
+                    wrapper.ParameterTranslation.Add("MinIceQuantity", "en{'Minimum ice quantity for weighing'}de{'Mindesteismenge zum Wiegen'}");
                 }
             }
 
@@ -395,6 +398,23 @@ namespace gipbakery.mes.processapplication
                     }
                 }
                 return false;
+            }
+        }
+
+        protected double? MinIceQuantity
+        {
+            get
+            {
+                var method = MyConfiguration;
+                if (method != null)
+                {
+                    var acValue = method.ParameterValueList.GetACValue("MinIceQuantity");
+                    if (acValue != null)
+                    {
+                        return (double?)acValue.Value;
+                    }
+                }
+                return null;
             }
         }
 
@@ -1306,7 +1326,7 @@ namespace gipbakery.mes.processapplication
                         coldWaterQuantity = 0;
                         dryIceQuantity = totalWaterQuantity;
                     }
-                    else if (dryIceQuantity < water.WaterMinDosingQuantity) // TODO: find manual scale on receiving point and get min weighing quantity
+                    else if (MinIceQuantity.HasValue && MinIceQuantity.Value > 0 && dryIceQuantity < MinIceQuantity.Value) // TODO: find manual scale on receiving point and get min weighing quantity
                     {
                         coldWaterQuantity = totalWaterQuantity;
                         dryIceQuantity = 0;
@@ -1372,7 +1392,7 @@ namespace gipbakery.mes.processapplication
 
                         iceQuantity = totalWaterQuantity - coldWaterQuantity;
 
-                        if (iceQuantity < dryIce.WaterMinDosingQuantity) //TODO find min dosing quantity
+                        if (MinIceQuantity.HasValue && MinIceQuantity.Value > 0 && iceQuantity < MinIceQuantity.Value) // TODO: find manual scale on receiving point and get min weighing quantity
                         {
                             coldWaterQuantity = totalWaterQuantity;
                             iceQuantity = 0;
@@ -1451,6 +1471,11 @@ namespace gipbakery.mes.processapplication
                                         iceQuantity = totalWaterQuantity;
                                         coldWaterQuantity = 0;
                                     }
+                                    else if (MinIceQuantity.HasValue && MinIceQuantity.Value > 0 && iceQuantity < MinIceQuantity.Value)
+                                    {
+                                        coldWaterQuantity = totalWaterQuantity;
+                                        iceQuantity = 0;
+                                    }
                                 }
                             }
 
@@ -1462,7 +1487,7 @@ namespace gipbakery.mes.processapplication
                                                  (water.AverageTemperature.Value - dryIce.AverageTemperature.Value);
                             double coldWaterQuantity = totalWaterQuantity - iceQuantity;
 
-                            if (iceQuantity < dryIce.WaterMinDosingQuantity)
+                            if (MinIceQuantity.HasValue && MinIceQuantity.Value > 0 && iceQuantity < MinIceQuantity.Value)
                             {
                                 coldWaterQuantity = totalWaterQuantity;
                                 iceQuantity = 0;
