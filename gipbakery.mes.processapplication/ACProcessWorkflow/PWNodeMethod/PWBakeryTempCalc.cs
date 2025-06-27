@@ -1501,6 +1501,10 @@ namespace gipbakery.mes.processapplication
                             SetWaterQuantity(water, coldWaterQuantity, dryIce, iceQuantity);
                         }
                     }
+                    else if (dryIce.AverageTemperature == 9999)
+                    {
+                        SetWaterQuantity(water, totalWaterQuantity, dryIce, 0);
+                    }
                     else
                     {
                         // The water temperature calculation can not be performed.
