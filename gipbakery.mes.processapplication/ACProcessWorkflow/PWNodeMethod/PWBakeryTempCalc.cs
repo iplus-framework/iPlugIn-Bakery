@@ -1194,7 +1194,7 @@ namespace gipbakery.mes.processapplication
             }
 
 
-            if (warmWater.WaterDefaultTemperature != 9999 && cityWater.WaterDefaultTemperature != 9999 && CombineWarmCityWater(warmWater, cityWater, targetWaterTemperature, totalWaterQuantity))
+            if (!IsWaterTempDeactivated(warmWater.WaterDefaultTemperature) && !IsWaterTempDeactivated(cityWater.WaterDefaultTemperature) && CombineWarmCityWater(warmWater, cityWater, targetWaterTemperature, totalWaterQuantity))
             {
                 //The calculated water temperature is {0} °C and the target quantity is {1} {2}.
                 TemperatureCalculationResult.ValueT = Root.Environment.TranslateText(this, "TempCalcResult", targetWaterTemperature.ToString("F2"),
@@ -1204,7 +1204,7 @@ namespace gipbakery.mes.processapplication
             }
 
 
-            if (coldWater.WaterDefaultTemperature != 9999 && cityWater.WaterDefaultTemperature != 9999 && CombineColdCityWater(coldWater, cityWater, targetWaterTemperature, totalWaterQuantity))
+            if (!IsWaterTempDeactivated(coldWater.WaterDefaultTemperature) && !IsWaterTempDeactivated(cityWater.WaterDefaultTemperature) && CombineColdCityWater(coldWater, cityWater, targetWaterTemperature, totalWaterQuantity))
             {
                 //The calculated water temperature is {0} °C and the target quantity is {1} {2}.
                 TemperatureCalculationResult.ValueT = Root.Environment.TranslateText(this, "TempCalcResult", targetWaterTemperature.ToString("F2"),
@@ -1213,7 +1213,7 @@ namespace gipbakery.mes.processapplication
                 return;
             }
 
-            if (coldWater.WaterDefaultTemperature != 9999 && warmWater.WaterDefaultTemperature != 9999 && CombineWarmCityWater(warmWater, coldWater, targetWaterTemperature, totalWaterQuantity))
+            if (!IsWaterTempDeactivated(coldWater.WaterDefaultTemperature) && !IsWaterTempDeactivated(warmWater.WaterDefaultTemperature) && CombineWarmCityWater(warmWater, coldWater, targetWaterTemperature, totalWaterQuantity))
             {
                 //The calculated water temperature is {0} °C and the target quantity is {1} {2}.
                 TemperatureCalculationResult.ValueT = Root.Environment.TranslateText(this, "TempCalcResult", targetWaterTemperature.ToString("F2"),
@@ -1223,7 +1223,7 @@ namespace gipbakery.mes.processapplication
             }
 
             MaterialTemperature waterWithIce = coldWater;
-            if (coldWater.WaterDefaultTemperature == 9999 && cityWater.WaterDefaultTemperature != 9999)
+            if (IsWaterTempDeactivated(coldWater.WaterDefaultTemperature) && !IsWaterTempDeactivated(cityWater.WaterDefaultTemperature))
                 waterWithIce = cityWater;
 
             if (!CombineWatersWithDryIce(coldWater, dryIce, targetWaterTemperature, totalWaterQuantity, defaultWaterTemp, 
@@ -1256,12 +1256,12 @@ namespace gipbakery.mes.processapplication
 
                 double cityWaterQuantity = totalWaterQuantity - warmWaterQuantity;
 
-                if (cityWaterQuantity < water.WaterMinDosingQuantity && warmWater.WaterDefaultTemperature != 9999)
+                if (cityWaterQuantity < water.WaterMinDosingQuantity && !IsWaterTempDeactivated(warmWater.WaterDefaultTemperature))
                 {
                     warmWaterQuantity = totalWaterQuantity;
                     cityWaterQuantity = 0;
                 }
-                else if (warmWaterQuantity < warmWater.WaterMinDosingQuantity || warmWater.WaterDefaultTemperature == 9999)
+                else if (warmWaterQuantity < warmWater.WaterMinDosingQuantity || IsWaterTempDeactivated(warmWater.WaterDefaultTemperature))
                 {
                     warmWaterQuantity = 0;
                     cityWaterQuantity = totalWaterQuantity;
@@ -1272,6 +1272,15 @@ namespace gipbakery.mes.processapplication
                 return true;
             }
 
+            return false;
+        }
+
+        private bool IsWaterTempDeactivated(double? temp)
+        {
+            if (temp.HasValue && Math.Abs(temp.Value - 9999) <= double.Epsilon)
+            {
+                return true;
+            }
             return false;
         }
 
@@ -1501,7 +1510,7 @@ namespace gipbakery.mes.processapplication
                             SetWaterQuantity(water, coldWaterQuantity, dryIce, iceQuantity);
                         }
                     }
-                    else if (dryIce.AverageTemperature == 9999)
+                    else if (IsWaterTempDeactivated(dryIce.AverageTemperature))
                     {
                         SetWaterQuantity(water, totalWaterQuantity, dryIce, 0);
                     }
