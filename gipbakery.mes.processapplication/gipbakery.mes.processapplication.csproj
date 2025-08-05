@@ -1,6 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
+  <Import Project="..\..\iPlus\Directory.Build.props" />
   <PropertyGroup>
-    <TargetFramework>net8.0</TargetFramework>
+    <TargetFramework>$(DefaultNetCoreTargetFramework)</TargetFramework>
     <OutputType>Library</OutputType>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
     <AssemblyTitle>gipbakery.mes.processapplication</AssemblyTitle>
@@ -9,10 +10,10 @@
     <ImportWindowsDesktopTargets>false</ImportWindowsDesktopTargets>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
-    <IPlusIncludeDir>..\..\iPlusMES\bin\Debug\net8.0</IPlusIncludeDir>
+    <IPlusIncludeDir>..\..\iPlusMES\bin\Debug\$(DefaultNetCoreTargetFramework)</IPlusIncludeDir>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
-    <IPlusIncludeDir>..\..\iPlusMES\bin\Release\net8.0</IPlusIncludeDir>
+    <IPlusIncludeDir>..\..\iPlusMES\bin\Release\$(DefaultNetCoreTargetFramework)</IPlusIncludeDir>
   </PropertyGroup>
   <ItemGroup>
     <None Update="readme.md">
@@ -305,7 +306,7 @@
     <PackageReference Include="Microsoft.EntityFrameworkCore" Version="8.0.10" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" Version="8.0.10" />
     <PackageReference Include="System.ComponentModel.Annotations" Version="5.0.0" />
-    <PackageReference Include="System.Data.DataSetExtensions" Version="4.5.0" />
-    <PackageReference Include="System.Configuration.ConfigurationManager" Version="8.0.1" />
+    <PackageReference Include="System.Data.DataSetExtensions" Version="4.6.0-preview3.19128.7" />
+    <PackageReference Include="System.Configuration.ConfigurationManager" Version="$(NetCorePackageVersion)" />
   </ItemGroup>
 </Project>
