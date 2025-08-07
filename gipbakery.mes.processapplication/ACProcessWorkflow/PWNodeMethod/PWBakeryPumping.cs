@@ -552,7 +552,7 @@ namespace gipbakery.mes.processapplication
 
         #endregion
 
-        private static bool HandleExecuteACMethod_PWBakeryPumping(out object result, IACComponent acComponent, string acMethodName, gip.core.datamodel.ACClassMethod acClassMethod, object[] acParameter)
+        public static bool HandleExecuteACMethod_PWBakeryPumping(out object result, IACComponent acComponent, string acMethodName, gip.core.datamodel.ACClassMethod acClassMethod, object[] acParameter)
         {
             return HandleExecuteACMethod_PWDischarging(out result, acComponent, acMethodName, acClassMethod, acParameter);
         }
