@@ -524,13 +524,17 @@ namespace gipbakery.mes.processapplication
                             if (module != null)
                             {
                                 string[] accessedFrom = module.SemaphoreAccessedFrom();
-                                if (accessedFrom == null)
+                                if (module == ParentPWGroup.AccessedProcessModule)
                                 {
                                     plannedSilosFree.Add(new Tuple<FacilityReservation, short>(plannedSilo, 1));
                                 }
-                                else
+                                else if (accessedFrom == null)
                                 {
                                     plannedSilosFree.Add(new Tuple<FacilityReservation, short>(plannedSilo, 2));
+                                }
+                                else
+                                {
+                                    plannedSilosFree.Add(new Tuple<FacilityReservation, short>(plannedSilo, 3));
                                 }
                             }
                         }
