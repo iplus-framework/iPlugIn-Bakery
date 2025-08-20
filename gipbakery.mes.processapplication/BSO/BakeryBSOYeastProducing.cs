@@ -1501,7 +1501,7 @@ namespace gipbakery.mes.processapplication
                 return;
 
             using (Database db = new gip.core.datamodel.Database())
-            using (DatabaseApp dbApp = new DatabaseApp())
+            using (DatabaseApp dbApp = new DatabaseApp(db))
             {
                 var outwardFacilityRef = VirtualStore.GetPropertyNet(nameof(Facility)) as IACContainerTNet<ACRef<Facility>>;
 
@@ -1514,6 +1514,14 @@ namespace gipbakery.mes.processapplication
                 }
 
                 Facility outwardFacility = outFacility.FromAppContext<Facility>(dbApp);
+
+                Msg msg = OnPumpOverStart(dbApp, outwardFacility);
+                if (msg != null)
+                {
+                    Messages.Msg(msg);
+                    if (msg.MessageLevel > eMsgLevel.Warning)
+                        return;
+                }
 
                 double currentStock = outwardFacility.CurrentFacilityStock != null ? outwardFacility.CurrentFacilityStock.AvailableQuantity : 0.0;
 
@@ -1588,6 +1596,11 @@ namespace gipbakery.mes.processapplication
         public bool IsEnabledPumpOverStart()
         {
             return PAFPreProducing != null && SelectedPumpTarget != null && PumpOverTargetQuantity > 0;
+        }
+
+        public virtual Msg OnPumpOverStart(DatabaseApp dbApp, Facility outwardFacility)
+        {
+            return null;
         }
 
         [ACMethodInfo("", "en{'Abort'}de{'Abbrechen'}", 606)]
