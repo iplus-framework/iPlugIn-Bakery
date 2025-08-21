@@ -1515,7 +1515,9 @@ namespace gipbakery.mes.processapplication
 
                 Facility outwardFacility = outFacility.FromAppContext<Facility>(dbApp);
 
-                Msg msg = OnPumpOverStart(dbApp, outwardFacility);
+                double currentStock = outwardFacility.CurrentFacilityStock != null ? outwardFacility.CurrentFacilityStock.AvailableQuantity : 0.0;
+
+                Msg msg = OnPumpOverStart(dbApp, outwardFacility, currentStock);
                 if (msg != null)
                 {
                     Messages.Msg(msg);
@@ -1523,9 +1525,9 @@ namespace gipbakery.mes.processapplication
                         return;
                 }
 
-                double currentStock = outwardFacility.CurrentFacilityStock != null ? outwardFacility.CurrentFacilityStock.AvailableQuantity : 0.0;
+                currentStock = outwardFacility.CurrentFacilityStock != null ? outwardFacility.CurrentFacilityStock.AvailableQuantity : 0.0;
 
-                if (currentStock < PumpOverTargetQuantity)
+                if (Math.Round(currentStock,3) < Math.Round(PumpOverTargetQuantity,3))
                 {
                     //Question50073: The current stock in facility is {0} kg, but you want pump over {1} kg. Do you still want to continue?
                     if (Messages.Question(this, "Question50073", Global.MsgResult.No, false, Math.Round(currentStock, 2), PumpOverTargetQuantity) != Global.MsgResult.Yes)
@@ -1598,7 +1600,7 @@ namespace gipbakery.mes.processapplication
             return PAFPreProducing != null && SelectedPumpTarget != null && PumpOverTargetQuantity > 0;
         }
 
-        public virtual Msg OnPumpOverStart(DatabaseApp dbApp, Facility outwardFacility)
+        public virtual Msg OnPumpOverStart(DatabaseApp dbApp, Facility outwardFacility, double currentFacilityStock)
         {
             return null;
         }
