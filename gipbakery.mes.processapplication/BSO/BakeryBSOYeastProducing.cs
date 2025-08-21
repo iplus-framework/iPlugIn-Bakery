@@ -331,7 +331,7 @@ namespace gipbakery.mes.processapplication
             get;
             protected set;
         }
-        private bool _IsOrderInfoEmpty = true;
+        protected bool _IsOrderInfoEmpty = true;
 
         protected ACRef<IACComponentPWNode> PWGroupFermentation
         {
@@ -1495,7 +1495,7 @@ namespace gipbakery.mes.processapplication
         }
 
         [ACMethodInfo("", "en{'Pump over'}de{'Umpumpen'}", 803, true)]
-        public void PumpOverStart()
+        public virtual void PumpOverStart()
         {
             if (VirtualStore == null)
                 return;
@@ -1516,14 +1516,6 @@ namespace gipbakery.mes.processapplication
                 Facility outwardFacility = outFacility.FromAppContext<Facility>(dbApp);
 
                 double currentStock = outwardFacility.CurrentFacilityStock != null ? outwardFacility.CurrentFacilityStock.AvailableQuantity : 0.0;
-
-                Msg msg = OnPumpOverStart(dbApp, outwardFacility, currentStock);
-                if (msg != null)
-                {
-                    Messages.Msg(msg);
-                    if (msg.MessageLevel > eMsgLevel.Warning)
-                        return;
-                }
 
                 currentStock = outwardFacility.CurrentFacilityStock != null ? outwardFacility.CurrentFacilityStock.AvailableQuantity : 0.0;
 
@@ -1598,11 +1590,6 @@ namespace gipbakery.mes.processapplication
         public bool IsEnabledPumpOverStart()
         {
             return PAFPreProducing != null && SelectedPumpTarget != null && PumpOverTargetQuantity > 0;
-        }
-
-        public virtual Msg OnPumpOverStart(DatabaseApp dbApp, Facility outwardFacility, double currentFacilityStock)
-        {
-            return null;
         }
 
         [ACMethodInfo("", "en{'Abort'}de{'Abbrechen'}", 606)]
