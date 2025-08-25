@@ -256,6 +256,8 @@ namespace gipbakery.mes.processapplication
         public override void SMCompleted()
         {
             DeactivatePreProdFunctions();
+            if (IsAlarmActive(ProcessAlarm) != null)
+                AcknowledgeAlarms();
             base.SMCompleted();
         }
 
