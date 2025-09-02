@@ -26,6 +26,9 @@ namespace gipbakery.mes.processapplication
                 {
                     wrapper.Method.ParameterValueList.Add(new ACValue("NextFreeDestinationPMCheck", typeof(bool), false, Global.ParamOption.Required));
                     wrapper.ParameterTranslation.Add("NextFreeDestinationPMCheck", "en{'Get next free destination via predecessor process module occupation check'}de{'Nächstes freies Ziel über Vorgängerprozessmodul Belegungsprüfung ermitteln'}");
+
+                    wrapper.Method.ParameterValueList.Add(new ACValue("RefreshQuantityBeforePosting", typeof(bool), false, Global.ParamOption.Optional));
+                    wrapper.ParameterTranslation.Add("RefreshQuantityBeforePosting", "en{'Refresh quntity before inward posting'}de{'Menge vor der Eingangsbuchung aktualisieren'}");
                 }
             }
 
@@ -119,6 +122,23 @@ namespace gipbakery.mes.processapplication
                 if (method != null)
                 {
                     var acValue = method.ParameterValueList.GetACValue("NextFreeDestinationPMCheck");
+                    if (acValue != null)
+                    {
+                        return acValue.ParamAsBoolean;
+                    }
+                }
+                return false;
+            }
+        }
+
+        public bool RefreshQuantityBeforePosting
+        {
+            get
+            {
+                var method = MyConfiguration;
+                if (method != null)
+                {
+                    var acValue = method.ParameterValueList.GetACValue("RefreshQuantityBeforePosting");
                     if (acValue != null)
                     {
                         return acValue.ParamAsBoolean;
@@ -233,6 +253,9 @@ namespace gipbakery.mes.processapplication
                                         if (prodOrderManager != null)
                                         {
                                             double calculatedBatchWeight = 0;
+                                            if (RefreshQuantityBeforePosting)
+                                                currentBatchPos.RecalcActualQuantity();
+
                                             if (prodOrderManager.CalcProducedBatchWeight(dbApp, currentBatchPos, LossCorrectionFactor, out calculatedBatchWeight) == null)
                                             {
                                                 double diff = calculatedBatchWeight - currentBatchPos.ActualQuantityUOM;

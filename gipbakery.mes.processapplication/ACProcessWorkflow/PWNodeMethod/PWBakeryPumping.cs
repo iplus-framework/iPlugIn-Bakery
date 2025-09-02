@@ -392,7 +392,13 @@ namespace gipbakery.mes.processapplication
                                 }
 
                                 if (BookTargetQuantity)
-                                    acMethod.ResultValueList["ActualQuantity"] = 0;
+                                {
+                                    ACValue tQ = acMethod.ParameterValueList.GetACValue("TargetQuantity");
+                                    if (tQ != null)
+                                    {
+                                        acMethod.ResultValueList["ActualQuantity"] = tQ.ParamAsDouble;
+                                    }
+                                }
 
                                 base.TaskCallback(sender, e, wrapObject);
 
