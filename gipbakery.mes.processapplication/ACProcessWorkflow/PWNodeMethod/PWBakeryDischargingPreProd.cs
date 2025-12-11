@@ -19,7 +19,20 @@ namespace gipbakery.mes.processapplication
 
         static PWBakeryDischargingPreProd()
         {
-            ACMethod.InheritFromBase(typeof(PWBakeryDischargingPreProd), ACStateConst.SMStarting);
+            List<ACMethodWrapper> wrappers = ACMethod.OverrideFromBase(typeof(PWBakeryDischargingPreProd), ACStateConst.SMStarting);
+            if (wrappers != null)
+            {
+                foreach (ACMethodWrapper wrapper in wrappers)
+                {
+                    wrapper.Method.ParameterValueList.Add(new ACValue("NextFreeDestinationPMCheck", typeof(bool), false, Global.ParamOption.Required));
+                    wrapper.ParameterTranslation.Add("NextFreeDestinationPMCheck", "en{'Get next free destination via predecessor process module occupation check'}de{'Nächstes freies Ziel über Vorgängerprozessmodul Belegungsprüfung ermitteln'}");
+
+                    wrapper.Method.ParameterValueList.Add(new ACValue("RefreshQuantityBeforePosting", typeof(bool), false, Global.ParamOption.Optional));
+                    wrapper.ParameterTranslation.Add("RefreshQuantityBeforePosting", "en{'Refresh quntity before inward posting'}de{'Menge vor der Eingangsbuchung aktualisieren'}");
+                }
+            }
+
+
             RegisterExecuteHandler(typeof(PWBakeryDischargingPreProd), HandleExecuteACMethod_PWBakeryDischargingPreProd);
         }
 
@@ -96,6 +109,40 @@ namespace gipbakery.mes.processapplication
                     var acValue = method.ParameterValueList.GetACValue("UseScaleWeightOnPost");
                     if (acValue != null)
                         return acValue.ParamAsBoolean;
+                }
+                return false;
+            }
+        }
+
+        public bool NextFreeDestinationPMCheck
+        {
+            get
+            {
+                var method = MyConfiguration;
+                if (method != null)
+                {
+                    var acValue = method.ParameterValueList.GetACValue("NextFreeDestinationPMCheck");
+                    if (acValue != null)
+                    {
+                        return acValue.ParamAsBoolean;
+                    }
+                }
+                return false;
+            }
+        }
+
+        public bool RefreshQuantityBeforePosting
+        {
+            get
+            {
+                var method = MyConfiguration;
+                if (method != null)
+                {
+                    var acValue = method.ParameterValueList.GetACValue("RefreshQuantityBeforePosting");
+                    if (acValue != null)
+                    {
+                        return acValue.ParamAsBoolean;
+                    }
                 }
                 return false;
             }
@@ -206,6 +253,9 @@ namespace gipbakery.mes.processapplication
                                         if (prodOrderManager != null)
                                         {
                                             double calculatedBatchWeight = 0;
+                                            if (RefreshQuantityBeforePosting)
+                                                currentBatchPos.RecalcActualQuantity();
+
                                             if (prodOrderManager.CalcProducedBatchWeight(dbApp, currentBatchPos, LossCorrectionFactor, out calculatedBatchWeight) == null)
                                             {
                                                 double diff = calculatedBatchWeight - currentBatchPos.ActualQuantityUOM;
@@ -468,6 +518,79 @@ namespace gipbakery.mes.processapplication
             }
             //}
             return base.DoInwardBooking(actualWeight, dbApp, dischargingDest, facilityDest, picking, pickingPos, e, isDischargingEnd);
+        }
+
+        public override FacilityReservation GetNextFreeDestination(IList<FacilityReservation> plannedSilos, ProdOrderPartslistPos pPos, bool changeReservationStateIfFull, FacilityReservation ignoreFullSilo = null, PAFDischarging discharging = null)
+        {
+            if (NextFreeDestinationPMCheck)
+            {
+                if (plannedSilos == null || !plannedSilos.Any())
+                    return null;
+
+                List<Tuple<FacilityReservation, short>> plannedSilosFree = new List<Tuple<FacilityReservation, short>>();
+
+                foreach (FacilityReservation plannedSilo in plannedSilos)
+                {
+                    string siloACUrl = plannedSilo.VBiACClass.ACURLComponentCached;
+                    ACRoutingParameters param = new ACRoutingParameters();
+                    param.Direction = RouteDirections.Backwards;
+                    param.SelectionRuleID = PAProcessModule.SelRuleID_ProcessModule;
+                    param.ResultMode = RouteResultMode.ShortRoute;
+
+                    RoutingResult result = ACRoutingService.FindSuccessors(siloACUrl, param);
+                    if (result != null && result.Routes != null && result.Routes.Any())
+                    {
+                        RouteItem rItem = result.Routes.FirstOrDefault().GetRouteSource();
+                        if (rItem != null)
+                        {
+                            PAProcessModule module = rItem.SourceACComponent as PAProcessModule;
+                            if (module != null)
+                            {
+                                string[] accessedFrom = module.SemaphoreAccessedFrom();
+                                if (module == ParentPWGroup.AccessedProcessModule)
+                                {
+                                    plannedSilosFree.Add(new Tuple<FacilityReservation, short>(plannedSilo, 1));
+                                }
+                                else if (accessedFrom == null)
+                                {
+                                    plannedSilosFree.Add(new Tuple<FacilityReservation, short>(plannedSilo, 2));
+                                }
+                                else
+                                {
+                                    plannedSilosFree.Add(new Tuple<FacilityReservation, short>(plannedSilo, 3));
+                                }
+                            }
+                        }
+                    }
+                }
+
+                if (!plannedSilosFree.Any())
+                    plannedSilosFree = plannedSilos.Select(c => new Tuple<FacilityReservation, short>(c, 1)).ToList();
+
+                foreach (FacilityReservation plannedSilo in plannedSilosFree.OrderBy(c => c.Item2).Select(c => c.Item1).Where(c => c.ReservationState == GlobalApp.ReservationState.Active))
+                {
+                    if (CheckPlannedDestinationSilo(plannedSilo, pPos, changeReservationStateIfFull, ignoreFullSilo))
+                        return plannedSilo;
+                }
+                foreach (FacilityReservation plannedSilo in plannedSilosFree.OrderBy(c => c.Item2).Select(c => c.Item1).Where(c => c.ReservationState == GlobalApp.ReservationState.New))
+                {
+                    if (CheckPlannedDestinationSilo(plannedSilo, pPos, changeReservationStateIfFull, ignoreFullSilo))
+                        return plannedSilo;
+                }
+                foreach (FacilityReservation plannedSilo in plannedSilosFree.OrderBy(c => c.Item2).Select(c => c.Item1).Where(c => c.ReservationState == GlobalApp.ReservationState.Finished))
+                {
+                    if (CheckPlannedDestinationSilo(plannedSilo, pPos, changeReservationStateIfFull, ignoreFullSilo))
+                    {
+                        plannedSilo.ReservationState = GlobalApp.ReservationState.New;
+                        return plannedSilo;
+                    }
+                }
+                return null;
+            }
+            else
+            {
+                return base.GetNextFreeDestination(plannedSilos, pPos, changeReservationStateIfFull, ignoreFullSilo, discharging);
+            }
         }
 
         private void StartMonitorSourceStore()

@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Windows;
 
 namespace gipbakery.mes.processapplication
 {
@@ -33,6 +34,13 @@ namespace gipbakery.mes.processapplication
         #region Properties
         [ACPropertyBindingSource(9999, "", "", "", false, true)]
         public IACContainerTNet<FermentationStageInfos> FermentationInfo { get; set; }
+
+        [ACPropertyBindingSource(810, "Error", "en{'Waiting alarm'}de{'Wartealarm'}", "", false, false)]
+        public IACContainerTNet<PANotifyState> WaitingAlarm
+        {
+            get;
+            set;
+        }
 
         #endregion
 
@@ -66,6 +74,12 @@ namespace gipbakery.mes.processapplication
             {
                 Messages.LogException(this.ACUrl, nameof(FermentationInfo), ex);
             }
+        }
+
+        public void RaiseWatingAlarm(string waitingTime)
+        {
+            Msg msg = new Msg(this, eMsgLevel.Error, nameof(PWBakeryMixingPreProd), nameof(RaiseWatingAlarm), 81, "Error50717", waitingTime);
+            OnNewAlarmOccurred(WaitingAlarm, msg);
         }
 
         protected override bool HandleExecuteACMethod(out object result, AsyncMethodInvocationMode invocationMode, string acMethodName, gip.core.datamodel.ACClassMethod acClassMethod, params object[] acParameter)

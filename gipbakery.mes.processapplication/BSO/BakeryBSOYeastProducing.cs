@@ -331,7 +331,7 @@ namespace gipbakery.mes.processapplication
             get;
             protected set;
         }
-        private bool _IsOrderInfoEmpty = true;
+        protected bool _IsOrderInfoEmpty = true;
 
         protected ACRef<IACComponentPWNode> PWGroupFermentation
         {
@@ -1496,13 +1496,13 @@ namespace gipbakery.mes.processapplication
         }
 
         [ACMethodInfo("", "en{'Pump over'}de{'Umpumpen'}", 803, true)]
-        public void PumpOverStart()
+        public virtual void PumpOverStart()
         {
             if (VirtualStore == null)
                 return;
 
             using (Database db = new gip.core.datamodel.Database())
-            using (DatabaseApp dbApp = new DatabaseApp())
+            using (DatabaseApp dbApp = new DatabaseApp(db))
             {
                 var outwardFacilityRef = VirtualStore.GetPropertyNet(nameof(Facility)) as IACContainerTNet<ACRef<Facility>>;
 
@@ -1518,7 +1518,9 @@ namespace gipbakery.mes.processapplication
 
                 double currentStock = outwardFacility.CurrentFacilityStock != null ? outwardFacility.CurrentFacilityStock.AvailableQuantity : 0.0;
 
-                if (currentStock < PumpOverTargetQuantity)
+                currentStock = outwardFacility.CurrentFacilityStock != null ? outwardFacility.CurrentFacilityStock.AvailableQuantity : 0.0;
+
+                if (Math.Round(currentStock,3) < Math.Round(PumpOverTargetQuantity,3))
                 {
                     //Question50073: The current stock in facility is {0} kg, but you want pump over {1} kg. Do you still want to continue?
                     if (Messages.Question(this, "Question50073", Global.MsgResult.No, false, Math.Round(currentStock, 2), PumpOverTargetQuantity) != Global.MsgResult.Yes)

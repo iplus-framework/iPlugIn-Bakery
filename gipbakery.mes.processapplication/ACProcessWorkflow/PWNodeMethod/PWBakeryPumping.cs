@@ -7,7 +7,6 @@ using gip.mes.processapplication;
 using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
-using System.IO.Packaging;
 using System.Linq;
 using System.Xml;
 
@@ -33,6 +32,8 @@ namespace gipbakery.mes.processapplication
                     wrapper.ParameterTranslation.Add("PreventPumpAtProd", "en{'No pumping during production'}de{'Kein Umpumpen während der Produktion'}");
                     wrapper.Method.ParameterValueList.Add(new ACValue("RouteItemIDChangeMode", typeof(ushort), 0, Global.ParamOption.Optional));
                     wrapper.ParameterTranslation.Add("RouteItemIDChangeMode", "en{'Changemode of RouteItemID (1=Remove last digit)'}de{'Änderungsmodus der RouteItemID (1=letzte Stelle entfernen)'}");
+                    wrapper.Method.ParameterValueList.Add(new ACValue("BookTargetQuantity", typeof(bool), false, Global.ParamOption.Optional));
+                    wrapper.ParameterTranslation.Add("BookTargetQuantity", "en{'Post target quantity'}de{'Zielmenge buchen'}");
                 }
             }
             RegisterExecuteHandler(typeof(PWBakeryPumping), HandleExecuteACMethod_PWBakeryPumping);
@@ -166,6 +167,23 @@ namespace gipbakery.mes.processapplication
                     }
                 }
                 return true;
+            }
+        }
+
+        public bool BookTargetQuantity
+        {
+            get
+            {
+                var method = MyConfiguration;
+                if (method != null)
+                {
+                    var acValue = method.ParameterValueList.GetACValue("BookTargetQuantity");
+                    if (acValue != null)
+                    {
+                        return acValue.ParamAsBoolean;
+                    }
+                }
+                return false;
             }
         }
 
@@ -374,6 +392,15 @@ namespace gipbakery.mes.processapplication
                                     acMethod.ResultValueList["ActualQuantity"] = actualQuantity;
                                 }
 
+                                if (BookTargetQuantity)
+                                {
+                                    ACValue tQ = acMethod.ParameterValueList.GetACValue("TargetQuantity");
+                                    if (tQ != null)
+                                    {
+                                        acMethod.ResultValueList["ActualQuantity"] = tQ.ParamAsDouble;
+                                    }
+                                }
+
                                 base.TaskCallback(sender, e, wrapObject);
 
                                 if (BlockSourceAtEnd)
@@ -554,7 +581,7 @@ namespace gipbakery.mes.processapplication
 
         #endregion
 
-        private static bool HandleExecuteACMethod_PWBakeryPumping(out object result, IACComponent acComponent, string acMethodName, gip.core.datamodel.ACClassMethod acClassMethod, object[] acParameter)
+        public static bool HandleExecuteACMethod_PWBakeryPumping(out object result, IACComponent acComponent, string acMethodName, gip.core.datamodel.ACClassMethod acClassMethod, object[] acParameter)
         {
             return HandleExecuteACMethod_PWDischarging(out result, acComponent, acMethodName, acClassMethod, acParameter);
         }

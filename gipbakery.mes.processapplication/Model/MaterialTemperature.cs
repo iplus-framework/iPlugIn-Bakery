@@ -264,8 +264,13 @@ namespace gipbakery.mes.processapplication
             return this.ReflectACUrlBinding(acUrl, ref acTypeInfo, ref source, ref path, ref rightControlMode);
         }
 
+        public bool ACUrlTypeInfo(string acUrl, ref ACUrlTypeInfo acUrlTypeInfo)
+        {
+            throw new NotImplementedException();
+        }
+
         #endregion
 
-        
+
     }
 }
